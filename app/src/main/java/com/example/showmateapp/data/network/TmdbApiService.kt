@@ -20,4 +20,16 @@ interface TmdbApiService {
         @Query("with_genres") genreIds: String,
         @Query("language") lang: String = "en-US"
     ): MovieResponse
+
+    @GET("trending/tv/day")
+    suspend fun getTrendingShows(
+        @Header("Authorization") token: String,
+        @Query("language") lang: String = "en-US"
+    ): MovieResponse
+
+    @GET("tv/popular")
+    suspend fun getPopularShows(
+        @Header("Authorization") token: String,
+        @Query("language") lang: String = "en-US"
+    ): MovieResponse
 }

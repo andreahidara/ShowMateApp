@@ -1,6 +1,7 @@
 package com.example.showmateapp.ui.screens.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,55 +17,73 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.showmateapp.ui.theme.*
+import com.example.showmateapp.data.network.Movie
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
-fun HomeScreen(navController: NavController) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            item {
-                FeaturedBanner()
-            }
+fun HomeScreen(navController: NavController, viewModel: HomeViewModel = viewModel()) {
+    val trendingShows by viewModel.trendingShows.collectAsState()
+    val popularShows by viewModel.popularShows.collectAsState()
 
-            item {
-                SectionTitle("Trending Now")
-                SeriesRow()
+    // Usamos el padding que viene de AppNavigation's Scaffold
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        item {
+            if (trendingShows.isNotEmpty()) {
+                FeaturedBanner(trendingShows.first()) { movie ->
+                    navigateToDetail(navController, movie)
+                }
             }
-
-            item {
-                SectionTitle("For You")
-                SeriesRow()
-            }
-
-            item { Spacer(modifier = Modifier.height(40.dp)) }
         }
+
+        item {
+            SectionTitle("Trending Now")
+            SeriesRow(trendingShows) { movie ->
+                navigateToDetail(navController, movie)
+            }
+        }
+
+        item {
+            SectionTitle("Popular")
+            SeriesRow(popularShows) { movie ->
+                navigateToDetail(navController, movie)
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
 
+private fun navigateToDetail(navController: NavController, movie: Movie) {
+    val encodedName = URLEncoder.encode(movie.name, StandardCharsets.UTF_8.toString())
+    val encodedOverview = URLEncoder.encode(movie.overview, StandardCharsets.UTF_8.toString())
+    val encodedPoster = URLEncoder.encode(movie.poster_path ?: "", StandardCharsets.UTF_8.toString())
+    
+    navController.navigate("detail/${movie.id}?name=$encodedName&overview=$encodedOverview&posterPath=$encodedPoster")
+}
+
 @Composable
-fun FeaturedBanner() {
+fun FeaturedBanner(movie: Movie, onClick: (Movie) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(450.dp) // Un poco más alto para que luzca
+            .height(450.dp)
+            .clickable { onClick(movie) }
     ) {
         AsyncImage(
-            // --- PARCHE AQUÍ: También añadimos el proxy al Banner ---
-            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/original/uKvH5611UiV3s9OQn9S1oHbsKh9.jpg",
-            contentDescription = null,
+            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/original${movie.poster_path}",
+            contentDescription = movie.name,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
 
-        // Degradado suave para que el fondo negro de la app se funda con la imagen
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -90,26 +109,20 @@ fun SectionTitle(title: String) {
 }
 
 @Composable
-fun SeriesRow() {
-    val tempPosters = listOf(
-        "/uKvH5611UiV3s9OQn9S1oHbsKh9.jpg",
-        "/9n21ow6vYfwSRC9uau3FJt6XmXp.jpg",
-        "/6L963vT86S2qIosNAsm80u49jN2.jpg",
-        "/og9S1oHbsKh9uKvH5611UiV3s9O.jpg"
-    )
-
+fun SeriesRow(shows: List<Movie>, onMovieClick: (Movie) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(tempPosters) { posterPath ->
+        items(shows) { movie ->
             AsyncImage(
-                model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500$posterPath",
-                contentDescription = null,
+                model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${movie.poster_path}",
+                contentDescription = movie.name,
                 modifier = Modifier
                     .width(130.dp)
                     .height(190.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onMovieClick(movie) },
                 contentScale = ContentScale.Crop
             )
         }
