@@ -36,12 +36,44 @@ import kotlin.math.absoluteValue
 fun SwipeScreen(navController: NavController, selectedGenres: String) {
     val viewModel: SwipeViewModel = viewModel()
     val showsToRate by viewModel.shows.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     var ratedCount by remember { mutableIntStateOf(0) }
     val maxRatings = 5
 
     LaunchedEffect(selectedGenres) {
         viewModel.loadShows(selectedGenres)
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.CircularProgressIndicator(color = PrimaryPurple)
+        }
+        return
+    }
+
+    if (errorMessage != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.Text(
+                text = errorMessage!!,
+                color = HeartRed,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+        return
     }
 
     Column(
@@ -79,7 +111,7 @@ fun SwipeScreen(navController: NavController, selectedGenres: String) {
                     Text("We've tailored your feed.", color = TextGray, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { navController.navigate("home") { popUpTo("swipe") { inclusive = true } } },
+                        onClick = { navController.navigate("main") { popUpTo("swipe") { inclusive = true } } },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
                         shape = RoundedCornerShape(12.dp)
                     ) {

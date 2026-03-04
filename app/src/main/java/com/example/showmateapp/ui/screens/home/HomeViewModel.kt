@@ -17,14 +17,28 @@ class HomeViewModel : ViewModel() {
     private val _popularShows = MutableStateFlow<List<Movie>>(emptyList())
     val popularShows: StateFlow<List<Movie>> = _popularShows
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     init {
         loadHomeContent()
     }
 
-    private fun loadHomeContent() {
+    fun loadHomeContent() {
         viewModelScope.launch {
-            _trendingShows.value = repository.getTrendingShows()
-            _popularShows.value = repository.getPopularShows()
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                _trendingShows.value = repository.getTrendingShows()
+                _popularShows.value = repository.getPopularShows()
+            } catch (e: Exception) {
+                _errorMessage.value = "Error de conexión. Comprueba tu internet."
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 }

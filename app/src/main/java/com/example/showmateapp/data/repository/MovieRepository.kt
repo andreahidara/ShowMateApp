@@ -5,32 +5,20 @@ import com.example.showmateapp.data.network.RetrofitClient
 
 class MovieRepository {
     private val apiService = RetrofitClient.apiService
-    private val token = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjYzFhY2NmNTU5Mzk4YTNmNDdiMWZhMzYyNTIwY2UyYiIsIm5iZiI6MTc3MTk1MDk1OC4xMjYwMDAyLCJzdWIiOiI2OTlkZDM2ZWJjM2YzZDFkNjUwNjYwMjYiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.Deix25uQqXJ623nkHJJWhLBz2Ga4ouCv1iK9PT5iSM8"
+    private val token = com.example.showmateapp.BuildConfig.TMDB_API_TOKEN
 
     suspend fun getTrendingShows(): List<Movie> {
-        return try {
-            val response = apiService.getTrendingShows(token)
-            response.results
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val response = apiService.getTrendingShows(token)
+        return response.results
     }
 
     suspend fun getPopularShows(): List<Movie> {
-        return try {
-            val response = apiService.getPopularShows(token)
-            response.results
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val response = apiService.getPopularShows(token)
+        return response.results
     }
 
     suspend fun getShowsByGenres(genreIds: String): List<Movie> {
-        return try {
-            val response = apiService.getShowsByGenres(token, genreIds)
-            response.results
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val response = apiService.getShowsByGenres(token, genreIds)
+        return response.results
     }
 }

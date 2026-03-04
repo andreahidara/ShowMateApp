@@ -1,7 +1,10 @@
 package com.example.showmateapp.ui.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,12 +17,21 @@ import com.example.showmateapp.ui.theme.PrimaryPurple
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Home : BottomNavItem("home", Icons.Default.Home, "Home")
-    object Swipe : BottomNavItem("swipe/Detective", Icons.Default.Search, "Discover") // Pasamos el nombre para que AppNavigation lo traduzca
+    object Search : BottomNavItem("search", Icons.Default.Search, "Search")
+    object Discover : BottomNavItem("discover", Icons.Default.Star, "Discover")
+    object Favorites : BottomNavItem("favorites", Icons.Default.Favorite, "Favorites")
+    object Profile : BottomNavItem("profile", Icons.Default.Person, "Profile")
 }
 
 @Composable
 fun BottomNavBar(navController: NavController) {
-    val items = listOf(BottomNavItem.Home, BottomNavItem.Swipe)
+    val items = listOf(
+        BottomNavItem.Home,
+        BottomNavItem.Search,
+        BottomNavItem.Discover,
+        BottomNavItem.Favorites,
+        BottomNavItem.Profile
+    )
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry.value?.destination?.route
 

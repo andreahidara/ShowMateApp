@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -28,6 +29,38 @@ import java.nio.charset.StandardCharsets
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = viewModel()) {
     val trendingShows by viewModel.trendingShows.collectAsState()
     val popularShows by viewModel.popularShows.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = com.example.showmateapp.ui.theme.PrimaryPurple)
+        }
+        return
+    }
+
+    if (errorMessage != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.Text(
+                text = errorMessage!!,
+                color = androidx.compose.ui.graphics.Color.Red,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+        return
+    }
 
     // Usamos el padding que viene de AppNavigation's Scaffold
     LazyColumn(
@@ -62,11 +95,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = viewMode
 }
 
 private fun navigateToDetail(navController: NavController, movie: Movie) {
-    val encodedName = URLEncoder.encode(movie.name, StandardCharsets.UTF_8.toString())
-    val encodedOverview = URLEncoder.encode(movie.overview, StandardCharsets.UTF_8.toString())
-    val encodedPoster = URLEncoder.encode(movie.poster_path ?: "", StandardCharsets.UTF_8.toString())
-    
-    navController.navigate("detail/${movie.id}?name=$encodedName&overview=$encodedOverview&posterPath=$encodedPoster")
+    navController.navigate("detail/${movie.id}")
 }
 
 @Composable

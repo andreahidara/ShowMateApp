@@ -14,6 +14,12 @@ class SwipeViewModel : ViewModel() {
     private val _shows = MutableStateFlow<List<Movie>>(emptyList())
     val shows: StateFlow<List<Movie>> = _shows
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     fun removeTopShow() {
         val currentList = _shows.value.toMutableList()
         if (currentList.isNotEmpty()) {
@@ -24,7 +30,15 @@ class SwipeViewModel : ViewModel() {
 
     fun loadShows(genreIds: String) {
         viewModelScope.launch {
-            _shows.value = repository.getShowsByGenres(genreIds)
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                _shows.value = repository.getShowsByGenres(genreIds).shuffled()
+            } catch (e: Exception) {
+                _errorMessage.value = "Hubo un error cargando las series. Inténtalo de nuevo."
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 }

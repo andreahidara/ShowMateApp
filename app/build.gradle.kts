@@ -1,16 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 android {
     namespace = "com.example.showmateapp"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.showmateapp"
@@ -20,6 +24,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        buildConfigField(
+            "String",
+            "TMDB_API_TOKEN",
+            "\"${localProperties.getProperty("TMDB_API_TOKEN") ?: ""}\""
+        )
     }
 
     buildTypes {
@@ -37,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -49,6 +60,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,7 +72,7 @@ dependencies {
     // --- LIBRERÍAS DE SHOWMATE ---
 
     // 1. Navegación entre pantallas en Compose
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.navigation:navigation-compose:2.8.8")
 
     // 2. Retrofit (Para conectarnos a la API de TMDB)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
@@ -70,7 +82,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     // 4. ViewModel (Para conectar la UI con la lógica)
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
     // 5. Firebase (Login y Base de datos)
     implementation(platform("com.google.firebase:firebase-bom:32.8.0"))

@@ -1,5 +1,12 @@
 package com.example.showmateapp.ui.screens.splash
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -8,91 +15,193 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.showmateapp.R
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.ShowMateAppTheme
-import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
-import androidx.compose.runtime.LaunchedEffect
-import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 
+@Composable
+fun SplashScreen(navController: NavController) {
+    // Entrance animations
+    val scale = remember { Animatable(0.8f) }
+    val alpha = remember { Animatable(0f) }
+    val contentTranslationY = remember { Animatable(20f) }
 
-    @Composable
-    fun SplashScreen(navController: NavController) { // <-- 1. Añadimos el NavController aquí
+    // Subtle "breathing" effect for the logo and tagline
+    val infiniteTransition = rememberInfiniteTransition(label = "breathing")
+    val breathingScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
 
-        // 2. Este bloque de código se ejecuta nada más cargar la pantalla
-        LaunchedEffect(key1 = true) {
-            delay(2000) // Esperamos 2000 milisegundos (2 segundos)
-
-            // Navegamos al login, borrando el splash del historial para que
-            // si el usuario le da al botón "Atrás" del móvil, no vuelva al logo
-            navController.navigate("login") {
-                popUpTo("splash") { inclusive = true }
-            }
+    LaunchedEffect(key1 = true) {
+        launch {
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(1200, easing = FastOutSlowInEasing)
+            )
         }
-    // Box es como una caja. Usamos fillMaxSize() para que ocupe toda la pantalla.
-    // Y le ponemos el color de fondo oscuro de nuestro tema.
+        launch {
+            alpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(1000)
+            )
+        }
+        launch {
+            contentTranslationY.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(1200, easing = FastOutSlowInEasing)
+            )
+        }
+
+        delay(3000)
+
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        val destination = if (currentUser != null) "main" else "login"
+        navController.navigate(destination) {
+            popUpTo("splash") { inclusive = true }
+        }
+    }
+
+    // Professional Background: Deep dark vignette with a subtle purple core
+    val backgroundBrush = Brush.radialGradient(
+        colors = listOf(
+            Color(0xFF1A1A2E), // Rich dark navy/purple
+            Color(0xFF08080D)  // Deep cinematic black
+        ),
+        radius = 1600f
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background), // Usa el color de fondo del tema (BackgroundDark)
-        contentAlignment = Alignment.Center // Todo lo que metamos dentro se centrará
+            .background(brush = backgroundBrush),
+        contentAlignment = Alignment.Center
     ) {
-        // Column apila elementos verticalmente (Logo encima del Texto)
+        // Decorative background glow for depth
+        Box(
+            modifier = Modifier
+                .size(400.dp)
+                .graphicsLayer(alpha = 0.15f)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(PrimaryPurple, Color.Transparent)
+                    )
+                )
+                .blur(80.dp)
+        )
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .graphicsLayer(
+                    scaleX = scale.value * breathingScale,
+                    scaleY = scale.value * breathingScale,
+                    alpha = alpha.value,
+                    translationY = contentTranslationY.value
+                )
         ) {
-            // 1. El Logo (Usamos el icono temporal que creamos)
-            Image(
-                painter = painterResource(id = R.drawable.ic_logo_placeholder),
-                contentDescription = "Logo ShowMate",
-                modifier = Modifier.size(100.dp), // Tamaño del logo
-                // Teñimos el icono de color púrpura para que se parezca a tu diseño
-                colorFilter = ColorFilter.tint(PrimaryPurple)
-            )
+            // Branded Logo Container
+            Box(contentAlignment = Alignment.Center) {
+                // Secondary glow behind logo
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .graphicsLayer(alpha = 0.3f)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(PrimaryPurple, Color.Transparent)
+                            )
+                        )
+                )
+                
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(100.dp)
+                )
+            }
 
-            Spacer(modifier = Modifier.height(24.dp)) // Espacio entre logo y texto
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. El Título Principal
+            // Brand Name: Bold, Clean, Modern
             Text(
                 text = "ShowMate",
-                color = Color.White, // Texto blanco
-                fontSize = 36.sp, // Tamaño grande
-                fontWeight = FontWeight.Bold // Negrita
+                color = Color.White,
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp // Tighter kerning for a modern look
+                )
             )
 
-            Spacer(modifier = Modifier.height(8.dp)) // Espacio pequeño
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // 3. El Subtítulo
+            // Cinematic Tagline
             Text(
-                text = "PREMIUM SERIES GUIDE",
-                color = PrimaryPurple, // Usamos el color acento púrpura
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 2.sp // Separamos un poco las letras como en el diseño
+                text = "SERIES GUIDE",
+                color = PrimaryPurple.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 6.sp,
+                    fontSize = 12.sp
+                )
+            )
+        }
+
+        // Refined Footer
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Menos buscar, más disfrutar",
+                color = Color.White.copy(alpha = 0.2f),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    letterSpacing = 2.sp
+                )
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "v1.0.0",
+                color = Color.White.copy(alpha = 0.15f),
+                style = MaterialTheme.typography.labelSmall
             )
         }
     }
 }
 
-// --- PREVISUALIZACIÓN ---
-// Esto te permite ver cómo queda la pantalla sin ejecutar la app en el emulador.
-// A veces tarda un poco en cargar la primera vez.
-@Preview(showBackground = true)
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun SplashScreenPreview() {
     ShowMateAppTheme {

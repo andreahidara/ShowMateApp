@@ -3,6 +3,7 @@ package com.example.showmateapp.data.network
 import retrofit2.http.GET
 import retrofit2.http.Query
 import retrofit2.http.Header
+import retrofit2.http.Path
 
 // Aquí definimos los datos que nos devuelve TMDB
 data class MovieResponse(val results: List<Movie>)
@@ -32,4 +33,18 @@ interface TmdbApiService {
         @Header("Authorization") token: String,
         @Query("language") lang: String = "en-US"
     ): MovieResponse
+
+    @GET("search/tv")
+    suspend fun searchShows(
+        @Header("Authorization") token: String,
+        @Query("query") query: String,
+        @Query("language") lang: String = "en-US"
+    ): MovieResponse
+
+    @GET("tv/{tv_id}")
+    suspend fun getTvShowDetails(
+        @Header("Authorization") token: String,
+        @Path("tv_id") tvId: Int,
+        @Query("language") lang: String = "en-US"
+    ): Movie
 }
