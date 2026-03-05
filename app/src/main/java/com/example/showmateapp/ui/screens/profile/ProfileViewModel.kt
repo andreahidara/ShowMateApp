@@ -6,6 +6,7 @@ import com.example.showmateapp.data.repository.FirestoreRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class ProfileViewModel : ViewModel() {
     private val repository = FirestoreRepository()
@@ -22,7 +23,10 @@ class ProfileViewModel : ViewModel() {
 
     fun loadProfileData() {
         viewModelScope.launch {
-            _userEmail.value = repository.getCurrentUserEmail()?.substringBefore("@")?.capitalize() ?: "User"
+            val email = repository.getCurrentUserEmail()
+            _userEmail.value = email?.substringBefore("@")?.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+            } ?: "Usuario"
             _favoritesCount.value = repository.getFavorites().size
         }
     }

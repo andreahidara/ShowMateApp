@@ -2,21 +2,23 @@ package com.example.showmateapp.ui.screens.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.showmateapp.data.network.Movie
-import com.example.showmateapp.data.network.RetrofitClient
+import com.example.showmateapp.data.network.TvShow
+import com.example.showmateapp.data.repository.TvShowRepository
 import com.example.showmateapp.data.repository.FirestoreRepository
-import com.example.showmateapp.BuildConfig
+import com.example.showmateapp.domain.usecase.UpdateUserInterestsUseCase
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class DetailViewModel : ViewModel() {
-    private val apiService = RetrofitClient.apiService
-    private val token = BuildConfig.TMDB_API_TOKEN
+    private val tvShowRepository = TvShowRepository()
     private val firestoreRepository = FirestoreRepository()
+    private val updateUserInterestsUseCase = UpdateUserInterestsUseCase(firestoreRepository)
+    private val auth = FirebaseAuth.getInstance()
 
-    private val _movie = MutableStateFlow<Movie?>(null)
-    val movie: StateFlow<Movie?> = _movie
+    private val _tvShow = MutableStateFlow<TvShow?>(null)
+    val tvShow: StateFlow<TvShow?> = _tvShow
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -32,11 +34,11 @@ class DetailViewModel : ViewModel() {
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                val response = apiService.getTvShowDetails(token, showId)
-                _movie.value = response
-                checkIfFavorite(response.id)
+                val details = tvShowRepository.getTvShowDetails(showId)
+                _tvShow.value = details
+                checkIfFavorite(details.id)
             } catch (e: Exception) {
-                _errorMessage.value = "Error al cargar los detalles. Inténtalo de nuevo."
+                _errorMessage.value = "Error al cargar los detalles."
             } finally {
                 _isLoading.value = false
             }
@@ -49,10 +51,18 @@ class DetailViewModel : ViewModel() {
     }
 
     fun toggleFavorite() {
-        val currentMovie = _movie.value ?: return
+        val currentShow = _tvShow.value ?: return
+        val userId = auth.currentUser?.uid ?: return
+
         viewModelScope.launch {
-            val isNowFav = firestoreRepository.toggleFavorite(currentMovie)
+            val isNowFav = firestoreRepository.toggleFavorite(currentShow)
             _isFavorite.value = isNowFav
+
+            if (isNowFav) {
+                currentShow.genre_ids?.forEach { genreId ->
+                    updateUserInterestsUseCase(userId, genreId.toString())
+                }
+            }
         }
     }
 }

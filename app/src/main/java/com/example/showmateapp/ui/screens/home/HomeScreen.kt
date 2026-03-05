@@ -21,139 +21,190 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.showmateapp.data.network.Movie
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+import com.example.showmateapp.data.network.TvShow
+import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.SurfaceDark
+import com.example.showmateapp.ui.theme.TextGray
 
 @Composable
-fun HomeScreen(navController: NavController, viewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = viewModel()
+) {
     val trendingShows by viewModel.trendingShows.collectAsState()
     val popularShows by viewModel.popularShows.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
-    if (isLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = com.example.showmateapp.ui.theme.PrimaryPurple)
-        }
-        return
-    }
-
-    if (errorMessage != null) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
-        ) {
-            androidx.compose.material3.Text(
-                text = errorMessage!!,
-                color = androidx.compose.ui.graphics.Color.Red,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-        return
-    }
-
-    // Usamos el padding que viene de AppNavigation's Scaffold
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        item {
-            if (trendingShows.isNotEmpty()) {
-                FeaturedBanner(trendingShows.first()) { movie ->
-                    navigateToDetail(navController, movie)
-                }
-            }
-        }
-
-        item {
-            SectionTitle("Trending Now")
-            SeriesRow(trendingShows) { movie ->
-                navigateToDetail(navController, movie)
-            }
-        }
-
-        item {
-            SectionTitle("Popular")
-            SeriesRow(popularShows) { movie ->
-                navigateToDetail(navController, movie)
-            }
-        }
-
-        item { Spacer(modifier = Modifier.height(80.dp)) }
-    }
-}
-
-private fun navigateToDetail(navController: NavController, movie: Movie) {
-    navController.navigate("detail/${movie.id}")
+    HomeScreenContent(
+        trendingShows = trendingShows,
+        popularShows = popularShows,
+        isLoading = isLoading,
+        errorMessage = errorMessage,
+        onTvShowClick = { tvShow -> navigateToDetail(navController, tvShow) }
+    )
 }
 
 @Composable
-fun FeaturedBanner(movie: Movie, onClick: (Movie) -> Unit) {
+fun HomeScreenContent(
+    trendingShows: List<TvShow>,
+    popularShows: List<TvShow>,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onTvShowClick: (TvShow) -> Unit
+) {
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = PrimaryPurple)
+        }
+    } else if (errorMessage != null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = errorMessage, color = Color.Red)
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            // Header
+            item {
+                Text(
+                    text = "ShowMate",
+                    color = PrimaryPurple,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            // Featured Section (First Trending Show)
+            if (trendingShows.isNotEmpty()) {
+                item {
+                    FeaturedBanner(trendingShows.first()) { tvShow ->
+                        onTvShowClick(tvShow)
+                    }
+                }
+            }
+
+            // Trending Row
+            item {
+                SectionHeader("Tendencias")
+                SeriesRow(trendingShows) { tvShow ->
+                    onTvShowClick(tvShow)
+                }
+            }
+
+            // Popular Row
+            item {
+                SectionHeader("Populares")
+                SeriesRow(popularShows) { tvShow ->
+                    onTvShowClick(tvShow)
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
+    }
+}
+
+private fun navigateToDetail(navController: NavController, tvShow: TvShow) {
+    navController.navigate("detail/${tvShow.id}")
+}
+
+@Composable
+fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        color = Color.White,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(16.dp)
+    )
+}
+
+@Composable
+fun FeaturedBanner(tvShow: TvShow, onClick: (TvShow) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(450.dp)
-            .clickable { onClick(movie) }
+            .height(400.dp)
+            .clickable { onClick(tvShow) }
     ) {
         AsyncImage(
-            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/original${movie.poster_path}",
-            contentDescription = movie.name,
+            model = "https://image.tmdb.org/t/p/original${tvShow.poster_path}",
+            contentDescription = "Featured: ${tvShow.name}",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background),
-                        startY = 700f
+                        startY = 300f
                     )
                 )
         )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = tvShow.name,
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { onClick(tvShow) },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Ver detalles")
+            }
+        }
     }
 }
 
 @Composable
-fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        color = Color.White,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 12.dp)
-    )
-}
-
-@Composable
-fun SeriesRow(shows: List<Movie>, onMovieClick: (Movie) -> Unit) {
+fun SeriesRow(shows: List<TvShow>, onTvShowClick: (TvShow) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(shows) { movie ->
-            AsyncImage(
-                model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${movie.poster_path}",
-                contentDescription = movie.name,
-                modifier = Modifier
-                    .width(130.dp)
-                    .height(190.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onMovieClick(movie) },
-                contentScale = ContentScale.Crop
-            )
+        items(shows) { tvShow ->
+            TvShowCard(tvShow = tvShow, onClick = onTvShowClick)
         }
+    }
+}
+
+@Composable
+fun TvShowCard(tvShow: TvShow, onClick: (TvShow) -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(120.dp)
+            .clickable { onClick(tvShow) }
+    ) {
+        AsyncImage(
+            model = "https://image.tmdb.org/t/p/w500${tvShow.poster_path}",
+            contentDescription = tvShow.name,
+            modifier = Modifier
+                .height(180.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = tvShow.name,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2
+        )
     }
 }

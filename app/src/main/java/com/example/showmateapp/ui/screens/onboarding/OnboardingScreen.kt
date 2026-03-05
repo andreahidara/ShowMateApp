@@ -1,5 +1,7 @@
 package com.example.showmateapp.ui.screens.onboarding
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,9 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,112 +20,180 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import com.example.showmateapp.ui.theme.*
-
-// Asegúrate de que el modelo GenreItem esté definido
-data class GenreItem(val name: String, val imageUrl: String)
+import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleLight
+import com.example.showmateapp.ui.theme.SurfaceDark
+import com.example.showmateapp.ui.theme.TextGray
 
 @Composable
 fun OnboardingScreen(navController: NavController) {
-    val genres = remember {
-        listOf(
-            GenreItem("Sci-Fi", "https://picsum.photos/id/903/500/500"),
-            GenreItem("Detective", "https://picsum.photos/id/609/500/500"),
-            GenreItem("Comedy", "https://picsum.photos/id/1012/500/500"),
-            GenreItem("Thriller", "https://picsum.photos/id/1024/500/500"),
-            GenreItem("Documentary", "https://picsum.photos/id/1036/500/500"),
-            GenreItem("Animation", "https://picsum.photos/id/1081/500/500"),
-            GenreItem("Fantasy", "https://picsum.photos/id/1043/500/500"),
-            GenreItem("Drama", "https://picsum.photos/id/64/500/500")
-        )
-    }
+    val viewModel: OnboardingViewModel = viewModel()
+    val genres = viewModel.genres
+    val selectedGenres by viewModel.selectedGenres.collectAsState()
 
-    // Esta es la lista que guarda tus selecciones
-    val selectedGenres = remember { mutableStateListOf<String>() }
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp)
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
-        Text("Choose Your Favorites", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("Select at least 3 genres.", color = TextGray, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(24.dp))
+        // Decorative background elements
+        Box(
+            modifier = Modifier
+                .size(300.dp)
+                .offset(x = (-100).dp, y = (-100).dp)
+                .background(PrimaryPurple.copy(alpha = 0.15f), CircleShape)
+        )
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(horizontal = 24.dp)
         ) {
-            items(genres) { genre ->
-                val isSelected = selectedGenres.contains(genre.name)
-                GenreCard(
-                    genre = genre,
-                    isSelected = isSelected,
-                    onClick = {
-                        if (isSelected) selectedGenres.remove(genre.name)
-                        else selectedGenres.add(genre.name)
-                    }
-                )
-            }
-        }
+            Spacer(modifier = Modifier.height(32.dp))
 
-        // --- EL BOTÓN CLAVE ---
-        Button(
-            onClick = {
-                // 1. Convertimos la lista en texto separado por comas
-                val genresString = selectedGenres.joinToString(",")
-
-                // 2. Lo enviamos por la ruta
-                navController.navigate("swipe/$genresString") {
-                    popUpTo("onboarding") { inclusive = true }
+            // Progress bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                repeat(3) { index ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(if (index == 0) PrimaryPurple else Color.White.copy(alpha = 0.1f))
+                    )
                 }
-            },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp).height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-            shape = RoundedCornerShape(16.dp),
-            enabled = selectedGenres.size >= 3 // Solo activa si hay 3 o más
-        ) {
-            Text("Continue", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Text(
+                text = "Tus gustos,\ntu experiencia",
+                color = Color.White,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Black,
+                lineHeight = 42.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Selecciona tus géneros favoritos para que podamos recomendarte las mejores series.",
+                color = TextGray,
+                fontSize = 16.sp,
+                lineHeight = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Genre Grid
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(genres) { genre ->
+                    val isSelected = selectedGenres.contains(genre.id)
+                    GenreCard(
+                        name = genre.name,
+                        isSelected = isSelected,
+                        onClick = { viewModel.toggleGenre(genre.id) }
+                    )
+                }
+            }
+
+            // Bottom Action
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                val canContinue = selectedGenres.isNotEmpty()
+
+                Button(
+                    onClick = {
+                        if (canContinue) {
+                            val genreString = selectedGenres.joinToString(",")
+                            navController.navigate("swipe/$genreString")
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (canContinue) PrimaryPurple else Color.White.copy(alpha = 0.1f)
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = canContinue
+                ) {
+                    Text(
+                        text = if (canContinue) "Continuar" else "Selecciona al menos uno",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (canContinue) Color.White else TextGray
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun GenreCard(genre: GenreItem, isSelected: Boolean, onClick: () -> Unit) {
+fun GenreCard(
+    name: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) PrimaryPurple.copy(alpha = 0.2f) else SurfaceDark,
+        label = "bgColor"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) PrimaryPurple else Color.Transparent,
+        label = "borderColor"
+    )
+
     Box(
         modifier = Modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(20.dp))
-            .background(SurfaceDark)
-            .border(
-                width = if (isSelected) 3.dp else 0.dp,
-                color = if (isSelected) PrimaryPurple else Color.Transparent,
-                shape = RoundedCornerShape(20.dp)
-            )
+            .height(60.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(backgroundColor)
+            .border(2.dp, borderColor, RoundedCornerShape(16.dp))
             .clickable { onClick() }
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        AsyncImage(
-            model = genre.imageUrl,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            alpha = if (isSelected) 1f else 0.5f
-        )
-        Text(
-            text = genre.name,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = name,
+                color = if (isSelected) Color.White else TextGray,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 15.sp
+            )
+            
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = PrimaryPurple,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }

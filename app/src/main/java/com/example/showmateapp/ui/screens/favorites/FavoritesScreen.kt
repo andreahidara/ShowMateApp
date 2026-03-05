@@ -28,8 +28,6 @@ import coil.compose.AsyncImage
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.PrimaryPurple
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun FavoritesScreen(
@@ -69,19 +67,19 @@ fun FavoritesScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(favorites) { movie ->
+                items(favorites) { tvShow ->
                     Box(
                         modifier = Modifier
                             .aspectRatio(2f / 3f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(SurfaceDark)
                             .clickable {
-                                globalNavController.navigate("detail/${movie.id}")
+                                globalNavController.navigate("detail/${tvShow.id}")
                             }
                     ) {
                         AsyncImage(
-                            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${movie.poster_path}",
-                            contentDescription = movie.name,
+                            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${tvShow.poster_path}",
+                            contentDescription = tvShow.name,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -122,7 +120,7 @@ fun EmptyFavoritesState() {
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Marca series y películas para guardarlas aquí",
+            text = "Marca series para guardarlas aquí",
             color = Color.Gray,
             fontSize = 14.sp,
             modifier = Modifier.padding(top = 8.dp)

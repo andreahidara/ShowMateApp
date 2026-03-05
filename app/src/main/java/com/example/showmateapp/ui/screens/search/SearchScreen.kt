@@ -30,8 +30,6 @@ import coil.compose.AsyncImage
 import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.TextGray
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +66,7 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp)),
-            placeholder = { Text("Películas, series, géneros...", color = TextGray) },
+            placeholder = { Text("Series, géneros...", color = TextGray) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -113,19 +111,19 @@ fun SearchScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(searchResults) { movie ->
+                items(searchResults) { tvShow ->
                     Box(
                         modifier = Modifier
                             .aspectRatio(2f / 3f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(SurfaceDark)
                             .clickable {
-                                globalNavController.navigate("detail/${movie.id}")
+                                globalNavController.navigate("detail/${tvShow.id}")
                             }
                     ) {
                         AsyncImage(
-                            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${movie.poster_path}",
-                            contentDescription = movie.name,
+                            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${tvShow.poster_path}",
+                            contentDescription = tvShow.name,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -159,7 +157,7 @@ fun EmptySearchState() {
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = "Busca por título, género o actor",
+            text = "Busca por título o género",
             color = TextGray.copy(alpha = 0.5f),
             fontSize = 14.sp,
             modifier = Modifier.padding(top = 8.dp)

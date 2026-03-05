@@ -15,4 +15,38 @@
     <string name="github">GitHub</string>
     <string name="dont_have_account">Don’t have an account?</string>
     <string name="create_account">Create Account</string>
+    <string name="trending_now">Trending Now</string>
+    <string name="popular">Popular</string>
+    <string name="see_all">See All</string>
+    <string name="play">Play</string>
+    <string name="my_list">My List</string>
+
+    <string name="profile_favorites">Favoritos</string>
+    <string name="profile_time">Tiempo</string>
+    <string name="profile_reviews">Reseñas</string>
+    <string name="profile_general">General</string>
+    <string name="profile_watchlist">Mi Lista de Seguimiento</string>
+    <string name="profile_account_settings">Ajustes de la Cuenta</string>
+    <string name="profile_help_support">Ayuda y Soporte</string>
+    <string name="profile_sign_out">Cerrar Sesión</string>
+    <string name="profile_expert">Cinéfilo Experto</string>
+    <string name="profile_beginner">Cinéfilo Principiante</string>
+
+    <string name="profile_favorites_title">Favorites</string>
+    <string name="profile_recently_watched">Recently Watched</string>
+    <string name="profile_see_all">See all</string>
+
+    <string name="detail_watch_now">Ver Ahora</string>
+    <string name="detail_trailer">Ver Trailer</string>
+    <string name="detail_synopsis">Sinopsis</string>
+    <string name="detail_no_synopsis">Sin sinopsis disponible.</string>
+    <string name="detail_back">Atrás</string>
+    <string name="detail_favorite">Favorito</string>
+    <string name="detail_available_on">Disponible en</string>
+    <string name="detail_like">Me gusta</string>
+    <string name="detail_rate">Tu Valoración</string>
+    <string name="detail_mark_watched">Marcar vista</string>
+    <string name="detail_add_favorites">A favoritos</string>
+    <string name="detail_edit">Editar</string>
+    <string name="detail_top_cast">Reparto principal</string>
 </resources>

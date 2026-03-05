@@ -1,8 +1,8 @@
 package com.example.showmateapp.ui.screens.swipe
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,27 +10,36 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.showmateapp.data.network.Movie
+import com.example.showmateapp.data.network.TvShow
 import com.example.showmateapp.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
 
 @Composable
 fun SwipeScreen(navController: NavController, selectedGenres: String) {
@@ -39,21 +48,40 @@ fun SwipeScreen(navController: NavController, selectedGenres: String) {
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    var ratedCount by remember { mutableIntStateOf(0) }
-    val maxRatings = 5
-
     LaunchedEffect(selectedGenres) {
         viewModel.loadShows(selectedGenres)
     }
+
+    SwipeScreenContent(
+        showsToRate = showsToRate,
+        errorMessage = errorMessage,
+        isLoading = isLoading,
+        onRemoveTopShow = { viewModel.removeTopShow() },
+        onNavigateToHome = {
+            navController.navigate("main") { popUpTo("swipe") { inclusive = true } }
+        }
+    )
+}
+
+@Composable
+fun SwipeScreenContent(
+    showsToRate: List<TvShow>,
+    errorMessage: String?,
+    isLoading: Boolean,
+    onRemoveTopShow: () -> Unit,
+    onNavigateToHome: () -> Unit
+) {
+    var ratedCount by remember { mutableIntStateOf(0) }
+    val maxRatings = 5
 
     if (isLoading) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+                .background(BackgroundDark),
             contentAlignment = Alignment.Center
         ) {
-            androidx.compose.material3.CircularProgressIndicator(color = PrimaryPurple)
+            CircularProgressIndicator(color = PrimaryPurpleLight, modifier = Modifier.size(64.dp))
         }
         return
     }
@@ -62,15 +90,15 @@ fun SwipeScreen(navController: NavController, selectedGenres: String) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+                .background(BackgroundDark),
             contentAlignment = Alignment.Center
         ) {
-            androidx.compose.material3.Text(
-                text = errorMessage!!,
+            Text(
+                text = errorMessage,
                 color = HeartRed,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(32.dp)
             )
         }
         return
@@ -79,106 +107,375 @@ fun SwipeScreen(navController: NavController, selectedGenres: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
+            .background(BackgroundDark)
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        // Professional Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column {
-                Text("Discover Series", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text("Personalized for you", color = TextGray, fontSize = 12.sp)
+                Text(
+                    text = "Discover",
+                    color = Color.White,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-1).sp
+                )
+                Text(
+                    text = "Handpicked for you",
+                    color = TextGray,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal
+                )
             }
-            Text("$ratedCount/$maxRatings", color = PrimaryPurple, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { ratedCount.toFloat() / maxRatings.toFloat() },
+                    modifier = Modifier.size(56.dp),
+                    color = PrimaryPurpleLight,
+                    strokeWidth = 6.dp,
+                    trackColor = Color.White.copy(alpha = 0.1f)
+                )
+                Text(
+                    text = "$ratedCount/$maxRatings",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        LinearProgressIndicator(
-            progress = { ratedCount.toFloat() / maxRatings.toFloat() },
-            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-            color = PrimaryPurple,
-            trackColor = SurfaceDark
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Box(modifier = Modifier.fillMaxWidth().aspectRatio(0.7f), contentAlignment = Alignment.Center) {
+        // Card Stack Area
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
             if (ratedCount >= maxRatings) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("¡Awesome!", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text("We've tailored your feed.", color = TextGray, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { navController.navigate("main") { popUpTo("swipe") { inclusive = true } } },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Go to Home", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
+                SuccessState(onNavigateToHome)
             } else if (showsToRate.isEmpty()) {
-                CircularProgressIndicator(color = PrimaryPurple)
+                Text("No more shows to discover", color = TextGray)
             } else {
-                showsToRate.reversed().forEach { show ->
+                // Show only top 3 for performance and visual clarity
+                val stackLimit = 3
+                val visibleShows = showsToRate.take(stackLimit).reversed()
+                
+                visibleShows.forEachIndexed { index, show ->
+                    val stackIndex = visibleShows.size - 1 - index
                     key(show.id) {
-                        SwipeableCard(show = show, onSwiped = { viewModel.removeTopShow(); ratedCount++ })
+                        SwipeableCard(
+                            show = show,
+                            stackIndex = stackIndex,
+                            onSwiped = { onRemoveTopShow(); ratedCount++ }
+                        )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(40.dp))
 
-        if (ratedCount < maxRatings) {
-            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                IconButton(onClick = { if (showsToRate.isNotEmpty()) { viewModel.removeTopShow(); ratedCount++ } }, modifier = Modifier.size(64.dp).background(SurfaceDark, CircleShape)) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
-                }
-                IconButton(onClick = { if (showsToRate.isNotEmpty()) { viewModel.removeTopShow(); ratedCount++ } }, modifier = Modifier.size(64.dp).background(PrimaryPurple, CircleShape)) {
-                    Icon(Icons.Default.Favorite, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
-                }
+        // Action Buttons
+        if (ratedCount < maxRatings && showsToRate.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 32.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ActionButton(
+                    icon = Icons.Default.Close,
+                    color = Color.White,
+                    backgroundColor = SurfaceDark,
+                    size = 64.dp,
+                    onClick = { onRemoveTopShow(); ratedCount++ }
+                )
+                ActionButton(
+                    icon = Icons.Default.Favorite,
+                    color = Color.White,
+                    backgroundColor = PrimaryPurple,
+                    size = 80.dp,
+                    onClick = { onRemoveTopShow(); ratedCount++ }
+                )
             }
         }
     }
 }
 
 @Composable
-fun SwipeableCard(show: Movie, onSwiped: () -> Unit) {
+fun SuccessState(onNavigateToHome: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(24.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(100.dp),
+            color = PrimaryPurple.copy(alpha = 0.2f),
+            shape = CircleShape
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = PrimaryPurpleLight,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = "¡Perfect Match!",
+            color = Color.White,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "Your feed has been calibrated. Get ready for your next obsession.",
+            color = TextGray,
+            fontSize = 17.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 24.sp
+        )
+        Spacer(modifier = Modifier.height(48.dp))
+        Button(
+            onClick = onNavigateToHome,
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = PrimaryPurple)
+        ) {
+            Text(
+                text = "Continue to Home",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ActionButton(
+    icon: ImageVector,
+    color: Color,
+    backgroundColor: Color,
+    size: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(size)
+            .shadow(16.dp, CircleShape)
+            .background(backgroundColor, CircleShape)
+            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape)
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(size * 0.45f)
+        )
+    }
+}
+
+@Composable
+fun SwipeableCard(
+    show: TvShow,
+    stackIndex: Int,
+    onSwiped: () -> Unit
+) {
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
+    val isTopCard = stackIndex == 0
+
+    // Stack animation properties
+    val scale by animateFloatAsState(targetValue = 1f - (stackIndex * 0.05f), label = "scale")
+    val translateY by animateFloatAsState(targetValue = (stackIndex * -15f), label = "translateY")
+    val alpha by animateFloatAsState(targetValue = 1f - (stackIndex * 0.3f), label = "alpha")
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer { translationX = offsetX.value; rotationZ = offsetX.value / 25f }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragEnd = {
-                        if (offsetX.value.absoluteValue > 400f) {
-                            scope.launch {
-                                offsetX.animateTo(if (offsetX.value > 0) 1500f else -1500f, tween(400))
-                                onSwiped()
-                            }
-                        } else { scope.launch { offsetX.animateTo(0f, tween(400)) } }
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        scope.launch { offsetX.snapTo(offsetX.value + dragAmount.x) }
-                    }
-                )
+            .padding(bottom = 16.dp)
+            .graphicsLayer {
+                translationX = offsetX.value
+                translationY = translateY.dp.toPx()
+                scaleX = scale
+                scaleY = scale
+                rotationZ = offsetX.value / 25f
+                this.alpha = alpha
             }
-            .clip(RoundedCornerShape(24.dp))
+            .pointerInput(Unit) {
+                if (isTopCard) {
+                    detectDragGestures(
+                        onDragEnd = {
+                            if (offsetX.value.absoluteValue > 500f) {
+                                scope.launch {
+                                    offsetX.animateTo(
+                                        if (offsetX.value > 0) 1500f else -1500f,
+                                        tween(350)
+                                    )
+                                    onSwiped()
+                                }
+                            } else {
+                                scope.launch { offsetX.animateTo(0f, spring()) }
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            scope.launch { offsetX.snapTo(offsetX.value + dragAmount.x) }
+                        }
+                    )
+                }
+            }
+            .clip(RoundedCornerShape(32.dp))
             .background(SurfaceDark)
+            .shadow(if (isTopCard) 12.dp else 0.dp, RoundedCornerShape(32.dp))
     ) {
         AsyncImage(
-            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${show.poster_path}",
+            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w780${show.poster_path}",
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f)), startY = 700f)))
-        Text(text = show.name, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomStart).padding(24.dp))
+
+        // Visual Feedback Overlay
+        if (isTopCard) {
+            val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 1f)
+            val overlayColor = if (offsetX.value > 0) PrimaryPurple else HeartRed
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(overlayColor.copy(alpha = swipeAlpha * 0.2f))
+            )
+        }
+
+        // Information Gradient Overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.1f),
+                            Color.Black.copy(alpha = 0.9f)
+                        ),
+                        startY = 500f
+                    )
+                )
+        )
+        
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(28.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    color = PrimaryPurple.copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = "SERIES",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFFFC107),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Top Trend",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = show.name,
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                lineHeight = 38.sp
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = show.overview,
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 15.sp,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 22.sp
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SwipeScreenPreview() {
+    val sampleTvShows = listOf(
+        TvShow(
+            id = 1, 
+            name = "The Mandalorian", 
+            poster_path = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg", 
+            overview = "After the fall of the Galactic Empire, a lone gunfighter makes his way through the outer reaches of the lawless galaxy."
+        ),
+        TvShow(
+            id = 2, 
+            name = "Breaking Bad", 
+            poster_path = "/ggm8fbIlUBYm9XDVp9qUqMvM3S0.jpg", 
+            overview = "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine."
+        ),
+        TvShow(
+            id = 3, 
+            name = "Stranger Things", 
+            poster_path = "/x2LSRm21uTEx8P9uS4NiYszix9b.jpg", 
+            overview = "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl."
+        )
+    )
+    ShowMateAppTheme {
+        SwipeScreenContent(
+            showsToRate = sampleTvShows,
+            errorMessage = null,
+            isLoading = false,
+            onRemoveTopShow = {},
+            onNavigateToHome = {}
+        )
     }
 }
