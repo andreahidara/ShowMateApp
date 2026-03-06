@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.network.TvShow
 import com.example.showmateapp.data.repository.TvShowRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class SearchViewModel : ViewModel() {
-    private val repository = TvShowRepository()
+@HiltViewModel
+class SearchViewModel @Inject constructor(
+    private val repository: TvShowRepository
+) : ViewModel() {
 
     private val _searchResults = MutableStateFlow<List<TvShow>>(emptyList())
     val searchResults: StateFlow<List<TvShow>> = _searchResults
@@ -20,7 +24,7 @@ class SearchViewModel : ViewModel() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
-    fun searchShows(query: String) {
+    fun searchTvShows(query: String) {
         if (query.isBlank()) return
 
         viewModelScope.launch {

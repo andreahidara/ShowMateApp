@@ -2,13 +2,15 @@ package com.example.showmateapp.ui.screens.login
 
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import javax.inject.Inject
 
-class LoginViewModel : ViewModel() {
-
-    // Instancia de Firebase: nuestra conexión directa con la nube
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val auth: FirebaseAuth
+) : ViewModel() {
 
     // Estados de la pantalla (Cargando, Error o Éxito)
     // Usamos StateFlow para que la pantalla "escuche" estos cambios al instante

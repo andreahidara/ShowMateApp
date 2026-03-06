@@ -30,17 +30,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.showmateapp.R
 import com.example.showmateapp.data.network.TvShow
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
-import com.example.showmateapp.ui.theme.ShowMateAppTheme
 import com.example.showmateapp.ui.theme.StarYellow
 import com.example.showmateapp.ui.theme.TextGray
 
@@ -48,7 +46,7 @@ import com.example.showmateapp.ui.theme.TextGray
 fun DetailScreen(
     navController: NavController,
     showId: Int,
-    viewModel: DetailViewModel = viewModel()
+    viewModel: DetailViewModel = hiltViewModel()
 ) {
     val tvShow by viewModel.tvShow.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -97,8 +95,9 @@ fun DetailScreenContent(
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // Hero Poster
         Box(modifier = Modifier.fillMaxWidth().height(550.dp)) {
+            val imageUrl = show.posterPath?.let { "https://image.tmdb.org/t/p/original$it" }
             AsyncImage(
-                model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/original${show.poster_path}",
+                model = imageUrl,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -266,17 +265,10 @@ fun DetailScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = stringResource(R.string.detail_top_cast),
+                            text = "Top Cast",
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = stringResource(R.string.see_all),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = PrimaryPurple,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable { }
                         )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -284,31 +276,29 @@ fun DetailScreenContent(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(end = 24.dp)
                     ) {
-                        items(listOf(
-                            CastMember("Benedict Cumberbatch", "https://image.tmdb.org/t/p/w200/6CH999o9VrTXS799699oTXS7996.jpg"),
-                            CastMember("Martin Freeman", "https://image.tmdb.org/t/p/w200/6CH999o9VrTXS799699oTXS7996.jpg"),
-                            CastMember("Una Stubbs", "https://image.tmdb.org/t/p/w200/6CH999o9VrTXS799699oTXS7996.jpg"),
-                            CastMember("Rupert Graves", "https://image.tmdb.org/t/p/w200/6CH999o9VrTXS799699oTXS7996.jpg")
-                        )) { cast ->
-                            CastItem(cast)
+                        val cast = show.credits?.cast ?: emptyList()
+                        items(cast) { member ->
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(80.dp)
+                            ) {
+                                val castImageUrl = member.profilePath?.let { "https://image.tmdb.org/t/p/w185$it" }
+                                AsyncImage(
+                                    model = castImageUrl,
+                                    contentDescription = member.name,
+                                    modifier = Modifier.size(80.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = member.name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2
+                                )
+                            }
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // "Where to watch" Section (Preserved as requested)
-                    Text(
-                        text = stringResource(R.string.detail_available_on),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        PlatformIcon(color = Color(0xFFE50914), label = "Netflix")
-                        PlatformIcon(color = Color(0xFF113CCF), label = "Disney+")
-                        PlatformIcon(color = Color(0xFF00A8E1), label = "Prime")
                     }
                 }
             }
@@ -316,111 +306,33 @@ fun DetailScreenContent(
     }
 }
 
-data class CastMember(val name: String, val imageUrl: String)
-
-@Composable
-fun CastItem(cast: CastMember) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(80.dp)
-    ) {
-        AsyncImage(
-            model = cast.imageUrl,
-            contentDescription = cast.name,
-            modifier = Modifier
-                .size(70.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.1f)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = cast.name,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            lineHeight = 14.sp
-        )
-    }
-}
-
 @Composable
 fun MatchBadge(percentage: Int) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(60.dp)
-            .drawBehindCircle(percentage)
+    Surface(
+        color = Color(0xFF4CAF50).copy(alpha = 0.2f),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, Color(0xFF4CAF50).copy(alpha = 0.5f))
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "$percentage%",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-            Text(
-                text = "MATCH",
-                color = Color.White.copy(alpha = 0.7f),
-                fontWeight = FontWeight.Bold,
-                fontSize = 8.sp
-            )
-        }
+        Text(
+            text = "$percentage% Match",
+            color = Color(0xFF4CAF50),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+        )
     }
 }
-
-fun Modifier.drawBehindCircle(percentage: Int): Modifier = this.then(
-    Modifier.background(
-        Brush.sweepGradient(
-            0f to Color(0xFF6C63FF),
-            percentage / 100f to Color(0xFF6C63FF),
-            percentage / 100f to Color.Transparent,
-            1f to Color.Transparent
-        ),
-        CircleShape
-    ).padding(2.dp).background(Color(0xFF151522), CircleShape)
-)
 
 @Composable
 fun GenreChipSmall(text: String) {
     Surface(
         color = Color.White.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.padding(vertical = 4.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Text(
             text = text,
             color = Color.White,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.bodySmall
         )
-    }
-}
-
-@Composable
-fun PlatformIcon(color: Color, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            modifier = Modifier.size(64.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = color,
-            shadowElevation = 8.dp
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(text = label.take(1), color = Color.White, fontWeight = FontWeight.Black, fontSize = 28.sp)
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextGray)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DetailScreenPreview() {
-    val sampleTvShow = TvShow(1, "Sherlock", "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg", "A modern update finds the famous sleuth and his doctor partner solving crime in 21st century London.")
-    ShowMateAppTheme {
-        DetailScreenContent(sampleTvShow, false, null, false, {}, {})
     }
 }

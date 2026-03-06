@@ -1,17 +1,26 @@
-package com.example.showmateapp.domain.usecase;
+package com.example.showmateapp.domain.usecase
 
-import com.example.showmateapp.data.repository.FirestoreRepository;
+import com.example.showmateapp.data.network.TvShow
+import com.example.showmateapp.data.repository.FirestoreRepository
+import javax.inject.Inject
 
-// Esta clase es el "puente" entre la pantalla y la base de datos
-class UpdateUserInterestsUseCase (
-        private val firestoreRepository: FirestoreRepository
+class UpdateUserInterestsUseCase @Inject constructor(
+    private val firestoreRepository: FirestoreRepository
 ) {
-    // El operador invoke permite llamar a la clase como si fuera una función
-    // Ejemplo: updateUserInterestsUseCase(userId, genreId)
-    operator fun invoke(userId: String, genreId: String) {
-        if (userId.isNotEmpty() && genreId.isNotEmpty()) {
-            // Asegúrate de que en FirestoreRepository la función se llame exactamente así:
-            firestoreRepository.incrementGenreScore(userId, genreId)
-        }
+    /**
+     * @param tvShow La serie con la que el usuario ha interactuado.
+     * @param isPositive True si es un Like/Favorito, False si es un Dislike/Penalización.
+     */
+    suspend fun execute(tvShow: TvShow, isPositive: Boolean) {
+        val genreIds = tvShow.safeGenreIds.map { it.toString() }
+        val keywordIds = tvShow.keywords?.results?.map { it.id.toString() } ?: emptyList()
+        val actorIds = tvShow.credits?.cast?.map { it.id } ?: emptyList()
+
+        firestoreRepository.updateUserInterests(
+            genres = genreIds,
+            keywords = keywordIds,
+            actors = actorIds,
+            isPositive = isPositive
+        )
     }
 }

@@ -18,18 +18,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.showmateapp.data.network.TvShow
 import com.example.showmateapp.ui.theme.PrimaryPurple
-import com.example.showmateapp.ui.theme.SurfaceDark
-import com.example.showmateapp.ui.theme.TextGray
 
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val trendingShows by viewModel.trendingShows.collectAsState()
     val popularShows by viewModel.popularShows.collectAsState()
@@ -54,11 +52,21 @@ fun HomeScreenContent(
     onTvShowClick: (TvShow) -> Unit
 ) {
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
             CircularProgressIndicator(color = PrimaryPurple)
         }
     } else if (errorMessage != null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
             Text(text = errorMessage, color = Color.Red)
         }
     } else {
@@ -131,8 +139,9 @@ fun FeaturedBanner(tvShow: TvShow, onClick: (TvShow) -> Unit) {
             .height(400.dp)
             .clickable { onClick(tvShow) }
     ) {
+        val imageUrl = tvShow.posterPath?.let { "https://image.tmdb.org/t/p/original$it" }
         AsyncImage(
-            model = "https://image.tmdb.org/t/p/original${tvShow.poster_path}",
+            model = imageUrl,
             contentDescription = "Featured: ${tvShow.name}",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -189,8 +198,9 @@ fun TvShowCard(tvShow: TvShow, onClick: (TvShow) -> Unit) {
             .width(120.dp)
             .clickable { onClick(tvShow) }
     ) {
+        val imageUrl = tvShow.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
         AsyncImage(
-            model = "https://image.tmdb.org/t/p/w500${tvShow.poster_path}",
+            model = imageUrl,
             contentDescription = tvShow.name,
             modifier = Modifier
                 .height(180.dp)

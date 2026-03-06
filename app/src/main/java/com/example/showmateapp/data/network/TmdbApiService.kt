@@ -11,8 +11,16 @@ interface TmdbApiService {
     @GET("tv/{tv_id}")
     suspend fun getTvShowDetails(
         @Header("Authorization") token: String,
-        @Path("tv_id") tvId: Int
+        @Path("tv_id") tvId: Int,
+        @Query("append_to_response") appendToResponse: String? = null
     ): TvShow
+
+    @GET("tv/popular")
+    suspend fun getPopularTvShows(
+        @Header("Authorization") token: String,
+        @Query("language") language: String = "es-ES",
+        @Query("page") page: Int = 1
+    ): TvShowResponse
 
     @GET("discover/tv")
     suspend fun getTvShowsByGenre(

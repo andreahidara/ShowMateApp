@@ -22,6 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -32,7 +33,7 @@ import com.example.showmateapp.ui.theme.PrimaryPurple
 @Composable
 fun FavoritesScreen(
     globalNavController: NavController,
-    viewModel: FavoritesViewModel = viewModel()
+    viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val favorites by viewModel.favorites.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -78,7 +79,7 @@ fun FavoritesScreen(
                             }
                     ) {
                         AsyncImage(
-                            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${tvShow.poster_path}",
+                            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${tvShow.posterPath}",
                             contentDescription = tvShow.name,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop

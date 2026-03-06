@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -37,7 +38,7 @@ import com.example.showmateapp.ui.theme.StarYellow
 @Composable
 fun DiscoverScreen(
     globalNavController: NavController,
-    viewModel: DiscoverViewModel = viewModel()
+    viewModel: DiscoverViewModel = hiltViewModel()
 ) {
     val heroShow by viewModel.heroShow.collectAsState()
     val euphoria by viewModel.euphoriaRecommendations.collectAsState()
@@ -125,7 +126,7 @@ fun DiscoverHeroSection(tvShow: TvShow, onClick: (TvShow) -> Unit) {
             .clickable { onClick(tvShow) }
     ) {
         AsyncImage(
-            model = "https://image.tmdb.org/t/p/original${tvShow.poster_path}",
+            model = "https://image.tmdb.org/t/p/original${tvShow.posterPath}",
             contentDescription = "Hero: ${tvShow.name}",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -218,19 +219,19 @@ fun DiscoverScreenPreview() {
         TvShow(
             id = 1,
             name = "The Mandalorian",
-            poster_path = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg",
+            posterPath = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg",
             overview = "After the fall of the Galactic Empire, a lone gunfighter makes his way through the outer reaches of the lawless galaxy."
         ),
         TvShow(
             id = 2,
             name = "Breaking Bad",
-            poster_path = "/ggm8fbIlUBYm9XDVp9qUqMvM3S0.jpg",
+            posterPath = "/ggm8fbIlUBYm9XDVp9qUqMvM3S0.jpg",
             overview = "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine."
         ),
         TvShow(
             id = 3,
             name = "Stranger Things",
-            poster_path = "/x2LSRm21uTEx8P9uS4NiYszix9b.jpg",
+            posterPath = "/x2LSRm21uTEx8P9uS4NiYszix9b.jpg",
             overview = "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl."
         )
     )
@@ -257,7 +258,7 @@ fun DiscoverHeroSectionPreview() {
     val sampleTvShow = TvShow(
         id = 1,
         name = "The Mandalorian",
-        poster_path = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg",
+        posterPath = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg",
         overview = "After the fall of the Galactic Empire, a lone gunfighter makes his way through the outer reaches of the lawless galaxy."
     )
     ShowMateAppTheme {

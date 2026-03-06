@@ -1,13 +1,16 @@
 package com.example.showmateapp.ui.screens.onboarding
 
 import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
 
 data class Genre(val id: String, val name: String)
 
-class OnboardingViewModel : ViewModel() {
+@HiltViewModel
+class OnboardingViewModel @Inject constructor() : ViewModel() {
     val genres = listOf(
         Genre("10759", "Acción y Aventura"),
         Genre("16", "Animación"),

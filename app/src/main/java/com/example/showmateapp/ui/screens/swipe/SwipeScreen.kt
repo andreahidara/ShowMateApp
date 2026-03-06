@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -43,7 +44,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SwipeScreen(navController: NavController, selectedGenres: String) {
-    val viewModel: SwipeViewModel = viewModel()
+    val viewModel: SwipeViewModel = hiltViewModel()
     val showsToRate by viewModel.shows.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -138,7 +139,7 @@ fun SwipeScreenContent(
 
             Box(contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
-                    progress = { ratedCount.toFloat() / maxRatings.toFloat() },
+                    progress = { ratedCount.DivideSafe(maxRatings) },
                     modifier = Modifier.size(56.dp),
                     color = PrimaryPurpleLight,
                     strokeWidth = 6.dp,
@@ -213,6 +214,9 @@ fun SwipeScreenContent(
         }
     }
 }
+
+// Helper extension for safe division
+fun Int.DivideSafe(divisor: Int): Float = if (divisor == 0) 0f else this.toFloat() / divisor.toFloat()
 
 @Composable
 fun SuccessState(onNavigateToHome: () -> Unit) {
@@ -350,7 +354,7 @@ fun SwipeableCard(
             .shadow(if (isTopCard) 12.dp else 0.dp, RoundedCornerShape(32.dp))
     ) {
         AsyncImage(
-            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w780${show.poster_path}",
+            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w780${show.posterPath}",
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -453,19 +457,19 @@ fun SwipeScreenPreview() {
         TvShow(
             id = 1, 
             name = "The Mandalorian", 
-            poster_path = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg", 
+            posterPath = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg", 
             overview = "After the fall of the Galactic Empire, a lone gunfighter makes his way through the outer reaches of the lawless galaxy."
         ),
         TvShow(
             id = 2, 
             name = "Breaking Bad", 
-            poster_path = "/ggm8fbIlUBYm9XDVp9qUqMvM3S0.jpg", 
+            posterPath = "/ggm8fbIlUBYm9XDVp9qUqMvM3S0.jpg", 
             overview = "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine."
         ),
         TvShow(
             id = 3, 
             name = "Stranger Things", 
-            poster_path = "/x2LSRm21uTEx8P9uS4NiYszix9b.jpg", 
+            posterPath = "/x2LSRm21uTEx8P9uS4NiYszix9b.jpg",
             overview = "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl."
         )
     )

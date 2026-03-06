@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.network.TvShow
 import com.example.showmateapp.data.repository.TvShowRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class DiscoverViewModel : ViewModel() {
-    private val repository = TvShowRepository()
+@HiltViewModel
+class DiscoverViewModel @Inject constructor(
+    private val repository: TvShowRepository
+) : ViewModel() {
 
     private val _heroShow = MutableStateFlow<TvShow?>(null)
     val heroShow: StateFlow<TvShow?> = _heroShow

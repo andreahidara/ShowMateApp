@@ -7,15 +7,19 @@ import com.example.showmateapp.data.repository.TvShowRepository
 import com.example.showmateapp.data.repository.FirestoreRepository
 import com.example.showmateapp.domain.usecase.UpdateUserInterestsUseCase
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class DetailViewModel : ViewModel() {
-    private val tvShowRepository = TvShowRepository()
-    private val firestoreRepository = FirestoreRepository()
-    private val updateUserInterestsUseCase = UpdateUserInterestsUseCase(firestoreRepository)
-    private val auth = FirebaseAuth.getInstance()
+@HiltViewModel
+class DetailViewModel @Inject constructor(
+    private val tvShowRepository: TvShowRepository,
+    private val firestoreRepository: FirestoreRepository,
+    private val updateUserInterestsUseCase: UpdateUserInterestsUseCase,
+    private val auth: FirebaseAuth
+) : ViewModel() {
 
     private val _tvShow = MutableStateFlow<TvShow?>(null)
     val tvShow: StateFlow<TvShow?> = _tvShow
@@ -46,22 +50,27 @@ class DetailViewModel : ViewModel() {
     }
 
     private suspend fun checkIfFavorite(showId: Int) {
-        val favorites = firestoreRepository.getFavorites()
-        _isFavorite.value = favorites.any { it.id == showId }
+        try {
+            val favorites = firestoreRepository.getFavorites()
+            _isFavorite.value = favorites.any { it.id == showId }
+        } catch (e: Exception) {
+            _isFavorite.value = false
+        }
     }
 
     fun toggleFavorite() {
         val currentShow = _tvShow.value ?: return
-        val userId = auth.currentUser?.uid ?: return
 
         viewModelScope.launch {
-            val isNowFav = firestoreRepository.toggleFavorite(currentShow)
-            _isFavorite.value = isNowFav
+            try {
+                val isNowFav = firestoreRepository.toggleFavorite(currentShow)
+                _isFavorite.value = isNowFav
 
-            if (isNowFav) {
-                currentShow.genre_ids?.forEach { genreId ->
-                    updateUserInterestsUseCase(userId, genreId.toString())
+                if (isNowFav) {
+                    updateUserInterestsUseCase.execute(currentShow, true)
                 }
+            } catch (e: Exception) {
+                // Handle error
             }
         }
     }

@@ -40,6 +40,10 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
     var notificationsEnabled by remember { mutableStateOf(true) }
     var isDarkMode by remember { mutableStateOf(true) }
     
+    // Nuevas funcionalidades de CTO
+    var autoplayVideo by remember { mutableStateOf(false) }
+    var privateMode by remember { mutableStateOf(false) }
+    
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -135,6 +139,33 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                         onCheckedChange = { 
                             notificationsEnabled = it
                             showFeedback(if (it) "Notificaciones activadas" else "Notificaciones desactivadas")
+                        }
+                    )
+                }
+            }
+
+            // Nueva sección añadida para cumplir los requerimientos técnicos
+            item {
+                SettingsSection(title = "Reproducción y Privacidad") {
+                    SettingsItemSwitch(
+                        title = "Autoplay de Tráilers (Solo Wi-Fi)",
+                        subtitle = "Reproduce sin sonido por defecto",
+                        iconRes = R.drawable.ic_lock, // Resuelto el error usando un icono existente como fallback
+                        checked = autoplayVideo,
+                        onCheckedChange = { 
+                            autoplayVideo = it
+                            showFeedback(if (it) "Autoplay activado en Wi-Fi" else "Autoplay desactivado")
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsItemSwitch(
+                        title = "Navegación Privada",
+                        subtitle = "Tus vistas no afectarán tus recomendaciones",
+                        iconRes = R.drawable.ic_lock,
+                        checked = privateMode,
+                        onCheckedChange = { 
+                            privateMode = it
+                            showFeedback(if (it) "Modo privado activado" else "Modo privado desactivado")
                         }
                     )
                 }

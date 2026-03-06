@@ -41,7 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.showmateapp.R
@@ -54,7 +54,7 @@ import com.example.showmateapp.ui.theme.TextGray
 @Composable
 fun ProfileScreen(
     globalNavController: NavController,
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val userName by viewModel.userEmail.collectAsState()
     val favoritesCount by viewModel.favoritesCount.collectAsState()
