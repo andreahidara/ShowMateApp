@@ -60,7 +60,7 @@ fun PrimaryButton(
             Text(
                 text = text,
                 color = Color.White.copy(alpha = alpha),
-                fontSize = 18.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
             )
         }
