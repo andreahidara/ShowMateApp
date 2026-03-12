@@ -1,5 +1,8 @@
 package com.example.showmateapp.ui.screens.home
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,12 +25,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.showmateapp.data.network.TvShow
+import com.example.showmateapp.data.network.MediaContent
+import com.example.showmateapp.ui.navigation.Screen
+import com.example.showmateapp.ui.components.premium.*
 import com.example.showmateapp.ui.theme.PrimaryPurple
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val trendingShows by viewModel.trendingShows.collectAsState()
@@ -39,36 +48,29 @@ fun HomeScreen(
         popularShows = popularShows,
         isLoading = isLoading,
         errorMessage = errorMessage,
-        onTvShowClick = { tvShow -> navigateToDetail(navController, tvShow) }
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        onMediaClick = { media -> navigateToDetail(navController, media) },
+        onRetry = { viewModel.loadData() }
     )
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreenContent(
-    trendingShows: List<TvShow>,
-    popularShows: List<TvShow>,
+    trendingShows: List<MediaContent>,
+    popularShows: List<MediaContent>,
     isLoading: Boolean,
     errorMessage: String?,
-    onTvShowClick: (TvShow) -> Unit
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onMediaClick: (MediaContent) -> Unit,
+    onRetry: () -> Unit
 ) {
     if (isLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = PrimaryPurple)
-        }
+        PulseLoader()
     } else if (errorMessage != null) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = errorMessage, color = Color.Red)
-        }
+        ErrorView(message = errorMessage, onRetry = onRetry)
     } else {
         LazyColumn(
             modifier = Modifier
@@ -89,26 +91,35 @@ fun HomeScreenContent(
             // Featured Section (First Trending Show)
             if (trendingShows.isNotEmpty()) {
                 item {
-                    FeaturedBanner(trendingShows.first()) { tvShow ->
-                        onTvShowClick(tvShow)
-                    }
+                    FeaturedBanner(
+                        media = trendingShows.first(),
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        onClick = { media -> onMediaClick(media) }
+                    )
                 }
             }
 
             // Trending Row
             item {
-                SectionHeader("Tendencias")
-                SeriesRow(trendingShows) { tvShow ->
-                    onTvShowClick(tvShow)
-                }
+                ShowSection(
+                    title = "Tendencias Ahora",
+                    items = trendingShows,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    onItemClick = onMediaClick
+                )
             }
 
             // Popular Row
             item {
-                SectionHeader("Populares")
-                SeriesRow(popularShows) { tvShow ->
-                    onTvShowClick(tvShow)
-                }
+                ShowSection(
+                    title = "Populares",
+                    items = popularShows,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    onItemClick = onMediaClick
+                )
             }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -116,36 +127,40 @@ fun HomeScreenContent(
     }
 }
 
-private fun navigateToDetail(navController: NavController, tvShow: TvShow) {
-    navController.navigate("detail/${tvShow.id}")
+private fun navigateToDetail(navController: NavController, media: MediaContent) {
+    navController.navigate(Screen.Detail(media.id))
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        color = Color.White,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(16.dp)
-    )
-}
-
-@Composable
-fun FeaturedBanner(tvShow: TvShow, onClick: (TvShow) -> Unit) {
+fun FeaturedBanner(
+    media: MediaContent,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onClick: (MediaContent) -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(400.dp)
-            .clickable { onClick(tvShow) }
+            .clickable { onClick(media) }
     ) {
-        val imageUrl = tvShow.posterPath?.let { "https://image.tmdb.org/t/p/original$it" }
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = "Featured: ${tvShow.name}",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        val imageUrl = media.posterPath?.let { "https://image.tmdb.org/t/p/original$it" }
+        
+        with(sharedTransitionScope) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Featured: ${media.name}",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .sharedElement(
+                        state = rememberSharedContentState(key = "image-${media.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    ),
+                contentScale = ContentScale.Crop
+            )
+        }
+        
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -156,20 +171,29 @@ fun FeaturedBanner(tvShow: TvShow, onClick: (TvShow) -> Unit) {
                     )
                 )
         )
+
+        if (media.affinityScore > 0f) {
+            MatchBadge(
+                affinityScore = media.affinityScore,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            )
+        }
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(16.dp)
         ) {
             Text(
-                text = tvShow.name,
+                text = media.name,
                 color = Color.White,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { onClick(tvShow) },
+                onClick = { onClick(media) },
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -179,42 +203,3 @@ fun FeaturedBanner(tvShow: TvShow, onClick: (TvShow) -> Unit) {
     }
 }
 
-@Composable
-fun SeriesRow(shows: List<TvShow>, onTvShowClick: (TvShow) -> Unit) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(shows) { tvShow ->
-            TvShowCard(tvShow = tvShow, onClick = onTvShowClick)
-        }
-    }
-}
-
-@Composable
-fun TvShowCard(tvShow: TvShow, onClick: (TvShow) -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(120.dp)
-            .clickable { onClick(tvShow) }
-    ) {
-        val imageUrl = tvShow.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = tvShow.name,
-            modifier = Modifier
-                .height(180.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = tvShow.name,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 2
-        )
-    }
-}

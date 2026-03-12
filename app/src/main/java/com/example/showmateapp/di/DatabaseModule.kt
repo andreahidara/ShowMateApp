@@ -3,7 +3,7 @@ package com.example.showmateapp.di
 import android.content.Context
 import androidx.room.Room
 import com.example.showmateapp.data.local.AppDatabase
-import com.example.showmateapp.data.local.TvShowDao
+import com.example.showmateapp.data.local.ShowDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,12 +22,12 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "showmate_database"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
     @Singleton
-    fun provideTvShowDao(appDatabase: AppDatabase): TvShowDao {
-        return appDatabase.tvShowDao()
+    fun provideShowDao(appDatabase: AppDatabase): ShowDao {
+        return appDatabase.showDao()
     }
 }

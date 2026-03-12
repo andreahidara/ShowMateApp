@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.showmateapp.R
+import com.example.showmateapp.ui.components.premium.PrimaryButton
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.ShowMateAppTheme
@@ -188,20 +189,14 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                         .padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Button(
+                    PrimaryButton(
+                        text = "Cerrar Sesión",
                         onClick = { showFeedback("Sesión cerrada correctamente") },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = HeartRed.copy(alpha = 0.15f),
-                            contentColor = HeartRed
-                        ),
-                        shape = RoundedCornerShape(12.dp),
+                        colorOverride = HeartRed,
                         modifier = Modifier
                             .widthIn(max = 320.dp)
                             .fillMaxWidth()
-                            .height(56.dp)
-                    ) {
-                        Text("Cerrar Sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
+                    )
                 }
             }
         }

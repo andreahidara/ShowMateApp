@@ -48,5 +48,7 @@
     <string name="detail_mark_watched">Marcar vista</string>
     <string name="detail_add_favorites">A favoritos</string>
     <string name="detail_edit">Editar</string>
+    <string name="detail_remove_favorites">Quitar de favoritos</string>
+    <string name="detail_watched">Vista</string>
     <string name="detail_top_cast">Reparto principal</string>
 </resources>

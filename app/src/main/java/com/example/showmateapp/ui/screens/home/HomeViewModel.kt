@@ -2,25 +2,27 @@ package com.example.showmateapp.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.showmateapp.data.network.TvShow
-import com.example.showmateapp.data.repository.TvShowRepository
+import com.example.showmateapp.data.network.MediaContent
+import com.example.showmateapp.data.repository.ShowRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.showmateapp.domain.usecase.GetRecommendationsUseCase
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: TvShowRepository
+    private val repository: ShowRepository,
+    private val getRecommendationsUseCase: GetRecommendationsUseCase
 ) : ViewModel() {
 
-    private val _trendingShows = MutableStateFlow<List<TvShow>>(emptyList())
-    val trendingShows: StateFlow<List<TvShow>> = _trendingShows.asStateFlow()
+    private val _trendingShows = MutableStateFlow<List<MediaContent>>(emptyList())
+    val trendingShows: StateFlow<List<MediaContent>> = _trendingShows.asStateFlow()
 
-    private val _popularShows = MutableStateFlow<List<TvShow>>(emptyList())
-    val popularShows: StateFlow<List<TvShow>> = _popularShows.asStateFlow()
+    private val _popularShows = MutableStateFlow<List<MediaContent>>(emptyList())
+    val popularShows: StateFlow<List<MediaContent>> = _popularShows.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -37,8 +39,10 @@ class HomeViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                _trendingShows.value = repository.getTrendingTvShows()
-                _popularShows.value = repository.getPopularTvShows()
+                val trending = repository.getTrendingShows()
+                val popular = repository.getPopularShows()
+                _trendingShows.value = getRecommendationsUseCase.scoreShows(trending)
+                _popularShows.value = getRecommendationsUseCase.scoreShows(popular)
             } catch (e: Exception) {
                 _errorMessage.value = "Error al cargar los datos"
             } finally {

@@ -29,6 +29,8 @@ class ShowMateApp : Application(), Configuration.Provider {
     }
 
     private fun setupWorkManager() {
+        // TODO: The DailyPicksWorker class doesn't exist yet, commenting out to fix build.
+        /*
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.UNMETERED) // Only Wi-Fi
             .setRequiresCharging(true) // Only when charging
@@ -45,5 +47,6 @@ class ShowMateApp : Application(), Configuration.Provider {
             ExistingPeriodicWorkPolicy.KEEP,
             dailyPicksRequest
         )
+        */
     }
 }

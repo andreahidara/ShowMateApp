@@ -21,3 +21,9 @@ val TextGray = Color(0xFFA0A0B0)
 // Semánticos (Errores, Likes, etc)
 val HeartRed = Color(0xFFFF4B4B)
 val StarYellow = Color(0xFFFFC107)
+
+// Premium gradients e Inputs
+val GradientPurpleStart = Color(0xFF7B2CBF)
+val GradientPurpleEnd = Color(0xFF3C096C)
+val SurfaceVariantDark = Color(0xFF2A2A3D) // Para campos de texto
+val InputBackground = Color(0xFF1A1A2E)

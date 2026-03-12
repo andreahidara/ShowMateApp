@@ -1,5 +1,8 @@
 package com.example.showmateapp.ui.screens.main
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -16,8 +19,13 @@ import com.example.showmateapp.ui.screens.home.HomeScreen
 import com.example.showmateapp.ui.screens.profile.ProfileScreen
 import com.example.showmateapp.ui.screens.search.SearchScreen
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun MainScreen(globalNavController: NavController) {
+fun MainScreen(
+    globalNavController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val bottomNavController = rememberNavController()
 
     Scaffold(
@@ -33,16 +41,32 @@ fun MainScreen(globalNavController: NavController) {
             modifier = Modifier.padding(paddingValues)
         ) {
             composable("home") { 
-                HomeScreen(navController = globalNavController) 
+                HomeScreen(
+                    navController = globalNavController,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                ) 
             }
             composable("search") { 
-                SearchScreen(globalNavController = globalNavController) 
+                SearchScreen(
+                    globalNavController = globalNavController,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                ) 
             }
             composable("discover") { 
-                DiscoverScreen(globalNavController = globalNavController) 
+                DiscoverScreen(
+                    globalNavController = globalNavController,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                ) 
             }
             composable("favorites") { 
-                FavoritesScreen(globalNavController = globalNavController) 
+                FavoritesScreen(
+                    globalNavController = globalNavController,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                ) 
             }
             composable("profile") { 
                 ProfileScreen(globalNavController = globalNavController) 

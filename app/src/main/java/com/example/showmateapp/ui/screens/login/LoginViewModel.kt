@@ -1,52 +1,64 @@
 package com.example.showmateapp.ui.screens.login
 
 import androidx.lifecycle.ViewModel
-import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewModelScope
+import com.example.showmateapp.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val auth: FirebaseAuth
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    // Estados de la pantalla (Cargando, Error o Éxito)
-    // Usamos StateFlow para que la pantalla "escuche" estos cambios al instante
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    fun onEmailChanged(email: String) {
+        _uiState.value = _uiState.value.copy(email = email, error = null)
+    }
 
-    private val _isLoginSuccessful = MutableStateFlow(false)
-    val isLoginSuccessful: StateFlow<Boolean> = _isLoginSuccessful
+    fun onPasswordChanged(password: String) {
+        _uiState.value = _uiState.value.copy(password = password, error = null)
+    }
 
-    // Función que llamaremos al pulsar el botón "Sign In"
-    fun signIn(email: String, pass: String) {
-        // 1. Comprobamos que no estén vacíos
-        if (email.isBlank() || pass.isBlank()) {
-            _errorMessage.value = "Please fill in all fields."
+    fun togglePasswordVisibility() {
+        _uiState.value = _uiState.value.copy(
+            isPasswordVisible = !_uiState.value.isPasswordVisible
+        )
+    }
+
+    fun onLoginClick() {
+        val email = _uiState.value.email
+        val password = _uiState.value.password
+
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "Completa todos los campos")
             return
         }
 
-        // 2. Empezamos a cargar y limpiamos errores anteriores
-        _isLoading.value = true
-        _errorMessage.value = null
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _uiState.value = _uiState.value.copy(error = "Formato de correo inválido")
+            return
+        }
 
-        // 3. Enviamos los datos a Firebase
-        auth.signInWithEmailAndPassword(email, pass)
-            .addOnCompleteListener { task ->
-                _isLoading.value = false // Terminamos de cargar
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-                if (task.isSuccessful) {
-                    // ¡Login correcto!
-                    _isLoginSuccessful.value = true
-                } else {
-                    // Algo falló (contraseña mal, correo no existe...)
-                    _errorMessage.value = task.exception?.localizedMessage ?: "Login failed."
-                }
+            val result = authRepository.login(email, password)
+
+            if (result.isSuccess) {
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = result.exceptionOrNull()?.message ?: "Error desconocido"
+                )
             }
+        }
     }
 }

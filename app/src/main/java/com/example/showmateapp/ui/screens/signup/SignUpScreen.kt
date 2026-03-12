@@ -1,10 +1,11 @@
-package com.example.showmateapp.ui.screens.login
+package com.example.showmateapp.ui.screens.signup
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,18 +25,20 @@ import com.example.showmateapp.ui.components.premium.PrimaryButton
 import com.example.showmateapp.ui.components.premium.PrimaryTextField
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.PrimaryPurpleLight
+import com.example.showmateapp.ui.theme.TextGray
 
 @Composable
-fun LoginScreen(
+fun SignUpScreen(
     navController: NavController,
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: SignUpViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Si el login es exitoso, navegamos a home y limpiamos el login de la pila
+    // Este bloque detecta cuando el registro ha funcionado para saltar de pantalla
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
             navController.navigate(Screen.Main) {
+                popUpTo<Screen.SignUp> { inclusive = true }
                 popUpTo<Screen.Login> { inclusive = true }
             }
         }
@@ -52,17 +55,29 @@ fun LoginScreen(
             Image(
                 painter = painterResource(id = R.drawable.logosm),
                 contentDescription = "ShowMate Logo",
-                modifier = Modifier.size(120.dp).padding(bottom = 16.dp)
+                modifier = Modifier.size(100.dp).padding(bottom = 16.dp)
             )
 
             Text(
-                text = "Bienvenido de nuevo",
+                text = "Crea tu cuenta",
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            // Campo Nombre de Usuario
+            PrimaryTextField(
+                value = state.username,
+                onValueChange = { viewModel.onUsernameChanged(it) },
+                label = "Nombre de usuario",
+                leadingIcon = Icons.Default.Person,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Campo Email
             PrimaryTextField(
                 value = state.email,
                 onValueChange = { viewModel.onEmailChanged(it) },
@@ -71,47 +86,66 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Campo Contraseña
             PrimaryTextField(
                 value = state.password,
                 onValueChange = { viewModel.onPasswordChanged(it) },
                 label = "Contraseña",
                 leadingIcon = Icons.Default.Lock,
-                visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    IconButton(onClick = { viewModel.togglePasswordVisibility() }) {
-                        Icon(
-                            painter = painterResource(
-                                id = if (state.isPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
-                            ),
-                            contentDescription = if (state.isPasswordVisible) "Ocultar Contraseña" else "Mostrar Contraseña",
-                            tint = Color.White.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
-                        )
+                    val iconText = if (state.isPasswordVisible) "Ocultar" else "Ver"
+                    TextButton(onClick = { viewModel.togglePasswordVisibility() }) {
+                        Text(iconText, color = TextGray, fontSize = 12.sp)
                     }
                 },
+                visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Campo Confirmar Contraseña
+            PrimaryTextField(
+                value = state.confirmPassword,
+                onValueChange = { viewModel.onConfirmPasswordChanged(it) },
+                label = "Confirmar Contraseña",
+                leadingIcon = Icons.Default.Lock,
+                trailingIcon = {
+                    val iconText = if (state.isConfirmPasswordVisible) "Ocultar" else "Ver"
+                    TextButton(onClick = { viewModel.toggleConfirmPasswordVisibility() }) {
+                        Text(iconText, color = TextGray, fontSize = 12.sp)
+                    }
+                },
+                visualTransformation = if (state.isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Mostrar error si existe
             state.error?.let {
-                Text(it, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
+                Text(
+                    text = it,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             PrimaryButton(
-                text = "Iniciar Sesión",
-                onClick = { viewModel.onLoginClick() },
+                text = "Registrarse",
+                onClick = { viewModel.onSignUpClick() },
                 isLoading = state.isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
             TextButton(
-                onClick = { navController.navigate(Screen.SignUp) },
+                onClick = { navController.popBackStack() },
                 modifier = Modifier.padding(top = 16.dp)
             ) {
-                Text("¿No tienes cuenta? Regístrate", color = PrimaryPurpleLight)
+                Text("¿Ya tienes cuenta? Inicia sesión", color = PrimaryPurpleLight)
             }
         }
     }

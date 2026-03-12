@@ -1,5 +1,8 @@
 package com.example.showmateapp.ui.screens.favorites
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,17 +25,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import com.example.showmateapp.data.network.MediaContent
+import com.example.showmateapp.ui.components.premium.*
+import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.PrimaryPurple
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun FavoritesScreen(
     globalNavController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val favorites by viewModel.favorites.collectAsState()
@@ -57,9 +66,7 @@ fun FavoritesScreen(
         )
 
         if (isLoading) {
-             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PrimaryPurple)
-            }
+            PulseLoader()
         } else if (favorites.isEmpty()) {
             EmptyFavoritesState()
         } else {
@@ -68,21 +75,13 @@ fun FavoritesScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(favorites) { tvShow ->
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(2f / 3f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SurfaceDark)
-                            .clickable {
-                                globalNavController.navigate("detail/${tvShow.id}")
-                            }
-                    ) {
-                        AsyncImage(
-                            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w500${tvShow.posterPath}",
-                            contentDescription = tvShow.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                items(favorites, key = { it.id }) { media ->
+                    Box {
+                        ShowCard(
+                            media = media,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onClick = { globalNavController.navigate(Screen.Detail(media.id)) }
                         )
                         Icon(
                             imageVector = Icons.Default.Favorite,

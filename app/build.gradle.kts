@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.hilt)
     kotlin("kapt")
     id("kotlin-parcelize")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 val localProperties = Properties()
@@ -69,6 +70,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
     
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
@@ -77,6 +79,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.messaging)
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
@@ -90,9 +93,10 @@ dependencies {
     // WorkManager
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
-    kapt(libs.hilt.compiler.androidx)
+    kapt(libs.androidx.hilt.compiler)
 
     testImplementation(libs.junit)
+    testImplementation("org.mockito:mockito-core:5.11.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

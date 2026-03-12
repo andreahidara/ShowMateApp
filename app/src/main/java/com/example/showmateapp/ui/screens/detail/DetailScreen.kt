@@ -20,7 +20,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,72 +44,97 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.showmateapp.R
-import com.example.showmateapp.data.network.TvShow
+import com.example.showmateapp.data.network.MediaContent
+import com.example.showmateapp.ui.components.premium.*
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.StarYellow
 import com.example.showmateapp.ui.theme.TextGray
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun DetailScreen(
     navController: NavController,
     showId: Int,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: DetailViewModel = hiltViewModel()
 ) {
-    val tvShow by viewModel.tvShow.collectAsState()
+    val media by viewModel.media.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
+    val isWatched by viewModel.isWatched.collectAsState()
+    val userRating by viewModel.userRating.collectAsState()
 
     LaunchedEffect(showId) {
         viewModel.loadShowDetails(showId)
     }
 
     DetailScreenContent(
-        tvShow = tvShow,
+        media = media,
         isLoading = isLoading,
         errorMessage = errorMessage,
         isFavorite = isFavorite,
+        isWatched = isWatched,
+        userRating = userRating,
         onBackClick = { navController.popBackStack() },
-        onFavoriteClick = { viewModel.toggleFavorite() }
+        onFavoriteClick = { viewModel.toggleFavorite() },
+        onWatchedClick = { viewModel.toggleWatched() },
+        onRateClick = { viewModel.rateShow(it) },
+        onClearRateClick = { viewModel.clearRating() },
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
     )
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun DetailScreenContent(
-    tvShow: TvShow?,
+    media: MediaContent?,
     isLoading: Boolean,
     errorMessage: String?,
     isFavorite: Boolean,
+    isWatched: Boolean,
+    userRating: Int?,
     onBackClick: () -> Unit,
-    onFavoriteClick: () -> Unit
+    onFavoriteClick: () -> Unit,
+    onWatchedClick: () -> Unit,
+    onRateClick: (Int) -> Unit,
+    onClearRateClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = PrimaryPurple)
-        }
+        PulseLoader()
         return
     }
 
     if (errorMessage != null) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
-            Text(errorMessage, color = HeartRed, fontWeight = FontWeight.Bold)
-        }
+        ErrorView(message = errorMessage, onRetry = { /* Retry logic if needed */ })
         return
     }
 
-    val show = tvShow ?: return
+    val show = media ?: return
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // Hero Poster
         Box(modifier = Modifier.fillMaxWidth().height(550.dp)) {
             val imageUrl = show.posterPath?.let { "https://image.tmdb.org/t/p/original$it" }
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+            
+            with(sharedTransitionScope) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .sharedElement(
+                            state = rememberSharedContentState(key = "image-${show.id}"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+            }
             Box(
                 modifier = Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
@@ -111,18 +144,6 @@ fun DetailScreenContent(
                     )
                 )
             )
-        }
-
-        // Back Action
-        Surface(
-            onClick = onBackClick,
-            shape = CircleShape,
-            color = Color.Black.copy(alpha = 0.3f),
-            modifier = Modifier.statusBarsPadding().padding(16.dp).size(44.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-            }
         }
 
         // Main Content
@@ -145,44 +166,60 @@ fun DetailScreenContent(
                             color = Color.White,
                             modifier = Modifier.weight(1f)
                         )
-                        MatchBadge(percentage = 87)
+                        if (show.affinityScore > 0f) {
+                            MatchBadge(affinityScore = show.affinityScore)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Meta Info
+                    val year = show.firstAirDate?.take(4) ?: "N/A"
+                    val seasons = show.numberOfSeasons?.let { "$it ${if (it == 1) "Season" else "Seasons"}" } ?: "N/A"
+                    val status = show.status ?: "Unknown"
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "2023", style = MaterialTheme.typography.bodyMedium, color = TextGray)
-                        Text(text = " • ", style = MaterialTheme.typography.bodyMedium, color = TextGray)
-                        Text(text = "4 Seasons", style = MaterialTheme.typography.bodyMedium, color = TextGray)
-                        Text(text = " • ", style = MaterialTheme.typography.bodyMedium, color = TextGray)
-                        Text(text = "In Progress", style = MaterialTheme.typography.bodyMedium, color = PrimaryPurple, fontWeight = FontWeight.Bold)
+                        Text(text = year, style = MaterialTheme.typography.titleSmall, color = TextGray)
+                        Text(text = " • ", style = MaterialTheme.typography.titleSmall, color = TextGray)
+                        Text(text = seasons, style = MaterialTheme.typography.titleSmall, color = TextGray)
+                        Text(text = " • ", style = MaterialTheme.typography.titleSmall, color = TextGray)
+                        Text(text = status, style = MaterialTheme.typography.titleSmall, color = PrimaryPurple, fontWeight = FontWeight.Bold)
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Genres
-                    val genres = listOf("Crime", "Drama", "Mystery", "Thriller")
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(genres) { genre -> GenreChipSmall(text = genre) }
+                    val genresList = show.genres?.map { it.name } ?: emptyList()
+                    if (genresList.isNotEmpty()) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(genresList) { genre -> GenreChipSmall(text = genre) }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
 
                     // Primary Actions: Mark as Watched & Add to Favorites
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        val watchedContainerColor = if (isWatched) Color(0xFF4CAF50) else PrimaryPurple
+                        val watchedIcon = Icons.Default.Check
+                        
                         Button(
-                            onClick = { },
+                            onClick = onWatchedClick,
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                            colors = ButtonDefaults.buttonColors(containerColor = watchedContainerColor)
                         ) {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(watchedIcon, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.detail_mark_watched), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                text = if (isWatched) stringResource(R.string.detail_watched) else stringResource(R.string.detail_mark_watched), 
+                                fontWeight = FontWeight.Bold, 
+                                fontSize = 14.sp
+                            )
                         }
 
                         OutlinedButton(
@@ -199,13 +236,19 @@ fun DetailScreenContent(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.detail_add_favorites), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                text = if (isFavorite) stringResource(R.string.detail_remove_favorites) else stringResource(R.string.detail_add_favorites), 
+                                fontWeight = FontWeight.Bold, 
+                                fontSize = 14.sp
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
                     // Synopsis Section
+                    var isSynopsisExpanded by remember { mutableStateOf(false) }
+                    
                     Text(
                         text = stringResource(R.string.detail_synopsis),
                         style = MaterialTheme.typography.titleLarge,
@@ -217,8 +260,24 @@ fun DetailScreenContent(
                         text = show.overview.ifEmpty { stringResource(R.string.detail_no_synopsis) },
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextGray,
-                        lineHeight = 24.sp
+                        lineHeight = 24.sp,
+                        maxLines = if (isSynopsisExpanded) Int.MAX_VALUE else 3,
+                        modifier = Modifier
+                            .animateContentSize(animationSpec = tween(durationMillis = 300))
+                            .clickable { isSynopsisExpanded = !isSynopsisExpanded }
                     )
+                    
+                    if (!isSynopsisExpanded && show.overview.isNotEmpty()) {
+                        Text(
+                            text = "Read more",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = PrimaryPurple,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .clickable { isSynopsisExpanded = true }
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
@@ -239,19 +298,31 @@ fun DetailScreenContent(
                             style = MaterialTheme.typography.bodyMedium,
                             color = PrimaryPurple,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable { }
+                            modifier = Modifier.clickable { onClearRateClick() }
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        repeat(4) {
-                            Icon(Icons.Default.Star, contentDescription = null, tint = StarYellow, modifier = Modifier.size(32.dp))
+                        repeat(5) { index ->
+                            val starIndex = index + 1
+                            val isSelected = (userRating ?: 0) >= starIndex
+                            val isRateableIndex = true // Always allow for now
+                            IconButton(
+                                onClick = { onRateClick(starIndex) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isSelected) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = "Rate $starIndex stars",
+                                    tint = if (isSelected) StarYellow else TextGray,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
                         }
-                        Icon(Icons.Default.StarBorder, contentDescription = null, tint = TextGray, modifier = Modifier.size(32.dp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Rated 4/5 based on your taste profile",
+                        text = if (userRating != null) "Tú puntuación: $userRating/5" else "Aún no has puntuado esta serie",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextGray
                     )
@@ -303,22 +374,18 @@ fun DetailScreenContent(
                 }
             }
         }
-    }
-}
 
-@Composable
-fun MatchBadge(percentage: Int) {
-    Surface(
-        color = Color(0xFF4CAF50).copy(alpha = 0.2f),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, Color(0xFF4CAF50).copy(alpha = 0.5f))
-    ) {
-        Text(
-            text = "$percentage% Match",
-            color = Color(0xFF4CAF50),
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-        )
+        // Back Action (Moved here to stay on top)
+        Surface(
+            onClick = onBackClick,
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.3f),
+            modifier = Modifier.statusBarsPadding().padding(16.dp).size(44.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
+        }
     }
 }
 

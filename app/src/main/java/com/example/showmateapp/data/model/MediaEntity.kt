@@ -2,20 +2,20 @@ package com.example.showmateapp.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.showmateapp.data.network.TvShow
+import com.example.showmateapp.data.network.MediaContent
 
-@Entity(tableName = "tv_shows")
-data class TvShowEntity(
-    @PrimaryKey val id: Int,
+@Entity(tableName = "media_content", primaryKeys = ["id", "category"])
+data class MediaEntity(
+    val id: Int,
     val name: String,
     val overview: String,
     val posterPath: String,
-    val category: String // "popular", "trending", "daily_pick"
+    val category: String // "popular", "trending", "recommended"
 )
 
 // Extension function to map network model to entity
-fun TvShow.toEntity(category: String): TvShowEntity {
-    return TvShowEntity(
+fun MediaContent.toEntity(category: String): MediaEntity {
+    return MediaEntity(
         id = this.id,
         name = this.name,
         overview = this.overview,
@@ -25,8 +25,8 @@ fun TvShow.toEntity(category: String): TvShowEntity {
 }
 
 // Extension function to map entity to network model (used internally in our app)
-fun TvShowEntity.toDomain(): TvShow {
-    return TvShow(
+fun MediaEntity.toDomain(): MediaContent {
+    return MediaContent(
         id = this.id,
         name = this.name,
         overview = this.overview,

@@ -32,48 +32,55 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.showmateapp.ui.navigation.Screen
 import coil.compose.AsyncImage
-import com.example.showmateapp.data.network.TvShow
+import com.example.showmateapp.data.network.MediaContent
+import com.example.showmateapp.ui.components.premium.MatchBadge
 import com.example.showmateapp.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 @Composable
-fun SwipeScreen(navController: NavController, selectedGenres: String) {
+fun SwipeScreen(navController: NavController) {
     val viewModel: SwipeViewModel = hiltViewModel()
     val showsToRate by viewModel.shows.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    LaunchedEffect(selectedGenres) {
-        viewModel.loadShows(selectedGenres)
+    LaunchedEffect(Unit) {
+        viewModel.loadShows()
     }
 
     SwipeScreenContent(
         showsToRate = showsToRate,
         errorMessage = errorMessage,
         isLoading = isLoading,
-        onRemoveTopShow = { viewModel.removeTopShow() },
+        onLikeShow = { viewModel.likeTopShow() },
+        onSkipShow = { viewModel.skipTopShow() },
         onNavigateToHome = {
-            navController.navigate("main") { popUpTo("swipe") { inclusive = true } }
+            navController.navigate(Screen.Main) { 
+                popUpTo<Screen.Swipe> { inclusive = true } 
+            }
         }
     )
 }
 
 @Composable
 fun SwipeScreenContent(
-    showsToRate: List<TvShow>,
+    showsToRate: List<MediaContent>,
     errorMessage: String?,
     isLoading: Boolean,
-    onRemoveTopShow: () -> Unit,
+    onLikeShow: () -> Unit,
+    onSkipShow: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
     var ratedCount by remember { mutableIntStateOf(0) }
-    val maxRatings = 5
+    val maxRatings = 10
 
     if (isLoading) {
         Box(
@@ -176,9 +183,12 @@ fun SwipeScreenContent(
                     val stackIndex = visibleShows.size - 1 - index
                     key(show.id) {
                         SwipeableCard(
-                            show = show,
+                            media = show,
                             stackIndex = stackIndex,
-                            onSwiped = { onRemoveTopShow(); ratedCount++ }
+                            onSwiped = { isLiked ->
+                                if (isLiked) onLikeShow() else onSkipShow()
+                                ratedCount++ 
+                            }
                         )
                     }
                 }
@@ -201,14 +211,14 @@ fun SwipeScreenContent(
                     color = Color.White,
                     backgroundColor = SurfaceDark,
                     size = 64.dp,
-                    onClick = { onRemoveTopShow(); ratedCount++ }
+                    onClick = { onSkipShow(); ratedCount++ }
                 )
                 ActionButton(
                     icon = Icons.Default.Favorite,
                     color = Color.White,
                     backgroundColor = PrimaryPurple,
                     size = 80.dp,
-                    onClick = { onRemoveTopShow(); ratedCount++ }
+                    onClick = { onLikeShow(); ratedCount++ }
                 )
             }
         }
@@ -301,9 +311,9 @@ fun ActionButton(
 
 @Composable
 fun SwipeableCard(
-    show: TvShow,
+    media: MediaContent,
     stackIndex: Int,
-    onSwiped: () -> Unit
+    onSwiped: (Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
@@ -331,12 +341,13 @@ fun SwipeableCard(
                     detectDragGestures(
                         onDragEnd = {
                             if (offsetX.value.absoluteValue > 500f) {
+                                val isLiked = offsetX.value > 0
                                 scope.launch {
                                     offsetX.animateTo(
-                                        if (offsetX.value > 0) 1500f else -1500f,
+                                        if (isLiked) 1500f else -1500f,
                                         tween(350)
                                     )
-                                    onSwiped()
+                                    onSwiped(isLiked)
                                 }
                             } else {
                                 scope.launch { offsetX.animateTo(0f, spring()) }
@@ -354,7 +365,7 @@ fun SwipeableCard(
             .shadow(if (isTopCard) 12.dp else 0.dp, RoundedCornerShape(32.dp))
     ) {
         AsyncImage(
-            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w780${show.posterPath}",
+            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w780${media.posterPath}",
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -368,6 +379,15 @@ fun SwipeableCard(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(overlayColor.copy(alpha = swipeAlpha * 0.2f))
+            )
+        }
+
+        if (media.affinityScore > 0f) {
+            MatchBadge(
+                affinityScore = media.affinityScore,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(24.dp)
             )
         }
 
@@ -429,7 +449,7 @@ fun SwipeableCard(
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                text = show.name,
+                text = media.name,
                 color = Color.White,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -439,7 +459,7 @@ fun SwipeableCard(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = show.overview,
+                text = media.overview,
                 color = Color.White.copy(alpha = 0.8f),
                 fontSize = 15.sp,
                 maxLines = 3,
@@ -453,20 +473,20 @@ fun SwipeableCard(
 @Preview(showBackground = true)
 @Composable
 fun SwipeScreenPreview() {
-    val sampleTvShows = listOf(
-        TvShow(
+    val sampleMediaContent = listOf(
+        MediaContent(
             id = 1, 
             name = "The Mandalorian", 
             posterPath = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg", 
             overview = "After the fall of the Galactic Empire, a lone gunfighter makes his way through the outer reaches of the lawless galaxy."
         ),
-        TvShow(
+        MediaContent(
             id = 2, 
             name = "Breaking Bad", 
             posterPath = "/ggm8fbIlUBYm9XDVp9qUqMvM3S0.jpg", 
             overview = "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine."
         ),
-        TvShow(
+        MediaContent(
             id = 3, 
             name = "Stranger Things", 
             posterPath = "/x2LSRm21uTEx8P9uS4NiYszix9b.jpg",
@@ -475,10 +495,11 @@ fun SwipeScreenPreview() {
     )
     ShowMateAppTheme {
         SwipeScreenContent(
-            showsToRate = sampleTvShows,
+            showsToRate = sampleMediaContent,
             errorMessage = null,
             isLoading = false,
-            onRemoveTopShow = {},
+            onLikeShow = {},
+            onSkipShow = {},
             onNavigateToHome = {}
         )
     }

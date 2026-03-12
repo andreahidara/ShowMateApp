@@ -1,3 +1,4 @@
+# --- ANDROID & KOTLIN ---
 *.iml
 .gradle
 /local.properties
@@ -7,9 +8,28 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
 .externalNativeBuild
 .cxx
-local.properties
+
+# --- BUILD OUTPUT ---
+/build
+/*/build
+/captures
+*.log
+*.txt
+out/
+
+# --- IDEA / INTELIJ ---
+.idea/
+*.iws
+*.ipr
+
+# --- OS SPECIFIC ---
+.DS_Store
+Thumbs.db
+
+# --- SECRETS (IMPORTANTE) ---
+.env
+*.jks
+*.keystore
+google-services.json
