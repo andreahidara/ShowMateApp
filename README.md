@@ -171,18 +171,6 @@ Los tests unitarios cubren el `GetRecommendationsUseCase` y el sistema de pesos.
 
 ---
 
-## 🔮 Próximas versiones
-
-- [ ] Filtrado colaborativo con Firebase ML / Vertex AI
-- [ ] Soporte para películas y documentales
-- [ ] Paginación con Paging 3
-- [ ] Sincronización OAuth con plataformas de streaming
-- [ ] TensorFlow Lite para inferencias offline
-- [ ] Módulo social para compartir listas con amigos
-- [ ] Modo claro completo
-
----
-
 ## 👩‍💻 Autora
 
 **Andrea Hidalgo Arana**  
