@@ -11,11 +11,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.showmateapp.R
@@ -32,7 +30,6 @@ fun LoginScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Si el login es exitoso, navegamos a home y limpiamos el login de la pila
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
             navController.navigate(Screen.Main) {

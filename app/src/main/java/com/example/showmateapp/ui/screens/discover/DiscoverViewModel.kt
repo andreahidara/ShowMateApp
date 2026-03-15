@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 import com.example.showmateapp.domain.usecase.GetRecommendationsUseCase
 
 @HiltViewModel
@@ -56,10 +55,9 @@ class DiscoverViewModel @Inject constructor(
                 val profile = userRepository.getUserProfile()
                 val sortedGenres = profile?.genreScores?.entries?.sortedByDescending { it.value } ?: emptyList()
                 
-                // Default Genres if empty
-                var topGenreId = "18" // Drama
+                var topGenreId = "18"
                 var topName = "Drama"
-                var secondGenreId = "35" // Comedy
+                var secondGenreId = "35"
                 var secondName = "Comedia"
 
                 if (sortedGenres.isNotEmpty()) {
@@ -78,16 +76,12 @@ class DiscoverViewModel @Inject constructor(
                 val query1 = repository.getShowsByGenres(topGenreId)
                 val query2 = repository.getShowsByGenres(secondGenreId)
 
-                // Sort purely randomly for discovery but apply scores
                 _topGenreShows.value = getRecommendationsUseCase.scoreShows(query1.shuffled().take(10))
                 _secondGenreShows.value = getRecommendationsUseCase.scoreShows(query2.shuffled().take(10))
                 
-                // Top Match Recommendation from the algorithm
-                // Top Match Recommendation from the algorithm
                 val recommendations = getRecommendationsUseCase.execute()
                 _heroShow.value = recommendations.firstOrNull() ?: query1.randomOrNull() 
 
-                // Context-Aware "Because you watched..." Section
                 val likedMedia = profile?.likedMediaIds?.toList() ?: emptyList()
                 val topRatedMedia = profile?.ratings?.filterValues { it >= 4f }?.keys?.mapNotNull { it.toIntOrNull() } ?: emptyList()
                 val candidates = (likedMedia + topRatedMedia).distinct()
@@ -101,8 +95,7 @@ class DiscoverViewModel @Inject constructor(
                         )
                     }
                 }
-            } catch (e: Exception) {
-                // Handled in a later fix
+            } catch (_: Exception) {
             } finally {
                 _isLoading.value = false
             }

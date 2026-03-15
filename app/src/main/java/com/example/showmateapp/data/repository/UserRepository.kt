@@ -102,9 +102,7 @@ class UserRepository @Inject constructor(
         try {
             usersCollection.document(uid).collection("ratings").document(mediaId.toString())
                 .set(mapOf("rating" to rating)).await()
-        } catch (_: Exception) {
-            // Error silently ignored for now
-        }
+        } catch (_: Exception) {}
     }
 
     suspend fun deleteRating(mediaId: Int) {
@@ -123,7 +121,6 @@ class UserRepository @Inject constructor(
             val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
 
             val newGenreScores = profile.genreScores.toMutableMap()
-            // Onboarding genres get a strong base weight
             genres.forEach { id ->
                 newGenreScores[id] = (newGenreScores[id] ?: 0f) + 15f
             }
@@ -179,19 +176,16 @@ class UserRepository @Inject constructor(
                 }
             }
 
-            // Update Dynamic Weights (Genres)
             val newGenreScores = profile.genreScores.toMutableMap()
             genres.forEach { id ->
                 newGenreScores[id] = (newGenreScores[id] ?: 0f) + weightModifier
             }
 
-            // Update Dynamic Weights (Keywords)
             val newKeywordScores = profile.preferredKeywords.toMutableMap()
             keywords.forEach { kw ->
                 newKeywordScores[kw] = (newKeywordScores[kw] ?: 0f) + weightModifier
             }
 
-            // Update Dynamic Weights (Actors)
             val newActorScores = profile.preferredActors.toMutableMap()
             actors.forEach { actorId ->
                 val actorKey = actorId.toString()

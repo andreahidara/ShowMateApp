@@ -25,6 +25,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.example.showmateapp.R
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.components.premium.*
@@ -77,7 +81,6 @@ fun HomeScreenContent(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Header
             item {
                 Text(
                     text = "ShowMate",
@@ -88,7 +91,6 @@ fun HomeScreenContent(
                 )
             }
 
-            // Featured Section (First Trending Show)
             if (trendingShows.isNotEmpty()) {
                 item {
                     FeaturedBanner(
@@ -100,7 +102,6 @@ fun HomeScreenContent(
                 }
             }
 
-            // Trending Row
             item {
                 ShowSection(
                     title = "Tendencias Ahora",
@@ -111,7 +112,6 @@ fun HomeScreenContent(
                 )
             }
 
-            // Popular Row
             item {
                 ShowSection(
                     title = "Populares",
@@ -145,11 +145,14 @@ fun FeaturedBanner(
             .height(400.dp)
             .clickable { onClick(media) }
     ) {
-        val imageUrl = media.posterPath?.let { "https://image.tmdb.org/t/p/original$it" }
+        val imageUrl = media.posterPath?.let { "https://image.tmdb.org/t/p/w780$it" }
         
         with(sharedTransitionScope) {
             AsyncImage(
-                model = imageUrl,
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = "Featured: ${media.name}",
                 modifier = Modifier
                     .fillMaxSize()
@@ -157,6 +160,8 @@ fun FeaturedBanner(
                         state = rememberSharedContentState(key = "image-${media.id}"),
                         animatedVisibilityScope = animatedVisibilityScope
                     ),
+                placeholder = painterResource(R.drawable.ic_logo_placeholder),
+                error = painterResource(R.drawable.ic_logo_placeholder),
                 contentScale = ContentScale.Crop
             )
         }
@@ -202,4 +207,3 @@ fun FeaturedBanner(
         }
     }
 }
-

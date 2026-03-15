@@ -36,6 +36,9 @@ class ProfileViewModel @Inject constructor(
     private val _totalWatchedHours = MutableStateFlow(0)
     val totalWatchedHours: StateFlow<Int> = _totalWatchedHours
 
+    private val _watchedCount = MutableStateFlow(0)
+    val watchedCount: StateFlow<Int> = _watchedCount
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
@@ -58,9 +61,11 @@ class ProfileViewModel @Inject constructor(
 
                 val watched = userRepository.getWatchedShows()
                 _watchedShows.value = watched
+                _watchedCount.value = watched.size
                 
                 val stats = getProfileStatsUseCase.execute(watched)
                 _totalWatchedHours.value = stats.totalWatchedHours
+            } catch (_: Exception) {
             } finally {
                 _isLoading.value = false
             }
@@ -77,8 +82,7 @@ class ProfileViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 userRepository.resetAlgorithmData()
-            } catch (e: Exception) {
-                // Ignore for now
+            } catch (_: Exception) {
             } finally {
                 _isLoading.value = false
                 onComplete()

@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import com.example.showmateapp.R
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.components.premium.*
@@ -111,20 +114,22 @@ fun DetailScreenContent(
     }
 
     if (errorMessage != null) {
-        ErrorView(message = errorMessage, onRetry = { /* Retry logic if needed */ })
+        ErrorView(message = errorMessage, onRetry = {})
         return
     }
 
     val show = media ?: return
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // Hero Poster
         Box(modifier = Modifier.fillMaxWidth().height(550.dp)) {
-            val imageUrl = show.posterPath?.let { "https://image.tmdb.org/t/p/original$it" }
+            val imageUrl = show.posterPath?.let { "https://image.tmdb.org/t/p/w780$it" }
             
             with(sharedTransitionScope) {
                 AsyncImage(
-                    model = imageUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
@@ -132,6 +137,8 @@ fun DetailScreenContent(
                             state = rememberSharedContentState(key = "image-${show.id}"),
                             animatedVisibilityScope = animatedVisibilityScope
                         ),
+                    placeholder = painterResource(R.drawable.ic_logo_placeholder),
+                    error = painterResource(R.drawable.ic_logo_placeholder),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -146,7 +153,6 @@ fun DetailScreenContent(
             )
         }
 
-        // Main Content
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 32.dp)
@@ -154,7 +160,6 @@ fun DetailScreenContent(
             item {
                 Spacer(modifier = Modifier.height(350.dp))
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-                    // Title and Match Info
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -173,7 +178,6 @@ fun DetailScreenContent(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Meta Info
                     val year = show.firstAirDate?.take(4) ?: "N/A"
                     val seasons = show.numberOfSeasons?.let { "$it ${if (it == 1) "Season" else "Seasons"}" } ?: "N/A"
                     val status = show.status ?: "Unknown"
@@ -188,7 +192,6 @@ fun DetailScreenContent(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Genres
                     val genresList = show.genres?.map { it.name } ?: emptyList()
                     if (genresList.isNotEmpty()) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -199,7 +202,6 @@ fun DetailScreenContent(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    // Primary Actions: Mark as Watched & Add to Favorites
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -246,7 +248,6 @@ fun DetailScreenContent(
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // Synopsis Section
                     var isSynopsisExpanded by remember { mutableStateOf(false) }
                     
                     Text(
@@ -281,7 +282,6 @@ fun DetailScreenContent(
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // Your Rating Section
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -306,7 +306,6 @@ fun DetailScreenContent(
                         repeat(5) { index ->
                             val starIndex = index + 1
                             val isSelected = (userRating ?: 0) >= starIndex
-                            val isRateableIndex = true // Always allow for now
                             IconButton(
                                 onClick = { onRateClick(starIndex) },
                                 modifier = Modifier.size(40.dp)
@@ -329,7 +328,6 @@ fun DetailScreenContent(
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // Top Cast Section
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -355,9 +353,14 @@ fun DetailScreenContent(
                             ) {
                                 val castImageUrl = member.profilePath?.let { "https://image.tmdb.org/t/p/w185$it" }
                                 AsyncImage(
-                                    model = castImageUrl,
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(castImageUrl)
+                                        .crossfade(true)
+                                        .build(),
                                     contentDescription = member.name,
                                     modifier = Modifier.size(80.dp).clip(CircleShape),
+                                    placeholder = painterResource(R.drawable.ic_logo_placeholder),
+                                    error = painterResource(R.drawable.ic_logo_placeholder),
                                     contentScale = ContentScale.Crop
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -375,7 +378,6 @@ fun DetailScreenContent(
             }
         }
 
-        // Back Action (Moved here to stay on top)
         Surface(
             onClick = onBackClick,
             shape = CircleShape,

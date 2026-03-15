@@ -21,7 +21,6 @@ interface ShowDao {
     @Query("DELETE FROM media_content WHERE category = :category")
     suspend fun deleteShowsByCategory(category: String)
 
-    // Helper transcation to replace category content
     @androidx.room.Transaction
     suspend fun replaceCategory(category: String, shows: List<MediaEntity>) {
         deleteShowsByCategory(category)

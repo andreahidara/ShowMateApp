@@ -31,12 +31,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.showmateapp.R
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.SurfaceDark
@@ -51,6 +56,7 @@ fun ProfileScreen(
     val favoriteShows by viewModel.favoriteShows.collectAsState()
     val favoritesCount by viewModel.favoritesCount.collectAsState()
     val totalWatchedHours by viewModel.totalWatchedHours.collectAsState()
+    val watchedCount by viewModel.watchedCount.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadProfileData()
@@ -66,7 +72,7 @@ fun ProfileScreen(
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        ProfileStats(favoritesCount, totalWatchedHours)
+        ProfileStats(favoritesCount, totalWatchedHours, watchedCount)
         
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -107,7 +113,6 @@ fun ProfileHeader(userEmail: String) {
             .fillMaxWidth()
             .height(200.dp)
     ) {
-        // Background Gradient
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -129,12 +134,16 @@ fun ProfileHeader(userEmail: String) {
                     .size(100.dp)
                     .clip(CircleShape)
                     .border(2.dp, PrimaryPurple, CircleShape)
+                    .background(SurfaceDark),
+                contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
-                    model = "https://via.placeholder.com/150",
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                val initials = userEmail.take(2).uppercase()
+                Text(
+                    text = initials,
+                    color = PrimaryPurple,
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
             }
             
@@ -151,7 +160,7 @@ fun ProfileHeader(userEmail: String) {
 }
 
 @Composable
-fun ProfileStats(favoritesCount: Int, totalHours: Int) {
+fun ProfileStats(favoritesCount: Int, totalHours: Int, watchedCount: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -160,7 +169,7 @@ fun ProfileStats(favoritesCount: Int, totalHours: Int) {
     ) {
         StatItem(totalHours.toString(), "Horas")
         StatItem(favoritesCount.toString(), "Favoritos")
-        StatItem("15", "Listas")
+        StatItem(watchedCount.toString(), "Vistas")
     }
 }
 
@@ -224,6 +233,7 @@ fun FavoritesSection(
 
 @Composable
 fun FavoriteMiniCard(media: MediaContent, onShowClick: (Int) -> Unit) {
+    val imageUrl = media.posterPath?.let { "https://image.tmdb.org/t/p/w342$it" }
     Card(
         modifier = Modifier
             .width(100.dp)
@@ -232,9 +242,14 @@ fun FavoriteMiniCard(media: MediaContent, onShowClick: (Int) -> Unit) {
         shape = RoundedCornerShape(8.dp)
     ) {
         AsyncImage(
-            model = "https://image.tmdb.org/t/p/w342${media.posterPath}",
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(imageUrl)
+                .crossfade(true)
+                .build(),
             contentDescription = media.name,
             modifier = Modifier.fillMaxSize(),
+            placeholder = painterResource(R.drawable.ic_logo_placeholder),
+            error = painterResource(R.drawable.ic_logo_placeholder),
             contentScale = ContentScale.Crop
         )
     }

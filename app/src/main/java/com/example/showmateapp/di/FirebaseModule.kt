@@ -9,7 +9,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
-@InstallIn(SingletonComponent::class) // Esto hace que las instancias vivan mientras la app esté abierta
+@InstallIn(SingletonComponent::class)
 object FirebaseModule {
 
     @Provides

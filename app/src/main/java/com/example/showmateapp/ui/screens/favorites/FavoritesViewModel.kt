@@ -30,8 +30,7 @@ class FavoritesViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 _favorites.value = userRepository.getFavorites()
-            } catch (e: Exception) {
-                // Ignore for now
+            } catch (_: Exception) {
             } finally {
                 _isLoading.value = false
             }

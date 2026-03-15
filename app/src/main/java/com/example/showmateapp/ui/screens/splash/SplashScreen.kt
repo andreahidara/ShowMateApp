@@ -28,14 +28,12 @@ fun SplashScreen(onTimeout: () -> Unit) {
     val titleAlpha = remember { Animatable(0f) }
     val subtitleAlpha = remember { Animatable(0f) }
     
-    // Offset for entry animation
     val logoOffsetY = remember { Animatable(50f) }
     val textOffsetY = remember { Animatable(30f) }
     
     val scale = remember { Animatable(0.9f) }
 
     LaunchedEffect(key1 = true) {
-        // Parallel animations
         launch { logoAlpha.animateTo(1f, animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)) }
         launch { logoOffsetY.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)) }
         launch { scale.animateTo(1f, animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)) }
@@ -60,7 +58,6 @@ fun SplashScreen(onTimeout: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.scale(scale.value)
             ) {
-                // LOGO
                 Image(
                     painter = painterResource(id = R.drawable.logo),
                     contentDescription = "Logo ShowMate",
@@ -72,7 +69,6 @@ fun SplashScreen(onTimeout: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // TÍTULO
                 Text(
                     text = "ShowMate",
                     color = Color.White,
@@ -85,7 +81,6 @@ fun SplashScreen(onTimeout: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ESLOGAN / SUBTÍTULO
                 Text(
                     text = "PREMIUM SERIES GUIDE",
                     color = PrimaryPurple.copy(alpha = 0.8f),

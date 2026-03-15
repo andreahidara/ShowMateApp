@@ -8,7 +8,6 @@ class GetProfileStatsUseCase @Inject constructor() {
     fun execute(watchedShows: List<MediaContent>): ProfileStats {
         var totalHours = 0
         watchedShows.forEach { show ->
-            // Estimating: 10 episodes per season, 1 hour per episode avg
             val seasons = show.numberOfSeasons ?: 1
             totalHours += (seasons * 10)
         }

@@ -52,11 +52,9 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Fetching trending/popular shows
                 val popular = showRepository.getPopularShows()
                 _trendingShows.value = popular
-            } catch (e: Exception) {
-                // Ignore errors for trending
+            } catch (_: Exception) {
             } finally {
                 _isLoading.value = false
             }
@@ -73,7 +71,6 @@ class SearchViewModel @Inject constructor(
         }
 
         searchJob = viewModelScope.launch {
-            // Debounce delay
             delay(500)
 
             _isLoading.value = true
@@ -133,7 +130,7 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun applyFiltersWithDebounce() {
-        searchMedia("") // Use empty query to trigger discover with filters
+        searchMedia("")
     }
 
     private suspend fun applyFilters() {

@@ -58,7 +58,6 @@ fun OnboardingScreen(
                 modifier = Modifier.padding(vertical = 16.dp)
             )
 
-            // Cuadrícula fluida de géneros
             FlowRow(
                 modifier = Modifier
                     .weight(1f)

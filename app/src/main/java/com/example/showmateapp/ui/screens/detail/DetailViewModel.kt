@@ -103,9 +103,7 @@ class DetailViewModel @Inject constructor(
                     actors = currentShow.credits?.cast?.map { it.id } ?: emptyList(),
                     interactionType = interactionType
                 )
-            } catch (_: Exception) {
-                // Handle error
-            }
+            } catch (_: Exception) {}
         }
     }
 
@@ -126,9 +124,7 @@ class DetailViewModel @Inject constructor(
                         interactionType = UserRepository.InteractionType.Watched
                     )
                 }
-            } catch (_: Exception) {
-                // Handle error
-            }
+            } catch (_: Exception) {}
         }
     }
 

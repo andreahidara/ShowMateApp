@@ -31,40 +31,33 @@ class GetRecommendationsUseCaseTest {
 
     @Test
     fun `execute returns popular shows when user profile is null`() = runBlocking {
-        // Given
         `when`(userRepository.getUserProfile()).thenReturn(null)
         val popularShows = listOf(MediaContent(id = 1, name = "Popular Show"))
         `when`(showRepository.getPopularShows()).thenReturn(popularShows)
 
-        // When
         val result = getRecommendationsUseCase.execute()
 
-        // Then
         assertEquals(popularShows, result)
     }
 
     @Test
     fun `execute returns popular shows when user has no genre scores`() = runBlocking {
-        // Given
         val emptyProfile = UserProfile(userId = "1", genreScores = emptyMap())
         `when`(userRepository.getUserProfile()).thenReturn(emptyProfile)
         val popularShows = listOf(MediaContent(id = 1, name = "Popular Show"))
         `when`(showRepository.getPopularShows()).thenReturn(popularShows)
 
-        // When
         val result = getRecommendationsUseCase.execute()
 
-        // Then
         assertEquals(popularShows, result)
     }
 
     @Test
     fun `test recommendation excludes disliked media`() = runBlocking {
-        // Given
         val userProfile = UserProfile(
             userId = "testUser",
-            genreScores = mapOf("28" to 5f), // Action
-            dislikedMediaIds = listOf(2) // Disliked Show 2
+            genreScores = mapOf("28" to 5f),
+            dislikedMediaIds = listOf(2)
         )
         `when`(userRepository.getUserProfile()).thenReturn(userProfile)
         `when`(userRepository.getWatchedShows()).thenReturn(emptyList())
@@ -76,10 +69,8 @@ class GetRecommendationsUseCaseTest {
         )
         `when`(showRepository.getDetailedRecommendations()).thenReturn(candidates)
 
-        // When
         val result = getRecommendationsUseCase.execute()
 
-        // Then
         assertEquals(2, result.size)
         assertTrue(result.none { it.id == 2 })
     }

@@ -44,7 +44,6 @@ fun BottomNavBar(navController: NavController) {
     )
 
     Box {
-        // Subtle top gradient for the navbar
         Box(
             modifier = Modifier
                 .fillMaxWidth()

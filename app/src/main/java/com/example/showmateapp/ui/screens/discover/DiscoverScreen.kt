@@ -26,17 +26,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.components.premium.*
 import com.example.showmateapp.ui.theme.PrimaryPurple
-import com.example.showmateapp.ui.theme.ShowMateAppTheme
 import com.example.showmateapp.ui.theme.StarYellow
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -264,5 +260,3 @@ fun DiscoverHeroSection(
 private fun navigateToDetail(navController: NavController, media: MediaContent) {
     navController.navigate(Screen.Detail(media.id))
 }
-
-

@@ -29,12 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.showmateapp.ui.navigation.Screen
 import coil.compose.AsyncImage
@@ -122,7 +119,6 @@ fun SwipeScreenContent(
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Professional Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -163,7 +159,6 @@ fun SwipeScreenContent(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Card Stack Area
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -175,7 +170,6 @@ fun SwipeScreenContent(
             } else if (showsToRate.isEmpty()) {
                 Text("No more shows to discover", color = TextGray)
             } else {
-                // Show only top 3 for performance and visual clarity
                 val stackLimit = 3
                 val visibleShows = showsToRate.take(stackLimit).reversed()
                 
@@ -197,7 +191,6 @@ fun SwipeScreenContent(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Action Buttons
         if (ratedCount < maxRatings && showsToRate.isNotEmpty()) {
             Row(
                 modifier = Modifier
@@ -225,7 +218,6 @@ fun SwipeScreenContent(
     }
 }
 
-// Helper extension for safe division
 fun Int.DivideSafe(divisor: Int): Float = if (divisor == 0) 0f else this.toFloat() / divisor.toFloat()
 
 @Composable
@@ -319,7 +311,6 @@ fun SwipeableCard(
     val offsetX = remember { Animatable(0f) }
     val isTopCard = stackIndex == 0
 
-    // Stack animation properties
     val scale by animateFloatAsState(targetValue = 1f - (stackIndex * 0.05f), label = "scale")
     val translateY by animateFloatAsState(targetValue = (stackIndex * -15f), label = "translateY")
     val alpha by animateFloatAsState(targetValue = 1f - (stackIndex * 0.3f), label = "alpha")
@@ -371,7 +362,6 @@ fun SwipeableCard(
             contentScale = ContentScale.Crop
         )
 
-        // Visual Feedback Overlay
         if (isTopCard) {
             val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 1f)
             val overlayColor = if (offsetX.value > 0) PrimaryPurple else HeartRed
@@ -391,7 +381,6 @@ fun SwipeableCard(
             )
         }
 
-        // Information Gradient Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()

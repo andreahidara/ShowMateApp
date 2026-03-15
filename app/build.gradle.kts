@@ -85,12 +85,10 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
     
-    // Room
     implementation(libs.room.runtime)
     kapt(libs.room.compiler)
     implementation(libs.room.ktx)
     
-    // WorkManager
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     kapt(libs.androidx.hilt.compiler)

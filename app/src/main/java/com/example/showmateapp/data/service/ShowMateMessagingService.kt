@@ -24,7 +24,6 @@ class ShowMateMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // Aquí se enviaría el token al servidor en una app real
     }
 
     private fun showNotification(title: String?, message: String?) {
@@ -39,7 +38,7 @@ class ShowMateMessagingService : FirebaseMessagingService() {
 
         val channelId = "showmate_notifications"
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher) // Usando el icono por defecto
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title ?: "ShowMate")
             .setContentText(message)
             .setAutoCancel(true)

@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -34,7 +33,6 @@ fun SignUpScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Este bloque detecta cuando el registro ha funcionado para saltar de pantalla
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
             navController.navigate(Screen.Main) {
@@ -66,7 +64,6 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Campo Nombre de Usuario
             PrimaryTextField(
                 value = state.username,
                 onValueChange = { viewModel.onUsernameChanged(it) },
@@ -77,7 +74,6 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Campo Email
             PrimaryTextField(
                 value = state.email,
                 onValueChange = { viewModel.onEmailChanged(it) },
@@ -88,7 +84,6 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Campo Contraseña
             PrimaryTextField(
                 value = state.password,
                 onValueChange = { viewModel.onPasswordChanged(it) },
@@ -106,7 +101,6 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Campo Confirmar Contraseña
             PrimaryTextField(
                 value = state.confirmPassword,
                 onValueChange = { viewModel.onConfirmPasswordChanged(it) },
@@ -122,7 +116,6 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Mostrar error si existe
             state.error?.let {
                 Text(
                     text = it,

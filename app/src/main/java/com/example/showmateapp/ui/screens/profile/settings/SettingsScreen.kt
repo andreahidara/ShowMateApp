@@ -41,7 +41,6 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
     var notificationsEnabled by remember { mutableStateOf(true) }
     var isDarkMode by remember { mutableStateOf(true) }
     
-    // Nuevas funcionalidades de CTO
     var autoplayVideo by remember { mutableStateOf(false) }
     var privateMode by remember { mutableStateOf(false) }
     
@@ -145,13 +144,12 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                 }
             }
 
-            // Nueva sección añadida para cumplir los requerimientos técnicos
             item {
                 SettingsSection(title = "Reproducción y Privacidad") {
                     SettingsItemSwitch(
                         title = "Autoplay de Tráilers (Solo Wi-Fi)",
                         subtitle = "Reproduce sin sonido por defecto",
-                        iconRes = R.drawable.ic_lock, // Resuelto el error usando un icono existente como fallback
+                        iconRes = R.drawable.ic_lock,
                         checked = autoplayVideo,
                         onCheckedChange = { 
                             autoplayVideo = it
@@ -319,7 +317,7 @@ fun SettingsItemSwitch(
         trailingContent = {
             Switch(
                 checked = checked,
-                onCheckedChange = null, // Handled by toggleable row
+                onCheckedChange = null,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = PrimaryPurple,

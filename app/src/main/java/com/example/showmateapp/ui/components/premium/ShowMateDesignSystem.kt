@@ -12,6 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import coil.request.ImageRequest
+import com.example.showmateapp.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -28,10 +32,6 @@ import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.TextGray
 
-/**
- * A premium TV show card designed for unified use across the app.
- * Supports Shared Element Transitions and high-quality image loading.
- */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ShowCard(
@@ -59,7 +59,10 @@ fun ShowCard(
         ) {
             with(sharedTransitionScope) {
                 AsyncImage(
-                    model = imageUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = media.name,
                     modifier = Modifier
                         .fillMaxSize()
@@ -67,11 +70,12 @@ fun ShowCard(
                             state = rememberSharedContentState(key = "image-${media.id}"),
                             animatedVisibilityScope = animatedVisibilityScope
                         ),
+                    placeholder = painterResource(R.drawable.ic_logo_placeholder),
+                    error = painterResource(R.drawable.ic_logo_placeholder),
                     contentScale = ContentScale.Crop
                 )
             }
             
-            // Subtle gradient overlay for better contrast
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -83,7 +87,6 @@ fun ShowCard(
                     )
             )
 
-            // Dynamic Match Badge
             if (media.affinityScore > 0f) {
                 MatchBadge(
                     affinityScore = media.affinityScore,
@@ -109,21 +112,16 @@ fun ShowCard(
     }
 }
 
-/**
- * Visual indicator for the algorithm's recommendation affinity.
- */
 @Composable
 fun MatchBadge(
     affinityScore: Float,
     modifier: Modifier = Modifier
 ) {
-    // Normalizamos el score (0-10) a un porcentaje (0-100)
     val percentage = (affinityScore * 10).toInt().coerceIn(0, 100)
     
-    // Asignamos un color según la calidad del match
     val matchColor = when {
-        percentage >= 80 -> Color(0xFF4CAF50) // Verde: Muy recomendado
-        percentage >= 50 -> Color(0xFFFFC107) // Amarillo: Recomendado
+        percentage >= 80 -> Color(0xFF4CAF50)
+        percentage >= 50 -> Color(0xFFFFC107)
         else -> Color.LightGray
     }
 
@@ -143,9 +141,6 @@ fun MatchBadge(
     }
 }
 
-/**
- * A reusable horizontal row for displaying a collection of TV shows.
- */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ShowSection(
@@ -181,9 +176,6 @@ fun ShowSection(
     }
 }
 
-/**
- * Premium Loading State with cinematic feel.
- */
 @Composable
 fun PulseLoader(modifier: Modifier = Modifier) {
     Box(
@@ -198,9 +190,6 @@ fun PulseLoader(modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * Premium Error State with retry option.
- */
 @Composable
 fun ErrorView(
     message: String,
