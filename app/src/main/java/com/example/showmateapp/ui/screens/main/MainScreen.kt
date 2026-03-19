@@ -12,6 +12,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.components.BottomNavBar
 import com.example.showmateapp.ui.screens.discover.DiscoverScreen
 import com.example.showmateapp.ui.screens.favorites.FavoritesScreen
@@ -37,38 +38,38 @@ fun MainScreen(
     ) { paddingValues ->
         NavHost(
             navController = bottomNavController,
-            startDestination = "home",
+            startDestination = Screen.Home,
             modifier = Modifier.padding(paddingValues)
         ) {
-            composable("home") { 
+            composable<Screen.Home> { 
                 HomeScreen(
                     navController = globalNavController,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope
                 ) 
             }
-            composable("search") { 
+            composable<Screen.Search> { 
                 SearchScreen(
                     globalNavController = globalNavController,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope
                 ) 
             }
-            composable("discover") { 
+            composable<Screen.Discover> { 
                 DiscoverScreen(
                     globalNavController = globalNavController,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope
                 ) 
             }
-            composable("favorites") { 
+            composable<Screen.Favorites> { 
                 FavoritesScreen(
                     globalNavController = globalNavController,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope
                 ) 
             }
-            composable("profile") { 
+            composable<Screen.Profile> { 
                 ProfileScreen(globalNavController = globalNavController) 
             }
         }

@@ -22,3 +22,10 @@ val GradientPurpleStart = Color(0xFF7B2CBF)
 val GradientPurpleEnd = Color(0xFF3C096C)
 val SurfaceVariantDark = Color(0xFF2A2A3D)
 val InputBackground = Color(0xFF1A1A2E)
+
+// Light theme colors
+val BackgroundLight = Color(0xFFF5F4FF)
+val SurfaceLight = Color(0xFFFFFFFF)
+val SurfaceVariantLight = Color(0xFFEEEDFA)
+val TextDark = Color(0xFF1A1A2E)
+val TextGrayLight = Color(0xFF6B6B80)

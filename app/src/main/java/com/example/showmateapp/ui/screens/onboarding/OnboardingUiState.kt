@@ -19,7 +19,8 @@ data class OnboardingUiState(
         "10768" to "War & Politics",
         "37" to "Western"
     ),
-    val selectedGenres: Set<String> = emptySet(), // Stores ONLY TMDB IDs.
+    val selectedGenres: Set<String> = emptySet(),
+    val genrePosters: Map<String, String?> = emptyMap(), // genreId -> posterPath
     val isLoading: Boolean = false,
     val isComplete: Boolean = false
 )

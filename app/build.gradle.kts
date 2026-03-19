@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     kapt(libs.androidx.hilt.compiler)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
     testImplementation("org.mockito:mockito-core:5.11.0")

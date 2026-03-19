@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
@@ -25,14 +26,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.showmateapp.R
 import com.example.showmateapp.ui.navigation.Screen
 import coil.compose.AsyncImage
 import com.example.showmateapp.data.network.MediaContent
@@ -40,7 +42,6 @@ import com.example.showmateapp.ui.components.premium.MatchBadge
 import com.example.showmateapp.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
-import kotlin.math.roundToInt
 
 @Composable
 fun SwipeScreen(navController: NavController) {
@@ -48,6 +49,7 @@ fun SwipeScreen(navController: NavController) {
     val showsToRate by viewModel.shows.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val ratedCount by viewModel.ratedCount.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadShows()
@@ -57,11 +59,12 @@ fun SwipeScreen(navController: NavController) {
         showsToRate = showsToRate,
         errorMessage = errorMessage,
         isLoading = isLoading,
+        ratedCount = ratedCount,
         onLikeShow = { viewModel.likeTopShow() },
         onSkipShow = { viewModel.skipTopShow() },
         onNavigateToHome = {
-            navController.navigate(Screen.Main) { 
-                popUpTo<Screen.Swipe> { inclusive = true } 
+            navController.navigate(Screen.Main) {
+                popUpTo(Screen.Swipe) { inclusive = true }
             }
         }
     )
@@ -72,11 +75,11 @@ fun SwipeScreenContent(
     showsToRate: List<MediaContent>,
     errorMessage: String?,
     isLoading: Boolean,
+    ratedCount: Int,
     onLikeShow: () -> Unit,
     onSkipShow: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
-    var ratedCount by remember { mutableIntStateOf(0) }
     val maxRatings = 10
 
     if (isLoading) {
@@ -86,7 +89,7 @@ fun SwipeScreenContent(
                 .background(BackgroundDark),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = PrimaryPurpleLight, modifier = Modifier.size(64.dp))
+            CircularProgressIndicator(color = PrimaryPurple, modifier = Modifier.size(64.dp))
         }
         return
     }
@@ -126,32 +129,32 @@ fun SwipeScreenContent(
         ) {
             Column {
                 Text(
-                    text = "Discover",
+                    text = "Para ti",
                     color = Color.White,
                     fontSize = 34.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Black,
                     letterSpacing = (-1).sp
                 )
                 Text(
-                    text = "Handpicked for you",
+                    text = "Desliza para calibrar tus gustos",
                     color = TextGray,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal
+                    fontWeight = FontWeight.Medium
                 )
             }
 
             Box(contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
-                    progress = { ratedCount.DivideSafe(maxRatings) },
+                    progress = { (ratedCount.toFloat() / maxRatings.toFloat()).coerceIn(0f, 1f) },
                     modifier = Modifier.size(56.dp),
-                    color = PrimaryPurpleLight,
+                    color = PrimaryPurple,
                     strokeWidth = 6.dp,
                     trackColor = Color.White.copy(alpha = 0.1f)
                 )
                 Text(
-                    text = "$ratedCount/$maxRatings",
+                    text = "$ratedCount",
                     color = Color.White,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Black
                 )
             }
@@ -168,7 +171,7 @@ fun SwipeScreenContent(
             if (ratedCount >= maxRatings) {
                 SuccessState(onNavigateToHome)
             } else if (showsToRate.isEmpty()) {
-                Text("No more shows to discover", color = TextGray)
+                Text("No hay más series por ahora", color = TextGray)
             } else {
                 val stackLimit = 3
                 val visibleShows = showsToRate.take(stackLimit).reversed()
@@ -180,8 +183,8 @@ fun SwipeScreenContent(
                             media = show,
                             stackIndex = stackIndex,
                             onSwiped = { isLiked ->
+                                // ratedCount is incremented inside likeTopShow/skipTopShow in ViewModel
                                 if (isLiked) onLikeShow() else onSkipShow()
-                                ratedCount++ 
                             }
                         )
                     }
@@ -196,29 +199,37 @@ fun SwipeScreenContent(
                 modifier = Modifier
                     .padding(bottom = 32.dp)
                     .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ActionButton(
-                    icon = Icons.Default.Close,
-                    color = Color.White,
-                    backgroundColor = SurfaceDark,
-                    size = 64.dp,
-                    onClick = { onSkipShow(); ratedCount++ }
-                )
-                ActionButton(
-                    icon = Icons.Default.Favorite,
-                    color = Color.White,
-                    backgroundColor = PrimaryPurple,
-                    size = 80.dp,
-                    onClick = { onLikeShow(); ratedCount++ }
-                )
+                // Botón Descartar (X)
+                IconButton(
+                    onClick = { onSkipShow() },
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+
+                // Botón Like (Corazón)
+                IconButton(
+                    onClick = { onLikeShow() },
+                    modifier = Modifier
+                        .size(80.dp)
+                        .shadow(20.dp, CircleShape, spotColor = PrimaryPurple)
+                        .background(
+                            Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0))),
+                            CircleShape
+                        )
+                ) {
+                    Icon(Icons.Default.Favorite, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
+                }
             }
         }
     }
 }
-
-fun Int.DivideSafe(divisor: Int): Float = if (divisor == 0) 0f else this.toFloat() / divisor.toFloat()
 
 @Composable
 fun SuccessState(onNavigateToHome: () -> Unit) {
@@ -226,23 +237,24 @@ fun SuccessState(onNavigateToHome: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(24.dp)
     ) {
-        Surface(
-            modifier = Modifier.size(100.dp),
-            color = PrimaryPurple.copy(alpha = 0.2f),
-            shape = CircleShape
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(PrimaryPurple.copy(alpha = 0.1f))
+                .border(2.dp, PrimaryPurple.copy(alpha = 0.3f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = PrimaryPurpleLight,
-                    modifier = Modifier.size(48.dp)
-                )
-            }
+            Icon(
+                Icons.Default.Star,
+                contentDescription = null,
+                tint = PrimaryPurple,
+                modifier = Modifier.size(60.dp)
+            )
         }
         Spacer(modifier = Modifier.height(32.dp))
         Text(
-            text = "¡Perfect Match!",
+            text = "¡Todo listo!",
             color = Color.White,
             fontSize = 32.sp,
             fontWeight = FontWeight.Black,
@@ -250,7 +262,7 @@ fun SuccessState(onNavigateToHome: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Your feed has been calibrated. Get ready for your next obsession.",
+            text = "Hemos calibrado tus gustos. Ahora ShowMate es mucho más inteligente para ti.",
             color = TextGray,
             fontSize = 17.sp,
             textAlign = TextAlign.Center,
@@ -259,45 +271,19 @@ fun SuccessState(onNavigateToHome: () -> Unit) {
         Spacer(modifier = Modifier.height(48.dp))
         Button(
             onClick = onNavigateToHome,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = PrimaryPurple)
+                .height(60.dp)
         ) {
             Text(
-                text = "Continue to Home",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
+                text = "Empezar a explorar",
+                color = Color.Black,
+                fontWeight = FontWeight.Black,
                 fontSize = 18.sp
             )
         }
-    }
-}
-
-@Composable
-fun ActionButton(
-    icon: ImageVector,
-    color: Color,
-    backgroundColor: Color,
-    size: androidx.compose.ui.unit.Dp,
-    onClick: () -> Unit
-) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier
-            .size(size)
-            .shadow(16.dp, CircleShape)
-            .background(backgroundColor, CircleShape)
-            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape)
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(size * 0.45f)
-        )
     }
 }
 
@@ -318,7 +304,6 @@ fun SwipeableCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(bottom = 16.dp)
             .graphicsLayer {
                 translationX = offsetX.value
                 translationY = translateY.dp.toPx()
@@ -327,7 +312,8 @@ fun SwipeableCard(
                 rotationZ = offsetX.value / 25f
                 this.alpha = alpha
             }
-            .pointerInput(Unit) {
+            .pointerInput(isTopCard) {
+                // Key = isTopCard so this block restarts when a card becomes/stops being top
                 if (isTopCard) {
                     detectDragGestures(
                         onDragEnd = {
@@ -353,28 +339,31 @@ fun SwipeableCard(
             }
             .clip(RoundedCornerShape(32.dp))
             .background(SurfaceDark)
-            .shadow(if (isTopCard) 12.dp else 0.dp, RoundedCornerShape(32.dp))
+            .shadow(if (isTopCard) 20.dp else 0.dp, RoundedCornerShape(32.dp))
     ) {
         AsyncImage(
-            model = "https://images.weserv.nl/?url=https://image.tmdb.org/t/p/w780${media.posterPath}",
+            model = "https://image.tmdb.org/t/p/w780${media.posterPath}",
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(R.drawable.ic_logo_placeholder)
         )
 
-        if (isTopCard) {
-            val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 1f)
-            val overlayColor = if (offsetX.value > 0) PrimaryPurple else HeartRed
+        // Overlay de color al deslizar
+        if (isTopCard && offsetX.value != 0f) {
+            val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 0.4f)
+            val overlayColor = if (offsetX.value > 0) Color(0xFF4CAF50) else HeartRed
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(overlayColor.copy(alpha = swipeAlpha * 0.2f))
+                    .background(overlayColor.copy(alpha = swipeAlpha))
             )
         }
 
         if (media.affinityScore > 0f) {
             MatchBadge(
-                affinityScore = media.affinityScore,
+                score = media.affinityScore,
+                isAffinity = true,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(24.dp)
@@ -388,10 +377,10 @@ fun SwipeableCard(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.1f),
-                            Color.Black.copy(alpha = 0.9f)
+                            Color.Black.copy(alpha = 0.2f),
+                            Color.Black.copy(alpha = 0.95f)
                         ),
-                        startY = 500f
+                        startY = 400f
                     )
                 )
         )
@@ -401,95 +390,24 @@ fun SwipeableCard(
                 .align(Alignment.BottomStart)
                 .padding(28.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Surface(
-                    color = PrimaryPurple.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = "SERIES",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFFFC107),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Top Trend",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
+            Text(
+                text = media.name,
+                color = Color.White,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Black,
+                lineHeight = 40.sp
+            )
             
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                text = media.name,
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.ExtraBold,
-                lineHeight = 38.sp
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
                 text = media.overview,
-                color = Color.White.copy(alpha = 0.8f),
+                color = Color.White.copy(alpha = 0.7f),
                 fontSize = 15.sp,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 lineHeight = 22.sp
             )
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SwipeScreenPreview() {
-    val sampleMediaContent = listOf(
-        MediaContent(
-            id = 1, 
-            name = "The Mandalorian", 
-            posterPath = "/62XjU7Yic8Msd5S9vXm2q1oZ0hg.jpg", 
-            overview = "After the fall of the Galactic Empire, a lone gunfighter makes his way through the outer reaches of the lawless galaxy."
-        ),
-        MediaContent(
-            id = 2, 
-            name = "Breaking Bad", 
-            posterPath = "/ggm8fbIlUBYm9XDVp9qUqMvM3S0.jpg", 
-            overview = "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine."
-        ),
-        MediaContent(
-            id = 3, 
-            name = "Stranger Things", 
-            posterPath = "/x2LSRm21uTEx8P9uS4NiYszix9b.jpg",
-            overview = "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl."
-        )
-    )
-    ShowMateAppTheme {
-        SwipeScreenContent(
-            showsToRate = sampleMediaContent,
-            errorMessage = null,
-            isLoading = false,
-            onLikeShow = {},
-            onSkipShow = {},
-            onNavigateToHome = {}
-        )
     }
 }

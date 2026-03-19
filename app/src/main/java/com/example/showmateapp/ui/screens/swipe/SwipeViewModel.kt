@@ -8,17 +8,19 @@ import com.example.showmateapp.data.repository.ShowRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 import com.example.showmateapp.domain.usecase.GetRecommendationsUseCase
+import android.util.Log
 
 @HiltViewModel
 class SwipeViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val getRecommendationsUseCase: GetRecommendationsUseCase
 ) : ViewModel() {
-    
+
     private val _shows = MutableStateFlow<List<MediaContent>>(emptyList())
     val shows: StateFlow<List<MediaContent>> = _shows
 
@@ -28,13 +30,18 @@ class SwipeViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    // Persists across tab switches unlike composable remember state
+    private val _ratedCount = MutableStateFlow(0)
+    val ratedCount: StateFlow<Int> = _ratedCount.asStateFlow()
+
     fun likeTopShow() {
         val currentList = _shows.value.toMutableList()
         if (currentList.isNotEmpty()) {
             val show = currentList.removeAt(0)
             _shows.value = currentList
+            _ratedCount.value++
             viewModelScope.launch {
-                userRepository.toggleFavorite(show)
+                userRepository.toggleFavorite(show, setLiked = true)
                 userRepository.trackMediaInteraction(
                     mediaId = show.id,
                     genres = show.safeGenreIds.map { it.toString() },
@@ -51,6 +58,7 @@ class SwipeViewModel @Inject constructor(
         if (currentList.isNotEmpty()) {
             val show = currentList.removeAt(0)
             _shows.value = currentList
+            _ratedCount.value++
             viewModelScope.launch {
                 userRepository.trackMediaInteraction(
                     mediaId = show.id,
@@ -70,7 +78,8 @@ class SwipeViewModel @Inject constructor(
             try {
                 _shows.value = getRecommendationsUseCase.execute()
             } catch (e: Exception) {
-                _errorMessage.value = "Hubo un error cargando las series. Inténtalo de nuevo."
+                Log.e("SwipeViewModel", "Error loading shows", e)
+                _errorMessage.value = "Hubo un error cargando las series: ${e.localizedMessage ?: "Inténtalo de nuevo"}"
             } finally {
                 _isLoading.value = false
             }

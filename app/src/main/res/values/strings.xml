@@ -51,4 +51,8 @@
     <string name="detail_remove_favorites">Quitar de favoritos</string>
     <string name="detail_watched">Vista</string>
     <string name="detail_top_cast">Reparto principal</string>
+
+    <string name="error_unexpected_data">Error inesperado al cargar los datos</string>
+    <string name="error_refresh_data">Error al recargar los datos. Comprueba tu conexión.</string>
+    <string name="error_empty_fields">Completa todos los campos</string>
 </resources>

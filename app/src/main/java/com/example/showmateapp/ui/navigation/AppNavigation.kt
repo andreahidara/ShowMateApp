@@ -11,7 +11,9 @@ import com.example.showmateapp.ui.screens.detail.DetailScreen
 import com.example.showmateapp.ui.screens.login.LoginScreen
 import com.example.showmateapp.ui.screens.main.MainScreen
 import com.example.showmateapp.ui.screens.onboarding.OnboardingScreen
+import com.example.showmateapp.ui.screens.profile.about.AboutScreen
 import com.example.showmateapp.ui.screens.profile.settings.SettingsScreen
+import com.example.showmateapp.ui.screens.stats.StatsScreen
 import com.example.showmateapp.ui.screens.splash.SplashScreen
 import com.example.showmateapp.ui.screens.swipe.SwipeScreen
 import com.example.showmateapp.ui.screens.signup.SignUpScreen
@@ -27,18 +29,34 @@ fun AppNavigation() {
             startDestination = Screen.Splash
         ) {
             composable<Screen.Splash> {
-                SplashScreen(onTimeout = {
-                    navController.navigate(Screen.Login) { 
-                        popUpTo<Screen.Splash> { inclusive = true } 
+                SplashScreen(
+                    onNavigateToMain = {
+                        navController.navigate(Screen.Main) {
+                            popUpTo(Screen.Splash) { inclusive = true }
+                        }
+                    },
+                    onNavigateToLogin = {
+                        navController.navigate(Screen.Login) { 
+                            popUpTo(Screen.Splash) { inclusive = true } 
+                        }
                     }
-                })
+                )
             }
             composable<Screen.Login> { LoginScreen(navController = navController) }
-            composable<Screen.SignUp> { SignUpScreen(navController = navController) }
+            composable<Screen.SignUp> {
+                SignUpScreen(
+                    navController = navController,
+                    onSignUpSuccess = {
+                        navController.navigate(Screen.Onboarding) {
+                            popUpTo(Screen.Login) { inclusive = true }
+                        }
+                    }
+                )
+            }
             composable<Screen.Onboarding> {
                 OnboardingScreen(onFinish = {
                     navController.navigate(Screen.Swipe) { 
-                        popUpTo<Screen.Onboarding> { inclusive = true } 
+                        popUpTo(Screen.Onboarding) { inclusive = true } 
                     }
                 })
             }
@@ -55,12 +73,15 @@ fun AppNavigation() {
                 ) 
             }
             composable<Screen.Settings> { SettingsScreen(navController = navController) }
+            composable<Screen.About> { AboutScreen(navController = navController) }
+            composable<Screen.Stats> { StatsScreen(navController = navController) }
 
             composable<Screen.Detail> { backStackEntry ->
                 val detailRoute = backStackEntry.toRoute<Screen.Detail>()
                 DetailScreen(
                     navController = navController, 
                     showId = detailRoute.showId,
+                    sharedElementTag = detailRoute.sharedElementTag,
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@composable
                 )

@@ -12,10 +12,16 @@ data class MediaContent(
     val popularity: Float = 0f,
     val keywords: KeywordsResponse? = null,
     val credits: CreditsResponse? = null,
-    var affinityScore: Float = 0f,
+    val affinityScore: Float = 0f,
     @SerializedName("first_air_date") val firstAirDate: String? = null,
     @SerializedName("number_of_seasons") val numberOfSeasons: Int? = null,
-    val status: String? = null
+    val status: String? = null,
+    @SerializedName("vote_average") val voteAverage: Float = 0f,
+    @SerializedName("vote_count") val voteCount: Int = 0,
+    @SerializedName("backdrop_path") val backdropPath: String? = null,
+    @SerializedName("watch/providers") val watchProviders: WatchProvidersResponse? = null,
+    val seasons: List<Season>? = null,
+    val videos: VideosResponse? = null
 ) {
     val safeGenreIds: List<Int>
         get() = genreIds ?: genres?.map { it.id } ?: emptyList()
@@ -40,4 +46,40 @@ data class CastMember(
     val id: Int = 0,
     val name: String = "",
     @SerializedName("profile_path") val profilePath: String? = null
+)
+
+data class WatchProvidersResponse(
+    val results: Map<String, CountryProviders>? = null
+)
+
+data class CountryProviders(
+    val link: String? = null,
+    val flatrate: List<Provider>? = null,
+    val rent: List<Provider>? = null,
+    val buy: List<Provider>? = null
+)
+
+data class Provider(
+    @SerializedName("provider_id") val providerId: Int = 0,
+    @SerializedName("provider_name") val providerName: String = "",
+    @SerializedName("logo_path") val logoPath: String? = null
+)
+
+data class Season(
+    val id: Int = 0,
+    val name: String = "",
+    @SerializedName("season_number") val seasonNumber: Int = 0,
+    @SerializedName("episode_count") val episodeCount: Int = 0,
+    @SerializedName("poster_path") val posterPath: String? = null
+)
+
+data class VideosResponse(
+    val results: List<Video>? = null
+)
+
+data class Video(
+    val id: String = "",
+    val key: String = "",
+    val site: String = "",
+    val type: String = ""
 )

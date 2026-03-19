@@ -5,6 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,26 +24,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.showmateapp.R
 import com.example.showmateapp.ui.components.premium.PrimaryButton
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.ShowMateAppTheme
-import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.TextGray
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(navController: NavController) {
-    SettingsScreenContent(onBackClick = { navController.popBackStack() })
+fun SettingsScreen(
+    navController: NavController,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val isDarkTheme by viewModel.isDarkTheme.collectAsState()
+    SettingsScreenContent(
+        onBackClick = { navController.popBackStack() },
+        isDarkMode = isDarkTheme,
+        onDarkModeChange = viewModel::setDarkTheme
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreenContent(onBackClick: () -> Unit) {
+fun SettingsScreenContent(
+    onBackClick: () -> Unit,
+    isDarkMode: Boolean = true,
+    onDarkModeChange: (Boolean) -> Unit = {}
+) {
     var notificationsEnabled by remember { mutableStateOf(true) }
-    var isDarkMode by remember { mutableStateOf(true) }
     
     var autoplayVideo by remember { mutableStateOf(false) }
     var privateMode by remember { mutableStateOf(false) }
@@ -60,21 +75,21 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
-                        text = "Ajustes", 
-                        color = Color.White, 
+                        text = "Ajustes",
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
-                    ) 
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_back),
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
@@ -96,13 +111,13 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                 SettingsSection(title = "Cuenta") {
                     SettingsItem(
                         title = "Editar Perfil",
-                        iconRes = R.drawable.ic_person,
+                        icon = Icons.Default.Person,
                         onClick = { showFeedback("Abriendo perfil...") }
                     )
                     SettingsDivider()
                     SettingsItem(
                         title = "Cambiar Contraseña",
-                        iconRes = R.drawable.ic_lock,
+                        icon = Icons.Default.Lock,
                         onClick = { showFeedback("Redirigiendo a seguridad...") }
                     )
                 }
@@ -112,17 +127,17 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                 SettingsSection(title = "Ajustes de Interfaz") {
                     SettingsItemSwitch(
                         title = "Modo Oscuro",
-                        iconRes = R.drawable.ic_dark_mode,
+                        icon = Icons.Default.DarkMode,
                         checked = isDarkMode,
-                        onCheckedChange = { 
-                            isDarkMode = it
+                        onCheckedChange = {
+                            onDarkModeChange(it)
                             showFeedback(if (it) "Tema oscuro activado" else "Tema claro activado")
                         }
                     )
                     SettingsDivider()
                     SettingsItem(
                         title = "Idioma",
-                        iconRes = R.drawable.ic_language,
+                        icon = Icons.Default.Language,
                         value = "Español",
                         onClick = { showFeedback("Seleccionando idioma...") }
                     )
@@ -134,7 +149,7 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                     SettingsItemSwitch(
                         title = "Permitir Notificaciones Push",
                         subtitle = "Nuevos episodios y recomendaciones",
-                        iconRes = R.drawable.ic_notifications,
+                        icon = Icons.Default.Notifications,
                         checked = notificationsEnabled,
                         onCheckedChange = { 
                             notificationsEnabled = it
@@ -149,7 +164,7 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                     SettingsItemSwitch(
                         title = "Autoplay de Tráilers (Solo Wi-Fi)",
                         subtitle = "Reproduce sin sonido por defecto",
-                        iconRes = R.drawable.ic_lock,
+                        icon = Icons.Default.PlayCircle,
                         checked = autoplayVideo,
                         onCheckedChange = { 
                             autoplayVideo = it
@@ -160,7 +175,7 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                     SettingsItemSwitch(
                         title = "Navegación Privada",
                         subtitle = "Tus vistas no afectarán tus recomendaciones",
-                        iconRes = R.drawable.ic_lock,
+                        icon = Icons.Default.Security,
                         checked = privateMode,
                         onCheckedChange = { 
                             privateMode = it
@@ -174,7 +189,7 @@ fun SettingsScreenContent(onBackClick: () -> Unit) {
                 SettingsSection(title = "Otros") {
                     SettingsItem(
                         title = "Borrar cuenta (RGPD)",
-                        iconRes = R.drawable.ic_delete,
+                        icon = Icons.Default.Delete,
                         onClick = { showFeedback("Solicitud de borrado en proceso...") }
                     )
                 }
@@ -210,7 +225,7 @@ fun SettingsSection(
     Column(modifier = modifier.padding(top = 24.dp)) {
         Text(
             text = title.uppercase(),
-            color = Color(0xFFB4B0FF), // Very light purple for high contrast (>7:1)
+            color = Color(0xFFB4B0FF),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
@@ -222,7 +237,7 @@ fun SettingsSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            color = SurfaceDark.copy(alpha = 0.4f),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.semantics { contentDescription = "Sección $title" }) {
@@ -237,35 +252,35 @@ fun SettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         thickness = 0.5.dp,
-        color = Color.White.copy(alpha = 0.08f)
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
     )
 }
 
 @Composable
 fun SettingsItem(
     title: String,
-    iconRes: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     value: String? = null,
     showChevron: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
     ListItem(
-        headlineContent = { Text(text = title, color = Color.White, fontSize = 15.sp) },
+        headlineContent = { Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp) },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (value != null) {
                     Text(
                         text = value,
-                        color = TextGray,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
                 if (showChevron) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_chevron_right),
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = TextGray.copy(alpha = 0.3f),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -273,7 +288,7 @@ fun SettingsItem(
         },
         leadingContent = {
             Icon(
-                painter = painterResource(id = iconRes),
+                imageVector = icon,
                 contentDescription = null,
                 tint = PrimaryPurple,
                 modifier = Modifier.size(20.dp)
@@ -296,19 +311,19 @@ fun SettingsItem(
 @Composable
 fun SettingsItemSwitch(
     title: String,
-    iconRes: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     subtitle: String? = null
 ) {
     ListItem(
-        headlineContent = { Text(text = title, color = Color.White, fontSize = 15.sp) },
+        headlineContent = { Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp) },
         supportingContent = if (subtitle != null) {
-            { Text(text = subtitle, color = TextGray, fontSize = 12.sp) }
+            { Text(text = subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 12.sp) }
         } else null,
         leadingContent = {
             Icon(
-                painter = painterResource(id = iconRes),
+                imageVector = icon,
                 contentDescription = null,
                 tint = PrimaryPurple,
                 modifier = Modifier.size(20.dp)

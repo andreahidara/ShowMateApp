@@ -3,6 +3,7 @@ package com.example.showmateapp.ui.components.premium
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -20,6 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.showmateapp.ui.theme.GradientPurpleStart
 import com.example.showmateapp.ui.theme.PrimaryPurple
+
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.PaddingValues
 
 @Composable
 fun PrimaryButton(
@@ -41,28 +46,39 @@ fun PrimaryButton(
         )
     }
 
-    Box(
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isLoading,
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(28.dp))
-            .background(brush)
-            .clickable(enabled = enabled && !isLoading, onClick = onClick),
-        contentAlignment = Alignment.Center
+            .background(brush),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent
+        ),
+        contentPadding = PaddingValues(0.dp),
+        shape = RoundedCornerShape(28.dp)
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                color = Color.White,
-                modifier = Modifier.size(28.dp),
-                strokeWidth = 3.dp
-            )
-        } else {
-            Text(
-                text = text,
-                color = Color.White.copy(alpha = alpha),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
-            )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 3.dp
+                )
+            } else {
+                Text(
+                    text = text,
+                    color = Color.White.copy(alpha = alpha),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

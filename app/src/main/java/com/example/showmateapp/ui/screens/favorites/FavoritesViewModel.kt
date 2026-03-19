@@ -2,11 +2,14 @@ package com.example.showmateapp.ui.screens.favorites
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.showmateapp.data.model.toDomain
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -15,25 +18,20 @@ class FavoritesViewModel @Inject constructor(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
-    private val _favorites = MutableStateFlow<List<MediaContent>>(emptyList())
-    val favorites: StateFlow<List<MediaContent>> = _favorites
-
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val favorites: StateFlow<List<MediaContent>> = userRepository
+        .getLikedShowsFlow()
+        .map { entities -> entities.map { it.toDomain() } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
 
     init {
-        loadFavorites()
-    }
-
-    fun loadFavorites() {
+        // Sync Firestore → Room on startup so favorites are visible even after
+        // a fresh install or after the local database was wiped
         viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                _favorites.value = userRepository.getFavorites()
-            } catch (_: Exception) {
-            } finally {
-                _isLoading.value = false
-            }
+            userRepository.syncFavoritesAndWatchedToRoom()
         }
     }
 }

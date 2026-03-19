@@ -4,7 +4,8 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.example.showmateapp.data.model.MediaEntity
 
-@Database(entities = [MediaEntity::class], version = 2, exportSchema = false)
+@Database(entities = [MediaEntity::class, MediaInteractionEntity::class], version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun showDao(): ShowDao
+    abstract fun mediaInteractionDao(): MediaInteractionDao
 }

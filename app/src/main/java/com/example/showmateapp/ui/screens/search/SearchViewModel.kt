@@ -52,8 +52,10 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val popular = showRepository.getPopularShows()
-                _trendingShows.value = popular
+                val popularRes = showRepository.getPopularShows()
+                if (popularRes is Resource.Success) {
+                    _trendingShows.value = popularRes.data
+                }
             } catch (_: Exception) {
             } finally {
                 _isLoading.value = false
@@ -77,17 +79,22 @@ class SearchViewModel @Inject constructor(
             _errorMessage.value = null
             try {
                 if (query.isNotBlank()) {
-                    _searchResults.value = showRepository.searchShows(query)
+                    val result = showRepository.searchShows(query)
+                    when (result) {
+                        is Resource.Success -> {
+                            _searchResults.value = result.data
+                            if (_searchResults.value.isEmpty()) {
+                                _errorMessage.value = "No se encontraron resultados para '$query'"
+                            }
+                        }
+                        is Resource.Error -> {
+                            _errorMessage.value = result.message
+                            _searchResults.value = emptyList()
+                        }
+                        else -> {}
+                    }
                 } else if (_isFilterActive.value) {
                     applyFilters()
-                }
-
-                if (_searchResults.value.isEmpty() && _isLoading.value) {
-                    _errorMessage.value = if (query.isNotBlank()) {
-                        "No se encontraron resultados para '$query'"
-                    } else {
-                        "No hay series que coincidan con los filtros"
-                    }
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error: ${e.message}"
@@ -100,19 +107,19 @@ class SearchViewModel @Inject constructor(
     fun updateGenre(genreId: String?) {
         _selectedGenre.value = genreId
         checkFilterStatus()
-        applyFiltersWithDebounce()
+        searchMedia("")
     }
 
     fun updateYear(year: Int?) {
         _selectedYear.value = year
         checkFilterStatus()
-        applyFiltersWithDebounce()
+        searchMedia("")
     }
 
     fun updateRating(rating: Float?) {
         _selectedRating.value = rating
         checkFilterStatus()
-        applyFiltersWithDebounce()
+        searchMedia("")
     }
 
     fun clearFilters() {
@@ -127,10 +134,6 @@ class SearchViewModel @Inject constructor(
         _isFilterActive.value = _selectedGenre.value != null || 
                               _selectedYear.value != null || 
                               _selectedRating.value != null
-    }
-
-    private fun applyFiltersWithDebounce() {
-        searchMedia("")
     }
 
     private suspend fun applyFilters() {

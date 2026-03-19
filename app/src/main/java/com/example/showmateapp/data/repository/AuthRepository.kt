@@ -28,4 +28,8 @@ class AuthRepository @Inject constructor(
     }
 
     fun getCurrentUser() = firebaseAuth.currentUser
+
+    fun signOut() {
+        firebaseAuth.signOut()
+    }
 }

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.showmateapp.data.model.MediaEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ShowDao {
@@ -20,6 +21,18 @@ interface ShowDao {
 
     @Query("DELETE FROM media_content WHERE category = :category")
     suspend fun deleteShowsByCategory(category: String)
+
+    @Query("SELECT * FROM media_content WHERE category = 'liked'")
+    fun getLikedShowsFlow(): Flow<List<MediaEntity>>
+
+    @Query("DELETE FROM media_content WHERE id = :id AND category = 'liked'")
+    suspend fun deleteLikedShow(id: Int)
+
+    @Query("SELECT * FROM media_content WHERE category = 'watched'")
+    fun getWatchedShowsFlow(): Flow<List<MediaEntity>>
+
+    @Query("DELETE FROM media_content WHERE id = :id AND category = 'watched'")
+    suspend fun deleteWatchedShow(id: Int)
 
     @androidx.room.Transaction
     suspend fun replaceCategory(category: String, shows: List<MediaEntity>) {

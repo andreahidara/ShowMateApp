@@ -26,6 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.draw.scale
+import kotlinx.coroutines.delay
 import coil.compose.AsyncImage
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.theme.PrimaryPurple
@@ -38,15 +44,18 @@ fun ShowCard(
     media: MediaContent,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    onClick: (MediaContent) -> Unit,
+    onClick: (MediaContent, String) -> Unit,
     modifier: Modifier = Modifier,
     width: Dp = 120.dp,
-    showTitle: Boolean = true
+    showTitle: Boolean = true,
+    tag: String = "list"
 ) {
+    val sharedElementKey = "image-${media.id}-$tag"
+    
     Column(
         modifier = modifier
             .then(if (width != Dp.Unspecified) Modifier.width(width) else Modifier)
-            .clickable { onClick(media) }
+            .clickable { onClick(media, tag) }
     ) {
         val imageUrl = media.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
         
@@ -54,7 +63,7 @@ fun ShowCard(
             modifier = Modifier
                 .aspectRatio(2f / 3f)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceDark)
         ) {
             with(sharedTransitionScope) {
@@ -67,7 +76,7 @@ fun ShowCard(
                     modifier = Modifier
                         .fillMaxSize()
                         .sharedElement(
-                            state = rememberSharedContentState(key = "image-${media.id}"),
+                            state = rememberSharedContentState(key = sharedElementKey),
                             animatedVisibilityScope = animatedVisibilityScope
                         ),
                     placeholder = painterResource(R.drawable.ic_logo_placeholder),
@@ -75,24 +84,34 @@ fun ShowCard(
                     contentScale = ContentScale.Crop
                 )
             }
-            
+
+            // Bottom gradient so the badge reads well
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.3f)),
-                            startY = 100f
+                            colors = listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent, Color.Black.copy(alpha = 0.15f)),
+                            startY = 0f
                         )
                     )
             )
 
             if (media.affinityScore > 0f) {
                 MatchBadge(
-                    affinityScore = media.affinityScore,
+                    score = media.affinityScore,
+                    isAffinity = true,
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                )
+            } else if (media.voteAverage > 0f) {
+                MatchBadge(
+                    score = media.voteAverage,
+                    isAffinity = false,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
                 )
             }
         }
@@ -114,29 +133,33 @@ fun ShowCard(
 
 @Composable
 fun MatchBadge(
-    affinityScore: Float,
+    score: Float,
+    isAffinity: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val percentage = (affinityScore * 10).toInt().coerceIn(0, 100)
+    val percentage = (score * 10).toInt().coerceIn(0, 100)
+    val displayValue = if (isAffinity) "$percentage% Match" else "${"%.1f".format(score)} ★"
     
     val matchColor = when {
-        percentage >= 80 -> Color(0xFF4CAF50)
-        percentage >= 50 -> Color(0xFFFFC107)
-        else -> Color.LightGray
+        isAffinity && percentage >= 80 -> Color(0xFF4CAF50) // High affinity
+        isAffinity && percentage >= 50 -> Color(0xFFFFC107) // Medium affinity
+        !isAffinity && score >= 7.5 -> Color(0xFFFFD700) // Quality star
+        else -> Color.White.copy(alpha = 0.7f)
     }
 
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(Color.Black.copy(alpha = 0.7f))
-            .padding(horizontal = 4.dp, vertical = 2.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.75f))
+            .padding(horizontal = 7.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "$percentage% Match",
+            text = displayValue,
             color = matchColor,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 11.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.3).sp
         )
     }
 }
@@ -148,17 +171,32 @@ fun ShowSection(
     items: List<MediaContent>,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    onItemClick: (MediaContent) -> Unit,
-    modifier: Modifier = Modifier
+    onItemClick: (MediaContent, String) -> Unit,
+    modifier: Modifier = Modifier,
+    tag: String = "list"
 ) {
     Column(modifier = modifier) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(PrimaryPurple)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -169,7 +207,8 @@ fun ShowSection(
                     media = item,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
-                    onClick = onItemClick
+                    onClick = onItemClick,
+                    tag = tag
                 )
             }
         }
@@ -178,15 +217,39 @@ fun ShowSection(
 
 @Composable
 fun PulseLoader(modifier: Modifier = Modifier) {
+    val circles = listOf(
+        remember { Animatable(0.3f) },
+        remember { Animatable(0.3f) },
+        remember { Animatable(0.3f) }
+    )
+
+    circles.forEachIndexed { index, animatable ->
+        LaunchedEffect(Unit) {
+            delay(index * 150L)
+            animatable.animateTo(
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                )
+            )
+        }
+    }
+
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(
-            color = PrimaryPurple,
-            strokeWidth = 3.dp,
-            modifier = Modifier.size(48.dp)
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            circles.forEach { animatable ->
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .scale(animatable.value)
+                        .background(PrimaryPurple, shape = CircleShape)
+                )
+            }
+        }
     }
 }
 
@@ -203,26 +266,34 @@ fun ErrorView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            imageVector = Icons.Default.Warning,
+            contentDescription = "Error",
+            tint = PrimaryPurple.copy(alpha = 0.8f),
+            modifier = Modifier.size(64.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "¡Ups! Algo salió mal",
             color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 22.sp,
+            fontWeight = FontWeight.ExtraBold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = message,
             color = TextGray,
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         Button(
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 14.dp)
         ) {
-            Text("Reintentar")
+            Text("Reintentar", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }

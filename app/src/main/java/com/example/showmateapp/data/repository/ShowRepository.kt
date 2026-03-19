@@ -5,12 +5,11 @@ import com.example.showmateapp.data.model.toDomain
 import com.example.showmateapp.data.model.toEntity
 import com.example.showmateapp.data.network.TmdbApiService
 import com.example.showmateapp.data.network.MediaContent
+import com.example.showmateapp.data.network.SeasonResponse
 import com.example.showmateapp.util.Resource
 import com.example.showmateapp.util.safeApiCall
 import javax.inject.Inject
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import android.util.Log
 
 class ShowRepository @Inject constructor(
     private val apiService: TmdbApiService,
@@ -19,26 +18,53 @@ class ShowRepository @Inject constructor(
 
     suspend fun getShowDetails(showId: Int): Resource<MediaContent> {
         val networkResource = safeApiCall { 
-            apiService.getMediaDetails(showId, "credits,keywords")
+            apiService.getMediaDetails(showId)
         }
         
-        return if (networkResource is Resource.Error) {
-            val localShow = showDao.getShowById(showId)?.toDomain()
-            if (localShow != null) Resource.Success(localShow) else networkResource
-        } else {
-            networkResource
+        return when (networkResource) {
+            is Resource.Success -> {
+                showDao.insertShows(listOf(networkResource.data.toEntity("details")))
+                networkResource
+            }
+            is Resource.Error -> {
+                Log.e("ShowRepository", "Error fetching details for $showId: ${networkResource.message}")
+                val localShow = showDao.getShowById(showId)?.toDomain()
+                if (localShow != null) Resource.Success(localShow) else networkResource
+            }
+            else -> networkResource
         }
+    }
+
+    suspend fun getSeasonDetails(showId: Int, seasonNumber: Int): SeasonResponse {
+        return apiService.getSeasonDetails(showId, seasonNumber)
     }
 
     suspend fun discoverShows(
         genreId: String? = null,
         year: Int? = null,
         minRating: Float? = null,
-        sortBy: String = "popularity.desc"
+        sortBy: String = "popularity.desc",
+        keywords: String? = null,
+        watchRegion: String? = null,
+        withCast: String? = null
     ): Resource<List<MediaContent>> {
         return safeApiCall {
-            val response = apiService.discoverMedia(genreId, year, minRating, sortBy = sortBy)
+            val response = apiService.discoverMedia(
+                genreId = genreId, 
+                year = year, 
+                minRating = minRating, 
+                sortBy = sortBy,
+                keywords = keywords,
+                watchRegion = watchRegion,
+                withCast = withCast
+            )
             response.results
+        }
+    }
+
+    suspend fun getPersonDetails(personId: Int): Resource<com.example.showmateapp.data.network.PersonResponse> {
+        return safeApiCall {
+            apiService.getPersonDetails(personId)
         }
     }
 
@@ -47,31 +73,45 @@ class ShowRepository @Inject constructor(
         return shows
     }
 
-    suspend fun getPopularShows(): List<MediaContent> {
+    suspend fun getPopularShows(): Resource<List<MediaContent>> {
         val result = safeApiCall {
             val response = apiService.getPopularMedia()
             response.results
         }
         
         return when (result) {
-            is Resource.Success -> saveAndReturn("popular", result.data)
-            else -> showDao.getShowsByCategory("popular").map { it.toDomain() }
+            is Resource.Success -> {
+                saveAndReturn("popular", result.data)
+                result
+            }
+            is Resource.Error -> {
+                val localShows = showDao.getShowsByCategory("popular").map { it.toDomain() }
+                if (localShows.isNotEmpty()) Resource.Success(localShows) else result
+            }
+            else -> result
         }
     }
 
-    suspend fun getTrendingShows(): List<MediaContent> {
+    suspend fun getTrendingShows(): Resource<List<MediaContent>> {
         val result = safeApiCall {
             val response = apiService.discoverMedia(sortBy = "popularity.desc")
             response.results
         }
         
         return when (result) {
-            is Resource.Success -> saveAndReturn("trending", result.data)
-            else -> showDao.getShowsByCategory("trending").map { it.toDomain() }
+            is Resource.Success -> {
+                saveAndReturn("trending", result.data)
+                result
+            }
+            is Resource.Error -> {
+                val localShows = showDao.getShowsByCategory("trending").map { it.toDomain() }
+                if (localShows.isNotEmpty()) Resource.Success(localShows) else result
+            }
+            else -> result
         }
     }
 
-    suspend fun getShowsByGenres(genreIds: String): List<MediaContent> {
+    suspend fun getShowsByGenres(genreIds: String): Resource<List<MediaContent>> {
         val result = safeApiCall {
             val response = apiService.discoverMedia(genreId = genreIds)
             response.results
@@ -80,20 +120,39 @@ class ShowRepository @Inject constructor(
         return when (result) {
             is Resource.Success -> {
                 saveAndReturn("recommended", result.data)
+                result
             }
-            else -> showDao.getShowsByCategory("recommended").map { it.toDomain() }
+            is Resource.Error -> {
+                val localShows = showDao.getShowsByCategory("recommended").map { it.toDomain() }
+                if (localShows.isNotEmpty()) Resource.Success(localShows) else result
+            }
+            else -> result
         }
     }
 
 
-    suspend fun getDetailedRecommendations(): List<MediaContent> = getTrendingShows()
-
-    suspend fun searchShows(query: String): List<MediaContent> {
+    suspend fun getDetailedRecommendations(genres: String?): List<MediaContent> {
+        if (genres.isNullOrEmpty()) {
+            val trending = getTrendingShows()
+            return if (trending is Resource.Success) trending.data else emptyList()
+        }
         val result = safeApiCall {
+            apiService.discoverMedia(genreId = genres, sortBy = "popularity.desc").results
+        }
+        val list = (result as? Resource.Success)?.data ?: emptyList()
+        return if (list.isEmpty()) {
+            val trending = getTrendingShows()
+            if (trending is Resource.Success) trending.data else emptyList()
+        } else {
+            list
+        }
+    }
+
+    suspend fun searchShows(query: String): Resource<List<MediaContent>> {
+        return safeApiCall {
             val response = apiService.searchMedia(query)
             response.results
         }
-        return (result as? Resource.Success)?.data ?: emptyList()
     }
 
     suspend fun getSimilarShows(showId: Int): List<MediaContent> {

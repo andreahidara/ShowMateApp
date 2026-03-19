@@ -29,16 +29,14 @@ import com.example.showmateapp.ui.theme.TextGray
 @Composable
 fun SignUpScreen(
     navController: NavController,
+    onSignUpSuccess: () -> Unit,
     viewModel: SignUpViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
-            navController.navigate(Screen.Main) {
-                popUpTo<Screen.SignUp> { inclusive = true }
-                popUpTo<Screen.Login> { inclusive = true }
-            }
+            onSignUpSuccess()
         }
     }
 
@@ -90,9 +88,15 @@ fun SignUpScreen(
                 label = "Contraseña",
                 leadingIcon = Icons.Default.Lock,
                 trailingIcon = {
-                    val iconText = if (state.isPasswordVisible) "Ocultar" else "Ver"
-                    TextButton(onClick = { viewModel.togglePasswordVisibility() }) {
-                        Text(iconText, color = TextGray, fontSize = 12.sp)
+                    IconButton(onClick = { viewModel.togglePasswordVisibility() }) {
+                        Icon(
+                            painter = painterResource(
+                                id = if (state.isPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
+                            ),
+                            contentDescription = if (state.isPasswordVisible) "Ocultar Contraseña" else "Mostrar Contraseña",
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 },
                 visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -107,9 +111,15 @@ fun SignUpScreen(
                 label = "Confirmar Contraseña",
                 leadingIcon = Icons.Default.Lock,
                 trailingIcon = {
-                    val iconText = if (state.isConfirmPasswordVisible) "Ocultar" else "Ver"
-                    TextButton(onClick = { viewModel.toggleConfirmPasswordVisibility() }) {
-                        Text(iconText, color = TextGray, fontSize = 12.sp)
+                    IconButton(onClick = { viewModel.toggleConfirmPasswordVisibility() }) {
+                        Icon(
+                            painter = painterResource(
+                                id = if (state.isConfirmPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
+                            ),
+                            contentDescription = if (state.isConfirmPasswordVisible) "Ocultar Contraseña" else "Mostrar Contraseña",
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 },
                 visualTransformation = if (state.isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -118,7 +128,7 @@ fun SignUpScreen(
 
             state.error?.let {
                 Text(
-                    text = it,
+                    text = it.asString(),
                     color = Color.Red,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 8.dp)
@@ -143,3 +153,4 @@ fun SignUpScreen(
         }
     }
 }
+

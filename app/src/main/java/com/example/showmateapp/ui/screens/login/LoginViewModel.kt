@@ -1,5 +1,6 @@
 package com.example.showmateapp.ui.screens.login
 
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.repository.AuthRepository
@@ -7,8 +8,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.showmateapp.util.UiText
+import com.example.showmateapp.R
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -19,46 +23,43 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     fun onEmailChanged(email: String) {
-        _uiState.value = _uiState.value.copy(email = email, error = null)
+        _uiState.update { it.copy(email = email, error = null) }
     }
 
     fun onPasswordChanged(password: String) {
-        _uiState.value = _uiState.value.copy(password = password, error = null)
+        _uiState.update { it.copy(password = password, error = null) }
     }
 
     fun togglePasswordVisibility() {
-        _uiState.value = _uiState.value.copy(
-            isPasswordVisible = !_uiState.value.isPasswordVisible
-        )
+        _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
     }
 
     fun onLoginClick() {
-        val email = _uiState.value.email
-        val password = _uiState.value.password
+        val state = _uiState.value
 
-        if (email.isBlank() || password.isBlank()) {
-            _uiState.value = _uiState.value.copy(error = "Completa todos los campos")
+        if (state.email.isBlank() || state.password.isBlank()) {
+            _uiState.update { it.copy(error = UiText.StringResource(R.string.error_empty_fields)) }
             return
         }
 
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            _uiState.value = _uiState.value.copy(error = "Formato de correo inválido")
+        if (!Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
+            _uiState.update { it.copy(error = UiText.DynamicString("Formato de correo inválido")) }
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
-            val result = authRepository.login(email, password)
-
-            if (result.isSuccess) {
-                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = result.exceptionOrNull()?.message ?: "Error desconocido"
-                )
-            }
+            authRepository.login(state.email, state.password)
+                .onSuccess {
+                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                }
+                .onFailure { throwable ->
+                    _uiState.update { it.copy(
+                        isLoading = false,
+                        error = UiText.DynamicString(throwable.message ?: "Error desconocido")
+                    ) }
+                }
         }
     }
 }

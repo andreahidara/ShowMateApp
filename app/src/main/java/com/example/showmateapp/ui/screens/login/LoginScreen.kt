@@ -33,7 +33,7 @@ fun LoginScreen(
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
             navController.navigate(Screen.Main) {
-                popUpTo<Screen.Login> { inclusive = true }
+                popUpTo(Screen.Login) { inclusive = true }
             }
         }
     }
@@ -92,7 +92,7 @@ fun LoginScreen(
             )
 
             state.error?.let {
-                Text(it, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
+                Text(it.asString(), color = Color.Red, modifier = Modifier.padding(top = 8.dp))
             }
 
             Spacer(modifier = Modifier.height(24.dp))

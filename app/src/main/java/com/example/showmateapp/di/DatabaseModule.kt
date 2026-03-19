@@ -3,6 +3,7 @@ package com.example.showmateapp.di
 import android.content.Context
 import androidx.room.Room
 import com.example.showmateapp.data.local.AppDatabase
+import com.example.showmateapp.data.local.MediaInteractionDao
 import com.example.showmateapp.data.local.ShowDao
 import dagger.Module
 import dagger.Provides
@@ -30,4 +31,11 @@ object DatabaseModule {
     fun provideShowDao(appDatabase: AppDatabase): ShowDao {
         return appDatabase.showDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideMediaInteractionDao(appDatabase: AppDatabase): MediaInteractionDao {
+        return appDatabase.mediaInteractionDao()
+    }
+
 }

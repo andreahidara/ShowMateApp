@@ -9,7 +9,7 @@ class UpdateUserInterestsUseCase @Inject constructor(
 ) {
     suspend fun execute(media: MediaContent, isPositive: Boolean) {
         val genreIds = media.safeGenreIds.map { it.toString() }
-        val keywordIds = media.keywords?.results?.map { it.id.toString() } ?: emptyList()
+        val keywordNames = media.keywords?.results?.map { it.name } ?: emptyList()
         val actorIds = media.credits?.cast?.map { it.id } ?: emptyList()
 
         val interactionType = if (isPositive) UserRepository.InteractionType.Like else UserRepository.InteractionType.Dislike
@@ -17,7 +17,7 @@ class UpdateUserInterestsUseCase @Inject constructor(
         userRepository.trackMediaInteraction(
             mediaId = media.id,
             genres = genreIds,
-            keywords = keywordIds,
+            keywords = keywordNames,
             actors = actorIds,
             interactionType = interactionType
         )
