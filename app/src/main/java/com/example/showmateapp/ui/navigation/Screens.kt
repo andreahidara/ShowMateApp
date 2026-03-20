@@ -17,5 +17,7 @@ sealed interface Screen {
     @Serializable object Settings : Screen
     @Serializable object About : Screen
     @Serializable object Stats : Screen
+    @Serializable object CustomLists : Screen
+    @Serializable object FriendCompare : Screen
     @Serializable data class Detail(val showId: Int, val sharedElementTag: String? = null) : Screen
 }

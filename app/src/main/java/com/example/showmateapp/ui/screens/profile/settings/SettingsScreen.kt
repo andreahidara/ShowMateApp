@@ -126,12 +126,13 @@ fun SettingsScreenContent(
             item {
                 SettingsSection(title = "Ajustes de Interfaz") {
                     SettingsItemSwitch(
-                        title = "Modo Oscuro",
+                        title = "Tema Oscuro",
+                        subtitle = if (isDarkMode) "Negro · Activado" else "Índigo · Activado",
                         icon = Icons.Default.DarkMode,
                         checked = isDarkMode,
                         onCheckedChange = {
                             onDarkModeChange(it)
-                            showFeedback(if (it) "Tema oscuro activado" else "Tema claro activado")
+                            showFeedback(if (it) "Tema negro activado" else "Tema índigo activado")
                         }
                     )
                     SettingsDivider()

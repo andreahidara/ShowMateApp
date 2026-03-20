@@ -480,8 +480,8 @@ class UserRepository @Inject constructor(
                 val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
                 interactionDao.upsert(current.copy(isWatched = true))
             }
-        } catch (_: Exception) {
-            // Sync failed; local Room data remains as-is
+        } catch (e: Exception) {
+            android.util.Log.w("UserRepository", "Firestore→Room sync failed; local data unchanged", e)
         }
     }
 

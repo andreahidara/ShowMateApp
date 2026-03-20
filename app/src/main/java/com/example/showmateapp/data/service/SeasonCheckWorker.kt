@@ -2,7 +2,9 @@ package com.example.showmateapp.data.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -10,6 +12,7 @@ import androidx.work.WorkerParameters
 import com.example.showmateapp.R
 import com.example.showmateapp.data.repository.ShowRepository
 import com.example.showmateapp.data.repository.UserRepository
+import com.example.showmateapp.ui.MainActivity
 import com.example.showmateapp.util.Resource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -42,6 +45,8 @@ class SeasonCheckWorker @AssistedInject constructor(
                     val currentSeasons = result.data.numberOfSeasons ?: entity.lastKnownSeasons
                     if (currentSeasons > entity.lastKnownSeasons && entity.lastKnownSeasons > 0) {
                         sendNotification(result.data.name, currentSeasons)
+                    }
+                    if (currentSeasons != entity.lastKnownSeasons) {
                         userRepository.updateLastKnownSeasons(entity.mediaId, currentSeasons)
                     }
                 }
@@ -56,21 +61,53 @@ class SeasonCheckWorker @AssistedInject constructor(
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Nuevas temporadas",
-            NotificationManager.IMPORTANCE_DEFAULT
-        ).apply { description = "Notifica cuando una serie que has visto tiene nueva temporada" }
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Notifica cuando una serie que has visto estrena nueva temporada"
+            enableLights(true)
+            enableVibration(true)
+        }
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(channel)
     }
 
     private fun sendNotification(showName: String, newSeasonCount: Int) {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Tap → abre la app en MainActivity
+        val intent = Intent(ctx, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("open_show_name", showName)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            ctx,
+            showName.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val bigText = "La temporada $newSeasonCount de $showName ya está disponible. ¡Es el momento de ponerte al día!"
+
         val notification = NotificationCompat.Builder(ctx, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_logo_placeholder)
-            .setContentTitle("¡Nueva temporada disponible!")
-            .setContentText("$showName tiene ahora $newSeasonCount temporadas")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("🎬 ¡Nueva temporada de $showName!")
+            .setContentText("Temporada $newSeasonCount disponible")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText(bigText)
+                    .setBigContentTitle("¡Nueva temporada de $showName!")
+                    .setSummaryText("ShowMate")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .addAction(
+                R.mipmap.ic_launcher,
+                "Ver ahora",
+                pendingIntent
+            )
             .build()
+
         nm.notify(showName.hashCode(), notification)
     }
 }

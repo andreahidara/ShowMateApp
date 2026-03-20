@@ -71,7 +71,12 @@ class SwipeViewModel @Inject constructor(
         }
     }
 
-    fun loadShows() {
+    fun loadShows(forceReload: Boolean = false) {
+        // Don't reset the card stack if the user just switched tabs and comes back
+        if (!forceReload && _shows.value.isNotEmpty()) {
+            _isLoading.value = false
+            return
+        }
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null

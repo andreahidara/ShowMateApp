@@ -32,6 +32,13 @@ class ShowMateApp : Application(), Configuration.Provider, ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG && BuildConfig.TMDB_API_TOKEN.isBlank()) {
+            error(
+                "TMDB_API_TOKEN no está configurado.\n" +
+                "Añade la siguiente línea a local.properties:\n" +
+                "TMDB_API_TOKEN=tu_token_aqui"
+            )
+        }
         scheduleWorkers()
     }
 

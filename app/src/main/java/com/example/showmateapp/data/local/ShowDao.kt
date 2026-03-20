@@ -22,6 +22,9 @@ interface ShowDao {
     @Query("DELETE FROM media_content WHERE category = :category")
     suspend fun deleteShowsByCategory(category: String)
 
+    @Query("DELETE FROM media_content WHERE category = :category AND cachedAt > 0 AND cachedAt < :threshold")
+    suspend fun deleteStaleByCategory(category: String, threshold: Long)
+
     @Query("SELECT * FROM media_content WHERE category = 'liked'")
     fun getLikedShowsFlow(): Flow<List<MediaEntity>>
 

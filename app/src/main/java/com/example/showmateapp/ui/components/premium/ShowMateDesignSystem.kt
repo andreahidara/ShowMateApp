@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
@@ -121,12 +122,21 @@ fun ShowCard(
             Text(
                 text = media.name,
                 color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (media.voteAverage > 0f) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = "${"%.1f".format(media.voteAverage)} ★",
+                    color = com.example.showmateapp.ui.theme.StarYellow.copy(alpha = 0.85f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
@@ -297,3 +307,111 @@ fun ErrorView(
         }
     }
 }
+
+@Composable
+fun shimmerBrush(): Brush {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
+        label = "shimmer"
+    )
+    return Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.04f),
+            Color.White.copy(alpha = 0.10f),
+            Color.White.copy(alpha = 0.04f)
+        ),
+        start = androidx.compose.ui.geometry.Offset(translateAnim - 300f, 0f),
+        end = androidx.compose.ui.geometry.Offset(translateAnim, 0f)
+    )
+}
+
+@Composable
+fun ShowSectionSkeleton(
+    title: String,
+    cardCount: Int = 5,
+    modifier: Modifier = Modifier
+) {
+    val shimmer = shimmerBrush()
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(PrimaryPurple)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(cardCount) {
+                Column(modifier = Modifier.width(120.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(2f / 3f)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(shimmer)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(13.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(shimmer)
+                    )
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.4f)
+                            .height(11.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(shimmer)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = PrimaryPurple,
+    unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+    focusedTextColor = Color.White,
+    unfocusedTextColor = Color.White,
+    cursorColor = PrimaryPurple,
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent
+)
+
+@Composable
+fun CardSurface(
+    modifier: Modifier = Modifier,
+    shape: RoundedCornerShape = RoundedCornerShape(16.dp),
+    content: @Composable () -> Unit
+) = Surface(
+    color = MaterialTheme.colorScheme.surface,
+    shape = shape,
+    tonalElevation = 2.dp,
+    modifier = modifier,
+    content = content
+)

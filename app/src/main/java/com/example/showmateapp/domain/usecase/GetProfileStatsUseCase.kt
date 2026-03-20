@@ -8,12 +8,17 @@ import javax.inject.Inject
 class GetProfileStatsUseCase @Inject constructor() {
 
     fun execute(watchedShows: List<MediaContent>, userProfile: UserProfile?): ProfileStats {
-        var totalHours = 0
+        val watchedEpisodesMap = userProfile?.watchedEpisodes ?: emptyMap()
+        var totalMinutes = 0
         watchedShows.forEach { show ->
-            // Estimación: 10 episodios por temporada, 45 min por episodio
-            val seasons = show.numberOfSeasons ?: 1
-            totalHours += (seasons * 10 * 45) / 60
+            val watchedEpCount = watchedEpisodesMap[show.id.toString()]?.size ?: 0
+            if (watchedEpCount > 0) {
+                // Use actual episode runtime if available, otherwise fall back to 45 min
+                val avgRuntime = show.episodeRunTime?.firstOrNull()?.takeIf { it > 0 } ?: 45
+                totalMinutes += watchedEpCount * avgRuntime
+            }
         }
+        val totalHours = totalMinutes / 60
 
         // Obtener género favorito basado en puntuaciones del perfil
         val topGenreId = userProfile?.genreScores?.maxByOrNull { it.value }?.key

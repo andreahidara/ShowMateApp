@@ -47,6 +47,14 @@ interface TmdbApiService {
         @Query("language") language: String = "es-ES"
     ): PersonResponse
 
+    @GET("tv/on_the_air")
+    suspend fun getOnTheAirShows(
+        @Query("language") language: String = "es-ES",
+        @Query("page") page: Int = 1,
+        @Query("watch_region") watchRegion: String = "ES",
+        @Query("with_watch_providers") withProviders: String? = null
+    ): MediaResponse
+
     @GET("search/tv")
     suspend fun searchMedia(
         @Query("query") query: String,

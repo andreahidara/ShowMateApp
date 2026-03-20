@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
@@ -95,6 +96,7 @@ fun DetailScreen(
         onReviewTextChange = { viewModel.onReviewTextChange(it) },
         onSaveReview = { viewModel.saveReview() },
         onDeleteReview = { viewModel.deleteReview() },
+        onMarkNextEpisode = { viewModel.markNextEpisodeWatched() },
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         sharedElementTag = sharedElementTag
@@ -119,12 +121,59 @@ fun DetailScreenContent(
     onReviewTextChange: (String) -> Unit = {},
     onSaveReview: () -> Unit = {},
     onDeleteReview: () -> Unit = {},
+    onMarkNextEpisode: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedElementTag: String?
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    var showScoreDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    if (showScoreDialog) {
+        AlertDialog(
+            onDismissRequest = { showScoreDialog = false },
+            containerColor = Color(0xFF1A1A2E),
+            title = {
+                Text(
+                    "¿Cómo funciona el Match?",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "El porcentaje de Match indica cuánto se alinea esta serie con tus gustos personales.",
+                        color = TextGray,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ScoreFactorRow("🎭 Géneros favoritos", "50%")
+                        ScoreFactorRow("🔑 Palabras clave", "30%")
+                        ScoreFactorRow("🎬 Actores preferidos", "20%")
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    Text(
+                        "El score se actualiza automáticamente cada vez que marcas una serie como favorita, la valoras o la descartas.",
+                        color = TextGray,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showScoreDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                ) {
+                    Text("Entendido", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     LaunchedEffect(uiState.actionError) {
         uiState.actionError?.let {
@@ -153,7 +202,6 @@ fun DetailScreenContent(
             modifier = Modifier.align(Alignment.BottomCenter)
         )
         
-        // Imagen de fondo con degradado
         Box(modifier = Modifier.fillMaxWidth().height(450.dp)) {
             val imageUrl = remember(show.backdropPath, show.posterPath) {
                 (show.backdropPath ?: show.posterPath)?.let { "https://image.tmdb.org/t/p/w1280$it" }
@@ -205,14 +253,12 @@ fun DetailScreenContent(
             }
             
             item {
-                // Panel de contenido con fondo sólido
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.background,
                     shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp)) {
-                        // Título y Badge de Afinidad
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -225,13 +271,26 @@ fun DetailScreenContent(
                                 modifier = Modifier.weight(1f)
                             )
                             if (show.affinityScore > 0f) {
-                                MatchBadge(score = show.affinityScore, isAffinity = true)
+                                Column(horizontalAlignment = Alignment.End) {
+                                    MatchBadge(
+                                        score = show.affinityScore,
+                                        isAffinity = true,
+                                        modifier = Modifier.clickable { showScoreDialog = true }
+                                    )
+                                    Text(
+                                        text = "¿Qué es esto?",
+                                        color = PrimaryPurple.copy(alpha = 0.7f),
+                                        fontSize = 10.sp,
+                                        modifier = Modifier
+                                            .padding(top = 2.dp)
+                                            .clickable { showScoreDialog = true }
+                                    )
+                                }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Info básica
                         val year = remember(show.firstAirDate) { show.firstAirDate?.take(4) ?: "N/A" }
                         val seasons = remember(show.numberOfSeasons) { show.numberOfSeasons?.let { "$it ${if (it == 1) "Temporada" else "Temporadas"}" } ?: "N/A" }
                         
@@ -244,12 +303,10 @@ fun DetailScreenContent(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Botones de acción principales
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // BOTÓN VISTO
                             val watchedColor by animateColorAsState(
                                 targetValue = if (uiState.isWatched) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.1f),
                                 label = "watchedColor"
@@ -263,7 +320,6 @@ fun DetailScreenContent(
                                 onClick = onWatchedClick
                             )
 
-                            // BOTÓN ME GUSTA
                             val likeColor by animateColorAsState(
                                 targetValue = if (uiState.isLiked) HeartRed else Color.White.copy(alpha = 0.1f),
                                 label = "likeColor"
@@ -277,7 +333,6 @@ fun DetailScreenContent(
                                 onClick = onLikeClick
                             )
 
-                            // BOTÓN IMPRESCINDIBLE (Estrella)
                             val essentialColor by animateColorAsState(
                                 targetValue = if (uiState.isEssential) StarYellow else Color.White.copy(alpha = 0.1f),
                                 label = "essentialColor"
@@ -293,11 +348,9 @@ fun DetailScreenContent(
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
-                        
-                        // Botón de Tráiler Oficial
                         val trailerKey = show.videos?.results?.firstOrNull { it.site == "YouTube" && it.type == "Trailer" }?.key
                         if (trailerKey != null) {
-                            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                            val uriHandler = LocalUriHandler.current
                             Button(
                                 onClick = { uriHandler.openUri("https://www.youtube.com/watch?v=$trailerKey") },
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -312,7 +365,6 @@ fun DetailScreenContent(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // Dónde ver (Watch Providers via JustWatch / TMDB)
                         val esProviders = show.watchProviders?.results?.get("ES")
                         if (esProviders != null &&
                             (!esProviders.flatrate.isNullOrEmpty() ||
@@ -323,7 +375,6 @@ fun DetailScreenContent(
                             Spacer(modifier = Modifier.height(32.dp))
                         }
 
-                        // Sinopsis
                         var isSynopsisExpanded by remember { mutableStateOf(false) }
                         Text(
                             text = stringResource(R.string.detail_synopsis),
@@ -345,7 +396,6 @@ fun DetailScreenContent(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // Reseña del usuario
                         ReviewSection(
                             reviewText = uiState.userReview,
                             userRating = uiState.userRating,
@@ -360,23 +410,23 @@ fun DetailScreenContent(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // Registro de episodios (Solo si hay temporadas)
                         if (!show.seasons.isNullOrEmpty()) {
                             EpisodesSection(
                                 seasons = show.seasons,
                                 selectedSeason = uiState.selectedSeason,
+                                isSeasonLoading = uiState.isSeasonLoading,
                                 watchedEpisodes = uiState.watchedEpisodes,
                                 onEpisodeToggle = onEpisodeToggle,
-                                onSeasonChange = { seasonNum -> 
-                                    (uiState.media?.id)?.let { id -> 
+                                onSeasonChange = { seasonNum ->
+                                    (uiState.media?.id)?.let { id ->
                                         onSeasonChange(id, seasonNum)
                                     }
-                                }
+                                },
+                                onMarkNextEpisode = onMarkNextEpisode
                             )
                             Spacer(modifier = Modifier.height(32.dp))
                         }
 
-                        // Reparto
                         Text(
                             text = stringResource(R.string.detail_top_cast),
                             style = MaterialTheme.typography.titleLarge,
@@ -391,7 +441,7 @@ fun DetailScreenContent(
                             }
                         }
 
-                        if (uiState.similarShows.isNotEmpty()) {
+                        if (uiState.isSimilarLoading || uiState.similarShows.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(32.dp))
                             Text(
                                 text = "Te puede gustar",
@@ -400,15 +450,29 @@ fun DetailScreenContent(
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(uiState.similarShows, key = { it.id }) { similarShow ->
-                                    ShowCard(
-                                        media = similarShow,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        onClick = { s, t -> onSimilarShowClick(s, t) },
-                                        tag = "similar"
-                                    )
+                            if (uiState.isSimilarLoading) {
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    items(5) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(120.dp)
+                                                .height(170.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(Color.White.copy(alpha = 0.08f))
+                                        )
+                                    }
+                                }
+                            } else {
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    items(uiState.similarShows, key = { it.id }) { similarShow ->
+                                        ShowCard(
+                                            media = similarShow,
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            onClick = { s, t -> onSimilarShowClick(s, t) },
+                                            tag = "similar"
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -417,7 +481,6 @@ fun DetailScreenContent(
             }
         }
 
-        // Botón atrás
         Surface(
             onClick = onBackClick,
             shape = CircleShape,
@@ -458,30 +521,28 @@ fun ActionIconButton(
     }
 }
 
-/** Maps a TMDB provider ID to its direct search URL for a given show name. */
 private fun providerSearchUrl(providerId: Int, showName: String): String? {
     val encoded = java.net.URLEncoder.encode(showName, "UTF-8")
     return when (providerId) {
-        8, 213 -> "https://www.netflix.com/search?q=$encoded"           // Netflix
-        9, 119  -> "https://www.primevideo.com/search?k=$encoded"        // Amazon Prime Video
-        337     -> "https://www.disneyplus.com/es-es/search/$encoded"    // Disney+
-        384, 29 -> "https://play.max.com/search?q=$encoded"              // Max (HBO)
-        2, 350  -> "https://tv.apple.com/search?term=$encoded"           // Apple TV+
-        531     -> "https://www.paramountplus.com/es/search/$encoded/"   // Paramount+
-        1773    -> "https://www.skyshowtime.com/es/search?q=$encoded"    // SkyShowtime
-        63      -> "https://www.filmin.es/buscar?q=$encoded"             // Filmin
-        149     -> "https://ver.movistarplus.es/buscar/?q=$encoded"      // Movistar+
-        35, 105 -> "https://www.rakuten.tv/es/search?q=$encoded"         // Rakuten TV
-        541     -> "https://www.atresplayer.com/buscar/?q=$encoded"      // Atresplayer
-        566     -> "https://www.rtve.es/play/buscar/?q=$encoded"         // RTVE Play
-        188     -> "https://www.youtube.com/results?search_query=$encoded" // YouTube Premium
+        8, 213 -> "https://www.netflix.com/search?q=$encoded"
+        9, 119  -> "https://www.primevideo.com/search?k=$encoded"
+        337     -> "https://www.disneyplus.com/es-es/search/$encoded"
+        384, 29 -> "https://play.max.com/search?q=$encoded"
+        2, 350  -> "https://tv.apple.com/search?term=$encoded"
+        531     -> "https://www.paramountplus.com/es/search/$encoded/"
+        1773    -> "https://www.skyshowtime.com/es/search?q=$encoded"
+        63      -> "https://www.filmin.es/buscar?q=$encoded"
+        149     -> "https://ver.movistarplus.es/buscar/?q=$encoded"
+        35, 105 -> "https://www.rakuten.tv/es/search?q=$encoded"
+        541     -> "https://www.atresplayer.com/buscar/?q=$encoded"
+        566     -> "https://www.rtve.es/play/buscar/?q=$encoded"
+        188     -> "https://www.youtube.com/results?search_query=$encoded"
         else    -> null
     }
 }
 
 @Composable
 fun WatchProvidersSection(providers: CountryProviders, showName: String) {
-    val uriHandler = LocalUriHandler.current
     val jwLink = providers.link
 
     Column {
@@ -598,9 +659,12 @@ fun ReviewSection(
     onClearRateClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Star rating: 5 visual stars → stored as 1-10 internally (star N = N*2)
     val starCount = 5
-    val visualRating = userRating?.let { (it + 1) / 2 } ?: 0
+    val visualRating = userRating?.let { ((it + 1) / 2).coerceIn(1, 5) } ?: 0
+
+    var isEditing by remember(isReviewSaved) {
+        mutableStateOf(reviewText.isBlank() || !isReviewSaved)
+    }
 
     Column(modifier = modifier) {
         Text(
@@ -618,37 +682,46 @@ fun ReviewSection(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
 
-                // Star selector
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     repeat(starCount) { index ->
                         val filled = index < visualRating
-                        Icon(
-                            imageVector = if (filled) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = "Estrella ${index + 1}",
-                            tint = if (filled) StarYellow else Color.White.copy(alpha = 0.3f),
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clickable {
-                                    val newVisual = index + 1
-                                    if (newVisual == visualRating) onClearRateClick()
-                                    else onRateClick(newVisual * 2)
-                                }
-                        )
+                        IconButton(
+                            onClick = { onRateClick((index + 1) * 2) },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (filled) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = "Estrella ${index + 1}",
+                                tint = if (filled) StarYellow else Color.White.copy(alpha = 0.3f),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
+                    Spacer(modifier = Modifier.width(4.dp))
                     if (userRating != null) {
-                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "$userRating/10",
                             color = StarYellow,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
+                        IconButton(
+                            onClick = onClearRateClick,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Quitar valoración",
+                                tint = Color.White.copy(alpha = 0.4f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     } else {
                         Text(
-                            text = "Sin valorar",
+                            text = "Toca para valorar",
                             color = Color.White.copy(alpha = 0.3f),
                             fontSize = 13.sp
                         )
@@ -659,79 +732,128 @@ fun ReviewSection(
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Text field
-                OutlinedTextField(
-                    value = reviewText,
-                    onValueChange = { if (it.length <= REVIEW_MAX_CHARS) onTextChange(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text(
-                            text = "Escribe tu opinión sobre esta serie...",
-                            color = Color.White.copy(alpha = 0.3f),
-                            fontSize = 14.sp
-                        )
-                    },
-                    minLines = 3,
-                    maxLines = 7,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryPurple,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = PrimaryPurple,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, lineHeight = 21.sp)
-                )
-
-                // Counter + actions row
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Character counter
-                    Text(
-                        text = "${reviewText.length}/$REVIEW_MAX_CHARS",
-                        color = if (reviewText.length > REVIEW_MAX_CHARS * 0.9) StarYellow else Color.White.copy(alpha = 0.3f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Delete button (only if there's saved text)
-                    if (reviewText.isNotBlank()) {
-                        TextButton(onClick = onDelete) {
-                            Text("Borrar", color = Color.Red.copy(alpha = 0.7f), fontSize = 13.sp)
+                if (!isEditing && reviewText.isNotBlank()) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Reseña guardada",
+                                    color = Color(0xFF4CAF50),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Row {
+                                TextButton(
+                                    onClick = { isEditing = true },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text("Editar", color = PrimaryPurple, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                                TextButton(
+                                    onClick = onDelete,
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text("Borrar", color = Color.Red.copy(alpha = 0.7f), fontSize = 13.sp)
+                                }
+                            }
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            color = PrimaryPurple.copy(alpha = 0.08f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .height(IntrinsicSize.Min)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(3.dp)
+                                        .fillMaxHeight()
+                                        .background(PrimaryPurple, RoundedCornerShape(2.dp))
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = reviewText,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontSize = 14.sp,
+                                    lineHeight = 22.sp
+                                )
+                            }
+                        }
                     }
-
-                    // Save button
-                    Button(
-                        onClick = onSave,
-                        enabled = reviewText.isNotBlank() && !isSaving && !isReviewSaved,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isReviewSaved) Color(0xFF4CAF50) else PrimaryPurple,
-                            disabledContainerColor = if (isReviewSaved) Color(0xFF4CAF50).copy(alpha = 0.7f)
-                                                     else PrimaryPurple.copy(alpha = 0.3f)
+                } else {
+                    OutlinedTextField(
+                        value = reviewText,
+                        onValueChange = { if (it.length <= REVIEW_MAX_CHARS) onTextChange(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = "Escribe tu opinión sobre esta serie...",
+                                color = Color.White.copy(alpha = 0.3f),
+                                fontSize = 14.sp
+                            )
+                        },
+                        minLines = 3,
+                        maxLines = 7,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryPurple,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = PrimaryPurple,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
                         ),
                         shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, lineHeight = 21.sp)
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        when {
-                            isSaving -> CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                            isReviewSaved -> Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Guardada", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(
+                            text = "${reviewText.length}/$REVIEW_MAX_CHARS",
+                            color = if (reviewText.length > REVIEW_MAX_CHARS * 0.9) StarYellow
+                                    else Color.White.copy(alpha = 0.3f),
+                            fontSize = 12.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            onClick = {
+                                onSave()
+                                isEditing = false
+                            },
+                            enabled = reviewText.isNotBlank() && !isSaving,
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                        ) {
+                            if (isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Guardar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
-                            else -> Text("Guardar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -744,10 +866,12 @@ fun ReviewSection(
 fun EpisodesSection(
     seasons: List<com.example.showmateapp.data.network.Season>,
     selectedSeason: com.example.showmateapp.data.network.SeasonResponse?,
+    isSeasonLoading: Boolean,
     watchedEpisodes: List<Int>,
     modifier: Modifier = Modifier,
     onEpisodeToggle: (Int) -> Unit,
-    onSeasonChange: (Int) -> Unit
+    onSeasonChange: (Int) -> Unit,
+    onMarkNextEpisode: () -> Unit = {}
 ) {
     Column(modifier = modifier) {
         Text(
@@ -758,7 +882,6 @@ fun EpisodesSection(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Selector de Temporadas
         var selectedTabIndex by remember(selectedSeason) { 
             mutableIntStateOf(seasons.indexOfFirst { it.seasonNumber == selectedSeason?.season_number }.coerceAtLeast(0)) 
         }
@@ -798,7 +921,6 @@ fun EpisodesSection(
         
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Season progress bar
         if (selectedSeason != null && selectedSeason.episodes.isNotEmpty()) {
             val totalEps = selectedSeason.episodes.size
             val watchedInSeason = selectedSeason.episodes.count { watchedEpisodes.contains(it.id) }
@@ -832,8 +954,55 @@ fun EpisodesSection(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Lista de episodios
         if (selectedSeason != null) {
+            val nextEpisode = selectedSeason.episodes.firstOrNull { it.id !in watchedEpisodes }
+            if (nextEpisode != null) {
+                OutlinedButton(
+                    onClick = onMarkNextEpisode,
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, PrimaryPurple),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Siguiente: ${nextEpisode.episode_number}. ${nextEpisode.name}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+
+        if (isSeasonLoading) {
+            repeat(4) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 100.dp, height = 60.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Box(modifier = Modifier.fillMaxWidth(0.7f).height(14.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = 0.08f)))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(modifier = Modifier.fillMaxWidth(0.3f).height(12.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = 0.05f)))
+                    }
+                }
+            }
+        } else if (selectedSeason != null) {
             selectedSeason.episodes.forEach { episode ->
                 val isWatched = watchedEpisodes.contains(episode.id)
                 Row(
@@ -843,16 +1012,22 @@ fun EpisodesSection(
                         .clickable { onEpisodeToggle(episode.id) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val imageModel = if (episode.still_path != null)
+                        "https://image.tmdb.org/t/p/w300${episode.still_path}"
+                    else null
                     AsyncImage(
-                        model = "https://image.tmdb.org/t/p/w300${episode.still_path}",
+                        model = imageModel,
                         contentDescription = null,
                         modifier = Modifier.size(width = 100.dp, height = 60.dp).clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(R.drawable.ic_logo_placeholder),
+                        placeholder = painterResource(R.drawable.ic_logo_placeholder)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = "${episode.episode_number}. ${episode.name}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text(text = "${episode.runtime ?: 0} min", color = TextGray, fontSize = 12.sp)
+                        val runtimeText = episode.runtime?.takeIf { it > 0 }?.let { "$it min" } ?: "N/A"
+                        Text(text = runtimeText, color = TextGray, fontSize = 12.sp)
                     }
                     Checkbox(
                         checked = isWatched,
@@ -863,6 +1038,29 @@ fun EpisodesSection(
             }
         } else {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = PrimaryPurple)
+        }
+    }
+}
+
+@Composable
+private fun ScoreFactorRow(label: String, weight: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, color = Color.White, fontSize = 13.sp)
+        Surface(
+            color = PrimaryPurple.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = weight,
+                color = PrimaryPurple,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            )
         }
     }
 }

@@ -146,17 +146,27 @@ fun SwipeScreenContent(
             Box(contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     progress = { (ratedCount.toFloat() / maxRatings.toFloat()).coerceIn(0f, 1f) },
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier.size(60.dp),
                     color = PrimaryPurple,
-                    strokeWidth = 6.dp,
+                    strokeWidth = 5.dp,
                     trackColor = Color.White.copy(alpha = 0.1f)
                 )
-                Text(
-                    text = "$ratedCount",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$ratedCount",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 14.sp
+                    )
+                    Text(
+                        text = "/$maxRatings",
+                        color = TextGray,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 10.sp
+                    )
+                }
             }
         }
 
@@ -203,28 +213,36 @@ fun SwipeScreenContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Botón Descartar (X)
-                IconButton(
-                    onClick = { onSkipShow() },
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(Color.White.copy(alpha = 0.05f), CircleShape)
-                        .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(
+                        onClick = { onSkipShow() },
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Paso", tint = HeartRed, modifier = Modifier.size(28.dp))
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("Paso", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
 
                 // Botón Like (Corazón)
-                IconButton(
-                    onClick = { onLikeShow() },
-                    modifier = Modifier
-                        .size(80.dp)
-                        .shadow(20.dp, CircleShape, spotColor = PrimaryPurple)
-                        .background(
-                            Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0))),
-                            CircleShape
-                        )
-                ) {
-                    Icon(Icons.Default.Favorite, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(
+                        onClick = { onLikeShow() },
+                        modifier = Modifier
+                            .size(80.dp)
+                            .shadow(20.dp, CircleShape, spotColor = PrimaryPurple)
+                            .background(
+                                Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0))),
+                                CircleShape
+                            )
+                    ) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Me gusta", tint = Color.White, modifier = Modifier.size(36.dp))
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("Me gusta", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -349,15 +367,37 @@ fun SwipeableCard(
             placeholder = painterResource(R.drawable.ic_logo_placeholder)
         )
 
-        // Overlay de color al deslizar
+        // Overlay de color + etiqueta al deslizar
         if (isTopCard && offsetX.value != 0f) {
-            val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 0.4f)
-            val overlayColor = if (offsetX.value > 0) Color(0xFF4CAF50) else HeartRed
+            val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 0.45f)
+            val isLiking = offsetX.value > 0
+            val overlayColor = if (isLiking) Color(0xFF4CAF50) else HeartRed
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(overlayColor.copy(alpha = swipeAlpha))
             )
+            // Etiqueta de acción
+            val labelAlpha = ((offsetX.value.absoluteValue - 80f) / 200f).coerceIn(0f, 1f)
+            if (labelAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .align(if (isLiking) Alignment.TopStart else Alignment.TopEnd)
+                        .padding(28.dp)
+                        .alpha(labelAlpha)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(3.dp, overlayColor, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = if (isLiking) "ME GUSTA" else "PASO",
+                        color = overlayColor,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp
+                    )
+                }
+            }
         }
 
         if (media.affinityScore > 0f) {

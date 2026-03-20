@@ -14,18 +14,23 @@ class GetRecommendationsUseCase @Inject constructor(
     private val showRepository: ShowRepository
 ) {
     companion object {
+        // Final score = 70 % personal affinity + 30 % Bayesian global rating
         private const val W_PERSONAL = 0.7f
         private const val W_GLOBAL   = 0.3f
-        private const val WG = 0.5f
-        private const val WK = 0.3f
-        private const val WA = 0.2f
-        private const val C  = 6.5f    // prior mean rating
-        private const val M  = 150f    // minimum votes threshold
 
-        // Time-decay: λ so that score halves after ~90 days
+        // Personal affinity sub-weights (must sum to 1.0)
+        private const val WG = 0.5f   // genres
+        private const val WK = 0.3f   // keywords
+        private const val WA = 0.2f   // actors
+
+        // Bayesian rating parameters (TMDB-style)
+        private const val C  = 6.5f   // prior mean rating across the platform
+        private const val M  = 150f   // minimum votes needed to trust the raw average
+
+        // Time-decay: λ = ln(2)/90 ≈ 0.0077 so that a score halves after ~90 days
         private const val DECAY_LAMBDA = 0.0077f
 
-        // Diversity: penalise a genre that already occupies > this fraction of results
+        // Diversity: no single genre may occupy more than this fraction of the results
         private const val MAX_GENRE_FRACTION = 0.35f
     }
 
@@ -142,6 +147,16 @@ class GetRecommendationsUseCase @Inject constructor(
         )
     }
 
+    /**
+     * Computes a personal affinity score in [0, 10] by combining three min-max normalised
+     * signals (genres, keywords, actors) weighted WG/WK/WA.
+     *
+     * Each signal is normalised against the user's own maximum score to prevent score
+     * accumulation over time (a user who has watched many dramas shouldn't push drama to ∞).
+     *
+     * Raw affinity ∈ [-1, 1] is remapped to [0, 10] via (raw + 1) / 2 * 10,
+     * then a log-scaled popularity boost (≤ 1.5 pts) is added to break ties.
+     */
     private fun calculatePersonalAffinity(show: MediaContent, user: UserProfile): Float {
         val maxGenreWeight   = user.genreScores.values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
         val maxKeywordWeight = user.preferredKeywords.values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
@@ -159,6 +174,7 @@ class GetRecommendationsUseCase @Inject constructor(
         keywords.forEach { kw ->
             keywordScore += ((user.preferredKeywords[kw.name] ?: 0f) / maxKeywordWeight).coerceIn(-1f, 1f)
         }
+        // Cap keyword denominator at 5 to avoid diluting the score on keyword-heavy shows
         val normalizedKeywordScore = if (keywords.isNotEmpty())
             (keywordScore / minOf(5f, keywords.size.toFloat())).coerceIn(-1f, 1f) else 0f
 
@@ -170,6 +186,7 @@ class GetRecommendationsUseCase @Inject constructor(
         val normalizedActorScore = if (actors.isNotEmpty())
             (actorScore / minOf(5f, actors.size.toFloat())).coerceIn(-1f, 1f) else 0f
 
+        // Weighted combination → [-1, 1], then mapped to [0, 10]
         val rawAffinity = (WG * normalizedGenreScore) + (WK * normalizedKeywordScore) + (WA * normalizedActorScore)
         val baseScore   = ((rawAffinity + 1f) / 2f) * 10f
         val popBoost    = if (show.popularity > 1f)
@@ -178,6 +195,12 @@ class GetRecommendationsUseCase @Inject constructor(
         return (baseScore + popBoost).coerceIn(0f, 10f)
     }
 
+    /**
+     * Bayesian average: B = (v·R + M·C) / (v + M)
+     *   v = vote count, R = raw average, M = confidence threshold, C = prior mean.
+     * Shows with few votes are pulled towards the platform average C,
+     * preventing obscure high-rated shows from dominating results.
+     */
     private fun calculateBayesianRating(show: MediaContent): Float {
         val v = show.voteCount.toFloat()
         val R = show.voteAverage

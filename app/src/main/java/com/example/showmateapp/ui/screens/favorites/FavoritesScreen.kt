@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -34,6 +35,7 @@ fun FavoritesScreen(
     globalNavController: NavController,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    onExploreClick: () -> Unit = {},
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val favorites by viewModel.favorites.collectAsState()
@@ -80,7 +82,7 @@ fun FavoritesScreen(
         }
 
         if (favorites.isEmpty()) {
-            EmptyFavoritesState()
+            EmptyFavoritesState(onExploreClick = onExploreClick)
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
@@ -105,7 +107,7 @@ fun FavoritesScreen(
 }
 
 @Composable
-fun EmptyFavoritesState() {
+fun EmptyFavoritesState(onExploreClick: () -> Unit = {}) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -130,5 +132,21 @@ fun EmptyFavoritesState() {
             color = Color.Gray,
             fontSize = 14.sp
         )
+        Spacer(modifier = Modifier.height(28.dp))
+        Button(
+            onClick = onExploreClick,
+            colors = ButtonDefaults.buttonColors(containerColor = HeartRed),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Explore,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Explorar series", color = Color.White, fontWeight = FontWeight.Bold)
+        }
     }
 }

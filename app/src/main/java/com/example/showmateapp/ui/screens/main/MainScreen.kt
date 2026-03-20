@@ -62,12 +62,13 @@ fun MainScreen(
                     animatedVisibilityScope = animatedVisibilityScope
                 ) 
             }
-            composable<Screen.Favorites> { 
+            composable<Screen.Favorites> {
                 FavoritesScreen(
                     globalNavController = globalNavController,
                     sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope
-                ) 
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    onExploreClick = { bottomNavController.navigate(Screen.Discover) }
+                )
             }
             composable<Screen.Profile> { 
                 ProfileScreen(globalNavController = globalNavController) 

@@ -12,7 +12,8 @@ data class MediaEntity(
     val voteAverage: Float = 0f,
     val backdropPath: String? = null,
     val category: String,
-    val genreIds: String = ""   // comma-separated list of genre IDs
+    val genreIds: String = "",   // comma-separated list of genre IDs
+    val cachedAt: Long = 0L      // epoch ms; used for TTL-based cache invalidation
 )
 
 fun MediaContent.toEntity(category: String): MediaEntity {
@@ -24,7 +25,8 @@ fun MediaContent.toEntity(category: String): MediaEntity {
         voteAverage = this.voteAverage,
         backdropPath = this.backdropPath,
         category = category,
-        genreIds = this.safeGenreIds.joinToString(",")
+        genreIds = this.safeGenreIds.joinToString(","),
+        cachedAt = System.currentTimeMillis()
     )
 }
 

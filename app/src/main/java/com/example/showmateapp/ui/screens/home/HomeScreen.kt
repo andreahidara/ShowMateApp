@@ -7,9 +7,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,8 +62,8 @@ fun HomeScreen(
         trendingShows = uiState.trendingShows,
         actionShows = uiState.actionShows,
         comedyShows = uiState.comedyShows,
-        popularInSpain = uiState.popularInSpain,
         mysteryShows = uiState.mysteryShows,
+        thisWeekShows = uiState.thisWeekShows,
         isLoading = uiState.isLoading,
         isRefreshing = uiState.isRefreshing,
         errorMessage = uiState.errorMessage,
@@ -90,8 +95,8 @@ fun HomeScreenContent(
     trendingShows: List<MediaContent>,
     actionShows: List<MediaContent>,
     comedyShows: List<MediaContent>,
-    popularInSpain: List<MediaContent>,
     mysteryShows: List<MediaContent>,
+    thisWeekShows: List<MediaContent>,
     isLoading: Boolean,
     isRefreshing: Boolean,
     errorMessage: UiText?,
@@ -102,8 +107,34 @@ fun HomeScreenContent(
     onRefresh: () -> Unit,
     onPickWhatToWatch: () -> Unit = {}
 ) {
-    if (isLoading) {
-        PulseLoader()
+    if (isLoading && trendingShows.isEmpty()) {
+        // Skeleton: muestra estructura mientras cargan los datos
+        Scaffold(
+            topBar = { HomeTopAppBar() },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                // Hero skeleton
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(480.dp)
+                            .padding(16.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(shimmerBrush())
+                    )
+                }
+                item { ShowSectionSkeleton("Tendencias") }
+                item { ShowSectionSkeleton("Populares en España") }
+                item { ShowSectionSkeleton("Acción y Aventura") }
+                item { Spacer(modifier = Modifier.height(100.dp)) }
+            }
+        }
     } else if (errorMessage != null) {
         ErrorView(message = errorMessage.asString(), onRetry = onRetry)
     } else {
@@ -163,15 +194,13 @@ fun HomeScreenContent(
                         )
                     }
 
-                    if (popularInSpain.isNotEmpty()) {
+                    if (thisWeekShows.isNotEmpty()) {
                         item {
-                            ShowSection(
-                                title = "Populares en España",
-                                items = popularInSpain,
+                            ThisWeekSection(
+                                shows = thisWeekShows,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
-                                onItemClick = onMediaClick,
-                                tag = "spain"
+                                onMediaClick = onMediaClick
                             )
                         }
                     }
@@ -439,9 +468,200 @@ fun FeaturedBanner(
                 onClick = { onClick(media) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(14.dp),
-                contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
             ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text("Ver ahora", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun ThisWeekSection(
+    shows: List<MediaContent>,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onMediaClick: (MediaContent, String) -> Unit
+) {
+    Column {
+        // Cabecera con icono de calendario
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(com.example.showmateapp.ui.theme.AccentBlue)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Icon(
+                imageVector = Icons.Default.Tv,
+                contentDescription = null,
+                tint = com.example.showmateapp.ui.theme.AccentBlue,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Esta semana en tus plataformas",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Chips de plataformas
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("Netflix", "Prime", "Disney+", "Max", "Paramount+").forEach { platform ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.White.copy(alpha = 0.07f)
+                ) {
+                    Text(
+                        text = platform,
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // Cards horizontales con diseño especial (backdrop + título superpuesto)
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(shows, key = { it.id }) { show ->
+                ThisWeekCard(
+                    media = show,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    onClick = { onMediaClick(show, "thisweek") }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun ThisWeekCard(
+    media: MediaContent,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onClick: () -> Unit
+) {
+    val imageUrl = (media.backdropPath ?: media.posterPath)
+        ?.let { "https://image.tmdb.org/t/p/w500$it" }
+
+    Box(
+        modifier = Modifier
+            .width(220.dp)
+            .height(130.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(com.example.showmateapp.ui.theme.SurfaceDark)
+            .clickable { onClick() }
+    ) {
+        with(sharedTransitionScope) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = media.name,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .sharedElement(
+                        state = rememberSharedContentState(key = "image-${media.id}-thisweek"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    ),
+                placeholder = painterResource(R.drawable.ic_logo_placeholder),
+                error = painterResource(R.drawable.ic_logo_placeholder),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        // Gradiente inferior
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.85f)
+                        ),
+                        startY = 40f
+                    )
+                )
+        )
+
+        // Badge "EN ANTENA" arriba a la izquierda
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(com.example.showmateapp.ui.theme.AccentBlue)
+                .padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(5.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(Color.White)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "EN ANTENA",
+                color = Color.White,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.5.sp
+            )
+        }
+
+        // Título y nota en la parte inferior
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(10.dp)
+        ) {
+            Text(
+                text = media.name,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (media.voteAverage > 0f) {
+                Text(
+                    text = "${"%.1f".format(media.voteAverage)} ★",
+                    color = com.example.showmateapp.ui.theme.StarYellow,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

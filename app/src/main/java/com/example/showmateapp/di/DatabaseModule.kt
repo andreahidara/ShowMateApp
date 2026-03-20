@@ -2,6 +2,8 @@ package com.example.showmateapp.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.showmateapp.data.local.AppDatabase
 import com.example.showmateapp.data.local.MediaInteractionDao
 import com.example.showmateapp.data.local.ShowDao
@@ -16,6 +18,15 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    // v6 → v7: add cachedAt column to media_content for TTL-based cache invalidation
+    private val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE media_content ADD COLUMN cachedAt INTEGER NOT NULL DEFAULT 0"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -23,7 +34,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "showmate_database"
-        ).fallbackToDestructiveMigration().build()
+        )
+            .addMigrations(MIGRATION_6_7)
+            .build()
     }
 
     @Provides

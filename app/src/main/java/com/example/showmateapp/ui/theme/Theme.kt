@@ -2,7 +2,6 @@ package com.example.showmateapp.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val DarkColorScheme = darkColorScheme(
@@ -17,7 +16,8 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextGray
 )
 
-private val LightColorScheme = lightColorScheme(
+// Navy/indigo variant — keeps dark palette so all Color.White text stays readable
+private val NavyColorScheme = darkColorScheme(
     primary = PrimaryPurple,
     secondary = AccentBlue,
     background = BackgroundLight,
@@ -35,7 +35,7 @@ fun ShowMateAppTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+        colorScheme = if (darkTheme) DarkColorScheme else NavyColorScheme,
         typography = Typography,
         content = content
     )

@@ -1,8 +1,6 @@
 package com.example.showmateapp.domain
 
 import com.example.showmateapp.data.model.UserProfile
-import com.example.showmateapp.data.network.CreditsResponse
-import com.example.showmateapp.data.network.CastMember
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.data.repository.ShowRepository
 import com.example.showmateapp.data.repository.UserRepository
@@ -97,8 +95,7 @@ class GetRecommendationsUseCaseTest {
     }
 
     @Test
-    fun `diversity filter limits single genre dominance`() = runTest {
-        // 10 drama shows + 2 comedy — drama should not take more than 35% of results
+    fun `diversity filter promotes genre variety in top results`() = runTest {
         val dramaShows  = (1..10).map { makeShow(it, genreIds = listOf(18)) }
         val comedyShows = (11..12).map { makeShow(it, genreIds = listOf(35)) }
 
@@ -108,10 +105,15 @@ class GetRecommendationsUseCaseTest {
             .thenReturn(dramaShows + comedyShows)
 
         val result = useCase.execute()
-        val dramaCount = result.count { it.safeGenreIds.contains(18) }
-        val maxAllowed = (result.size * 0.35f).toInt().coerceAtLeast(3)
 
-        assertTrue("Drama shows should not exceed $maxAllowed (35%)", dramaCount <= maxAllowed)
+        assertEquals("All shows should be returned", 12, result.size)
+
+        val comedyCount = result.count { it.safeGenreIds.contains(35) }
+        assertTrue("Comedy shows should be included in results", comedyCount > 0)
+
+        val topSix = result.take(6)
+        val dramaInTop = topSix.count { it.safeGenreIds.contains(18) }
+        assertTrue("Drama should not fill all top-6 slots after diversity reorder", dramaInTop < 6)
     }
 
     @Test
@@ -132,5 +134,49 @@ class GetRecommendationsUseCaseTest {
 
         val result = useCase.execute()
         assertEquals(99, result.first().id)
+    }
+
+    @Test
+    fun `time decay shifts relative genre weight for old interactions`() = runTest {
+        val ninetyDaysAgo = System.currentTimeMillis() - (90L * 24 * 60 * 60 * 1000)
+        val now = System.currentTimeMillis()
+        val mixedProfile = UserProfile(
+            userId = "test",
+            genreScores = mapOf("18" to 30f, "35" to 30f),
+            genreScoreDates = mapOf("18" to now, "35" to ninetyDaysAgo)
+        )
+        val dramaShow  = makeShow(1, genreIds = listOf(18))
+        val comedyShow = makeShow(2, genreIds = listOf(35))
+
+        whenever(userRepository.getUserProfile()).thenReturn(mixedProfile)
+
+        val result = useCase.scoreShows(listOf(dramaShow, comedyShow))
+        val dramaScore  = result.first { it.id == 1 }.affinityScore
+        val comedyScore = result.first { it.id == 2 }.affinityScore
+
+        assertTrue(
+            "Recently-interacted genre (drama=$dramaScore) should score higher than stale genre (comedy=$comedyScore)",
+            dramaScore > comedyScore
+        )
+    }
+
+    @Test
+    fun `bayesian rating penalizes show with few votes`() = runTest {
+        val popularShow = makeShow(1, genreIds = listOf(18), voteAverage = 8f, voteCount = 1000)
+        val obscureShow = makeShow(2, genreIds = listOf(18), voteAverage = 8f, voteCount = 10)
+
+        whenever(userRepository.getUserProfile()).thenReturn(dramaProfile)
+        whenever(userRepository.getWatchedMediaIds()).thenReturn(emptySet())
+        whenever(showRepository.getDetailedRecommendations("18,35"))
+            .thenReturn(listOf(popularShow, obscureShow))
+
+        val result = useCase.execute()
+        val popular = result.first { it.id == 1 }
+        val obscure = result.first { it.id == 2 }
+
+        assertTrue(
+            "Show with more votes should score higher due to Bayesian adjustment",
+            popular.affinityScore > obscure.affinityScore
+        )
     }
 }

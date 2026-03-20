@@ -10,15 +10,23 @@ import com.example.showmateapp.util.Resource
 import com.example.showmateapp.util.safeApiCall
 import javax.inject.Inject
 import android.util.Log
+import kotlinx.coroutines.withTimeoutOrNull
 
 class ShowRepository @Inject constructor(
     private val apiService: TmdbApiService,
     private val showDao: ShowDao
 ) {
 
+    companion object {
+        private const val API_TIMEOUT_MS = 15_000L
+        // Cache entries older than 24 h are considered stale and replaced on next successful fetch
+        private const val CACHE_TTL_MS = 24 * 60 * 60 * 1000L
+    }
+
     suspend fun getShowDetails(showId: Int): Resource<MediaContent> {
-        val networkResource = safeApiCall { 
-            apiService.getMediaDetails(showId)
+        val networkResource = safeApiCall {
+            withTimeoutOrNull(API_TIMEOUT_MS) { apiService.getMediaDetails(showId) }
+                ?: throw Exception("Tiempo de espera agotado")
         }
         
         return when (networkResource) {
@@ -49,16 +57,17 @@ class ShowRepository @Inject constructor(
         withCast: String? = null
     ): Resource<List<MediaContent>> {
         return safeApiCall {
-            val response = apiService.discoverMedia(
-                genreId = genreId, 
-                year = year, 
-                minRating = minRating, 
-                sortBy = sortBy,
-                keywords = keywords,
-                watchRegion = watchRegion,
-                withCast = withCast
-            )
-            response.results
+            withTimeoutOrNull(API_TIMEOUT_MS) {
+                apiService.discoverMedia(
+                    genreId = genreId,
+                    year = year,
+                    minRating = minRating,
+                    sortBy = sortBy,
+                    keywords = keywords,
+                    watchRegion = watchRegion,
+                    withCast = withCast
+                )
+            }?.results ?: throw Exception("Tiempo de espera agotado")
         }
     }
 
@@ -69,14 +78,16 @@ class ShowRepository @Inject constructor(
     }
 
     private suspend fun saveAndReturn(category: String, shows: List<MediaContent>): List<MediaContent> {
+        val staleThreshold = System.currentTimeMillis() - CACHE_TTL_MS
+        showDao.deleteStaleByCategory(category, staleThreshold)
         showDao.replaceCategory(category, shows.map { it.toEntity(category) })
         return shows
     }
 
     suspend fun getPopularShows(): Resource<List<MediaContent>> {
         val result = safeApiCall {
-            val response = apiService.getPopularMedia()
-            response.results
+            withTimeoutOrNull(API_TIMEOUT_MS) { apiService.getPopularMedia() }?.results
+                ?: throw Exception("Tiempo de espera agotado")
         }
         
         return when (result) {
@@ -94,8 +105,8 @@ class ShowRepository @Inject constructor(
 
     suspend fun getTrendingShows(): Resource<List<MediaContent>> {
         val result = safeApiCall {
-            val response = apiService.discoverMedia(sortBy = "popularity.desc")
-            response.results
+            withTimeoutOrNull(API_TIMEOUT_MS) { apiService.discoverMedia(sortBy = "popularity.desc") }?.results
+                ?: throw Exception("Tiempo de espera agotado")
         }
         
         return when (result) {
@@ -113,8 +124,8 @@ class ShowRepository @Inject constructor(
 
     suspend fun getShowsByGenres(genreIds: String): Resource<List<MediaContent>> {
         val result = safeApiCall {
-            val response = apiService.discoverMedia(genreId = genreIds)
-            response.results
+            withTimeoutOrNull(API_TIMEOUT_MS) { apiService.discoverMedia(genreId = genreIds) }?.results
+                ?: throw Exception("Tiempo de espera agotado")
         }
         
         return when (result) {
@@ -145,6 +156,20 @@ class ShowRepository @Inject constructor(
             if (trending is Resource.Success) trending.data else emptyList()
         } else {
             list
+        }
+    }
+
+    /**
+     * Returns shows airing in the next 7 days on the given provider IDs (pipe-separated, e.g. "8|9|337").
+     * Defaults to the top streaming platforms in Spain.
+     */
+    suspend fun getShowsOnTheAir(
+        providers: String = "8|9|337|384|531"
+    ): Resource<List<MediaContent>> {
+        return safeApiCall {
+            withTimeoutOrNull(API_TIMEOUT_MS) {
+                apiService.getOnTheAirShows(withProviders = providers)
+            }?.results ?: throw Exception("Tiempo de espera agotado")
         }
     }
 

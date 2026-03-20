@@ -18,6 +18,7 @@ data class MediaContent(
     val status: String? = null,
     @SerializedName("vote_average") val voteAverage: Float = 0f,
     @SerializedName("vote_count") val voteCount: Int = 0,
+    @SerializedName("episode_run_time") val episodeRunTime: List<Int>? = null,
     @SerializedName("backdrop_path") val backdropPath: String? = null,
     @SerializedName("watch/providers") val watchProviders: WatchProvidersResponse? = null,
     val seasons: List<Season>? = null,

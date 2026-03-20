@@ -32,6 +32,7 @@ data class DetailUiState(
     val isSavingReview: Boolean = false,
     val isReviewSaved: Boolean = false,
     val similarShows: List<MediaContent> = emptyList(),
+    val isSimilarLoading: Boolean = true,
     val actionError: String? = null,
     val watchedEpisodes: List<Int> = emptyList(),
     val selectedSeason: SeasonResponse? = null,
@@ -48,7 +49,7 @@ class DetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
-    // Prevents race conditions when toggling buttons rapidly
+    // Serialises rapid like/essential/watched taps so Firestore writes don't race
     private val toggleMutex = Mutex()
 
     fun loadShowDetails(showId: Int) {
@@ -61,14 +62,15 @@ class DetailViewModel @Inject constructor(
                         val scoredDetails = getRecommendationsUseCase.scoreShows(listOf(details)).first()
                         _uiState.update { it.copy(media = scoredDetails) }
 
-                        // Await interaction state before hiding the loader so buttons show correct state
+                        // Await interactions, rating and review in parallel before hiding the loader
+                        // so the action buttons show the correct initial state on first render
                         coroutineScope {
                             launch { checkInteractions(scoredDetails.id) }
                             launch { loadUserRating(scoredDetails.id) }
                             launch { loadUserReview(scoredDetails.id) }
                         }
 
-                        // Fire-and-forget secondary content
+                        // Secondary content is fire-and-forget; it updates the UI when ready
                         launch { loadSimilarShows(showId) }
                         scoredDetails.seasons?.firstOrNull()?.let {
                             launch { loadSeasonDetails(showId, it.seasonNumber) }
@@ -90,15 +92,18 @@ class DetailViewModel @Inject constructor(
 
     private suspend fun checkInteractions(showId: Int) {
         try {
+            // Prefer the Room cache for instant reads; fall back to Firestore on first launch
             val localState = userRepository.getLocalInteractionState(showId)
+            val profile = userRepository.getUserProfile()
+            val episodes = profile?.watchedEpisodes?.get(showId.toString()) ?: emptyList()
             if (localState != null) {
                 _uiState.update { it.copy(
                     isLiked = localState.isLiked,
                     isEssential = localState.isEssential,
-                    isWatched = localState.isWatched
+                    isWatched = localState.isWatched,
+                    watchedEpisodes = episodes
                 ) }
             } else {
-                // Fallback a Firestore si no hay datos locales (primera apertura tras instalar)
                 val favorites = userRepository.getFavorites()
                 val essentials = userRepository.getEssentials()
                 val watched = userRepository.getWatchedShows()
@@ -108,16 +113,15 @@ class DetailViewModel @Inject constructor(
                 _uiState.update { it.copy(
                     isLiked = isLiked,
                     isEssential = isEssential,
-                    isWatched = isWatched
+                    isWatched = isWatched,
+                    watchedEpisodes = episodes
                 ) }
-                // Cache to Room so future opens are instant
+                // Cache result so future opens skip Firestore
                 userRepository.cacheInteractionState(showId, isLiked, isEssential, isWatched)
             }
-            val profile = userRepository.getUserProfile()
-            _uiState.update { it.copy(
-                watchedEpisodes = profile?.watchedEpisodes?.get(showId.toString()) ?: emptyList()
-            ) }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w("DetailViewModel", "Error loading interaction state for $showId", e)
+        }
     }
 
     fun toggleLiked() {
@@ -211,10 +215,16 @@ class DetailViewModel @Inject constructor(
             try {
                 userRepository.toggleEpisodeWatched(showId, episodeId)
             } catch (e: Exception) {
-                // Revert on error
                 checkInteractions(showId)
             }
         }
+    }
+
+    fun markNextEpisodeWatched() {
+        val season = _uiState.value.selectedSeason ?: return
+        val watched = _uiState.value.watchedEpisodes
+        val next = season.episodes.firstOrNull { it.id !in watched } ?: return
+        toggleEpisodeWatched(next.id)
     }
 
     fun loadSeasonDetails(showId: Int, seasonNumber: Int) {
@@ -279,8 +289,10 @@ class DetailViewModel @Inject constructor(
         _uiState.update { it.copy(userRating = rating) }
 
         viewModelScope.launch {
+            var ratingSaved = false
             try {
                 userRepository.updateRating(currentShow.id, rating)
+                ratingSaved = true
                 userRepository.trackMediaInteraction(
                     mediaId = currentShow.id,
                     genres = currentShow.safeGenreIds.map { it.toString() },
@@ -289,7 +301,9 @@ class DetailViewModel @Inject constructor(
                     interactionType = UserRepository.InteractionType.Rate(rating)
                 )
             } catch (e: Exception) {
-                _uiState.update { it.copy(userRating = previousRating, actionError = "Error al guardar") }
+                if (!ratingSaved) {
+                    _uiState.update { it.copy(userRating = previousRating, actionError = "Error al guardar") }
+                }
             }
         }
     }
@@ -309,12 +323,15 @@ class DetailViewModel @Inject constructor(
 
     private fun loadSimilarShows(showId: Int) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isSimilarLoading = true) }
             try {
                 val similar = showRepository.getSimilarShows(showId)
                 val scoredSimilar = getRecommendationsUseCase.scoreShows(similar)
                 _uiState.update { it.copy(similarShows = scoredSimilar) }
             } catch (e: Exception) {
                 Log.e("DetailViewModel", "Error loading similar shows", e)
+            } finally {
+                _uiState.update { it.copy(isSimilarLoading = false) }
             }
         }
     }

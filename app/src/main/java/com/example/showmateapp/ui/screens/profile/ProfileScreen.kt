@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Update
@@ -146,7 +148,9 @@ fun ProfileScreen(
                     onResetClick = { showResetDialog = true },
                     onLogoutClick = { showLogoutDialog = true },
                     onAboutClick = { globalNavController.navigate(Screen.About) },
-                    onStatsClick = { globalNavController.navigate(Screen.Stats) }
+                    onStatsClick = { globalNavController.navigate(Screen.Stats) },
+                    onCustomListsClick = { globalNavController.navigate(Screen.CustomLists) },
+                    onFriendCompareClick = { globalNavController.navigate(Screen.FriendCompare) }
                 )
                 
                 Spacer(modifier = Modifier.height(100.dp))
@@ -432,7 +436,7 @@ fun WatchedShowsSection(
 }
 
 @Composable
-fun SettingsSectionPremium(onSettingsClick: () -> Unit, onResetClick: () -> Unit, onLogoutClick: () -> Unit, onAboutClick: () -> Unit, onStatsClick: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun SettingsSectionPremium(onSettingsClick: () -> Unit, onResetClick: () -> Unit, onLogoutClick: () -> Unit, onAboutClick: () -> Unit, onStatsClick: () -> Unit = {}, onCustomListsClick: () -> Unit = {}, onFriendCompareClick: () -> Unit = {}, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -465,6 +469,8 @@ fun SettingsSectionPremium(onSettingsClick: () -> Unit, onResetClick: () -> Unit
         ) {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 SettingsItemPremium(Icons.Default.Analytics, "Estadísticas avanzadas", onStatsClick, isAction = true)
+                SettingsItemPremium(Icons.AutoMirrored.Filled.List, "Mis listas", onCustomListsClick, isAction = true)
+                SettingsItemPremium(Icons.Default.People, "Comparar con amigo", onFriendCompareClick, isAction = true)
                 SettingsItemPremium(Icons.Default.Settings, "Configuración", onSettingsClick)
                 SettingsItemPremium(Icons.Default.Update, "Reiniciar mis gustos", onResetClick, isAction = true)
                 SettingsItemPremium(Icons.Default.Info, "Sobre ShowMate", onAboutClick)

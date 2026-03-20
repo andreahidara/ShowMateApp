@@ -28,8 +28,8 @@ data class HomeUiState(
     val trendingShows: List<MediaContent> = emptyList(),
     val actionShows: List<MediaContent> = emptyList(),
     val comedyShows: List<MediaContent> = emptyList(),
-    val popularInSpain: List<MediaContent> = emptyList(),
     val mysteryShows: List<MediaContent> = emptyList(),
+    val thisWeekShows: List<MediaContent> = emptyList(),
     val errorMessage: UiText? = null,
     val whatToWatchToday: MediaContent? = null
 )
@@ -60,7 +60,9 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value.trendingShows
             }
-            val pick = recommendations.filter { it.posterPath != null }.randomOrNull()
+            val pick = recommendations
+                .filter { it.posterPath != null }
+                .maxByOrNull { it.affinityScore }
                 ?: _uiState.value.trendingShows.filter { it.posterPath != null }.firstOrNull()
             _uiState.update { it.copy(whatToWatchToday = pick) }
         }
@@ -79,24 +81,24 @@ class HomeViewModel @Inject constructor(
             }
 
             try {
-                val trendingDeferred = async { repository.getTrendingShows() }
-                val actionDeferred = async { repository.discoverShows(genreId = "10759") } // Action & Adventure
-                val comedyDeferred = async { repository.discoverShows(genreId = "35") } // Comedy
-                val spainDeferred = async { repository.discoverShows(watchRegion = "ES", sortBy = "popularity.desc") }
-                val mysteryDeferred = async { repository.discoverShows(genreId = "9648") } // Mystery
-                
-                val trendingRes = trendingDeferred.await()
-                val actionRes = actionDeferred.await()
-                val comedyRes = comedyDeferred.await()
-                val spainRes = spainDeferred.await()
-                val mysteryRes = mysteryDeferred.await()
-                
-                var upNextList = _uiState.value.upNextShows
+                val trendingDeferred  = async { repository.getTrendingShows() }
+                val actionDeferred   = async { repository.discoverShows(genreId = "10759") }
+                val comedyDeferred   = async { repository.discoverShows(genreId = "35") }
+                val mysteryDeferred  = async { repository.discoverShows(genreId = "9648") }
+                val thisWeekDeferred = async { repository.getShowsOnTheAir() }
+
+                val trendingRes  = trendingDeferred.await()
+                val actionRes    = actionDeferred.await()
+                val comedyRes    = comedyDeferred.await()
+                val mysteryRes   = mysteryDeferred.await()
+                val thisWeekRes  = thisWeekDeferred.await()
+
+                var upNextList   = emptyList<MediaContent>()
                 var trendingList = _uiState.value.trendingShows
-                var actionList = _uiState.value.actionShows
-                var comedyList = _uiState.value.comedyShows
-                var spainList = _uiState.value.popularInSpain
-                var mysteryList = _uiState.value.mysteryShows
+                var actionList   = _uiState.value.actionShows
+                var comedyList   = _uiState.value.comedyShows
+                var mysteryList  = _uiState.value.mysteryShows
+                var thisWeekList = _uiState.value.thisWeekShows
                 var error: UiText? = null
 
                 when (trendingRes) {
@@ -107,8 +109,8 @@ class HomeViewModel @Inject constructor(
 
                 if (actionRes is Resource.Success) actionList = getRecommendationsUseCase.scoreShows(actionRes.data)
                 if (comedyRes is Resource.Success) comedyList = getRecommendationsUseCase.scoreShows(comedyRes.data)
-                if (spainRes is Resource.Success) spainList = getRecommendationsUseCase.scoreShows(spainRes.data)
                 if (mysteryRes is Resource.Success) mysteryList = getRecommendationsUseCase.scoreShows(mysteryRes.data)
+                if (thisWeekRes is Resource.Success) thisWeekList = getRecommendationsUseCase.scoreShows(thisWeekRes.data.take(15))
 
                 // Fetch Up Next shows in parallel
                 val profile = userRepository.getUserProfile()
@@ -129,7 +131,7 @@ class HomeViewModel @Inject constructor(
                         .distinctBy { it.id }
                 }
 
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
@@ -137,10 +139,10 @@ class HomeViewModel @Inject constructor(
                         trendingShows = trendingList,
                         actionShows = actionList,
                         comedyShows = comedyList,
-                        popularInSpain = spainList,
                         mysteryShows = mysteryList,
+                        thisWeekShows = thisWeekList,
                         errorMessage = error
-                    ) 
+                    )
                 }
 
             } catch (e: Exception) {

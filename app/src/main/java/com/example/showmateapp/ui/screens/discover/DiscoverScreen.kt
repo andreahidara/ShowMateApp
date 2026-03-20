@@ -50,32 +50,28 @@ fun DiscoverScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: DiscoverViewModel = hiltViewModel()
 ) {
-    val heroShow by viewModel.heroShow.collectAsState()
-    val topGenreShows by viewModel.topGenreShows.collectAsState()
-    val secondGenreShows by viewModel.secondGenreShows.collectAsState()
-    val topGenreName by viewModel.topGenreName.collectAsState()
-    val secondGenreName by viewModel.secondGenreName.collectAsState()
-    val similarShows by viewModel.similarShows.collectAsState()
-    val similarToName by viewModel.similarToName.collectAsState()
-    val timeTravelShows by viewModel.timeTravelShows.collectAsState()
-    val actorShows by viewModel.actorShows.collectAsState()
-    val actorName by viewModel.actorName.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
+    val state by viewModel.uiState.collectAsState()
 
     DiscoverScreenContent(
-        heroShow = heroShow,
-        topGenreShows = topGenreShows,
-        secondGenreShows = secondGenreShows,
-        similarShows = similarShows,
-        topGenreName = topGenreName,
-        secondGenreName = secondGenreName,
-        similarToName = similarToName,
-        timeTravelShows = timeTravelShows,
-        actorShows = actorShows,
-        actorName = actorName,
-        isLoading = isLoading,
-        errorMessage = errorMessage,
+        heroShow = state.heroShow,
+        topGenreShows = state.topGenreShows,
+        secondGenreShows = state.secondGenreShows,
+        similarShows = state.similarShows,
+        topGenreName = state.topGenreName,
+        secondGenreName = state.secondGenreName,
+        similarToName = state.similarToName,
+        timeTravelShows = state.timeTravelShows,
+        actorShows = state.actorShows,
+        actorName = state.actorName,
+        secondActorShows = state.secondActorShows,
+        secondActorName = state.secondActorName,
+        thirdGenreShows = state.thirdGenreShows,
+        thirdGenreName = state.thirdGenreName,
+        topRatedShows = state.topRatedShows,
+        topKeywordShows = state.topKeywordShows,
+        topKeywordLabel = state.topKeywordLabel,
+        isLoading = state.isLoading,
+        errorMessage = state.errorMessage,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         onMediaClick = { media, tag -> navigateToDetail(globalNavController, media, tag) },
@@ -96,6 +92,13 @@ fun DiscoverScreenContent(
     timeTravelShows: List<MediaContent>,
     actorShows: List<MediaContent>,
     actorName: String,
+    secondActorShows: List<MediaContent>,
+    secondActorName: String,
+    thirdGenreShows: List<MediaContent>,
+    thirdGenreName: String,
+    topRatedShows: List<MediaContent>,
+    topKeywordShows: List<MediaContent>,
+    topKeywordLabel: String,
     isLoading: Boolean,
     errorMessage: String?,
     sharedTransitionScope: SharedTransitionScope,
@@ -152,6 +155,19 @@ fun DiscoverScreenContent(
                     )
                 }
 
+                if (thirdGenreShows.isNotEmpty() && thirdGenreName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "También te puede gustar: $thirdGenreName",
+                            items = thirdGenreShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_genre3"
+                        )
+                    }
+                }
+
                 if (timeTravelShows.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -161,6 +177,32 @@ fun DiscoverScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_timetravel"
+                        )
+                    }
+                }
+
+                if (topKeywordShows.isNotEmpty() && topKeywordLabel.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = topKeywordLabel,
+                            items = topKeywordShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_keyword"
+                        )
+                    }
+                }
+
+                if (topRatedShows.isNotEmpty() && topGenreName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Los mejor valorados en $topGenreName",
+                            items = topRatedShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_toprated"
                         )
                     }
                 }
@@ -187,6 +229,19 @@ fun DiscoverScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_actor"
+                        )
+                    }
+                }
+
+                if (secondActorShows.isNotEmpty() && secondActorName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Porque te gusta $secondActorName",
+                            items = secondActorShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_actor2"
                         )
                     }
                 }
