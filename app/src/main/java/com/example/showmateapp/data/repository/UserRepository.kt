@@ -161,6 +161,20 @@ class UserRepository @Inject constructor(
         usersCollection.document(uid).collection("ratings").document(mediaId.toString()).delete().await()
     }
 
+    suspend fun getAllRatings(): Map<Int, Int> {
+        val uid = auth.currentUser?.uid ?: return emptyMap()
+        return try {
+            val snapshot = usersCollection.document(uid).collection("ratings").get().await()
+            snapshot.documents.mapNotNull { doc ->
+                val id = doc.id.toIntOrNull() ?: return@mapNotNull null
+                val rating = doc.getLong("rating")?.toInt() ?: return@mapNotNull null
+                id to rating
+            }.toMap()
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
     suspend fun saveOnboardingInterests(genres: List<String>) {
         val uid = auth.currentUser?.uid ?: return
         val userRef = usersCollection.document(uid)
@@ -327,7 +341,9 @@ class UserRepository @Inject constructor(
 
     suspend fun updateProfile(username: String) {
         val uid = auth.currentUser?.uid ?: return
-        usersCollection.document(uid).update("username", username).await()
+        usersCollection.document(uid)
+            .set(mapOf("username" to username), com.google.firebase.firestore.SetOptions.merge())
+            .await()
     }
 
     // ── Reviews ───────────────────────────────────────────────────────────────

@@ -11,6 +11,8 @@ import com.example.showmateapp.util.safeApiCall
 import javax.inject.Inject
 import android.util.Log
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class ShowRepository @Inject constructor(
     private val apiService: TmdbApiService,
@@ -54,7 +56,10 @@ class ShowRepository @Inject constructor(
         sortBy: String = "popularity.desc",
         keywords: String? = null,
         watchRegion: String? = null,
-        withCast: String? = null
+        withCast: String? = null,
+        providers: String? = null,
+        firstAirDateGte: String? = null,
+        firstAirDateLte: String? = null
     ): Resource<List<MediaContent>> {
         return safeApiCall {
             withTimeoutOrNull(API_TIMEOUT_MS) {
@@ -65,7 +70,10 @@ class ShowRepository @Inject constructor(
                     sortBy = sortBy,
                     keywords = keywords,
                     watchRegion = watchRegion,
-                    withCast = withCast
+                    withCast = withCast,
+                    watchProviders = providers,
+                    firstAirDateGte = firstAirDateGte,
+                    firstAirDateLte = firstAirDateLte
                 )
             }?.results ?: throw Exception("Tiempo de espera agotado")
         }
@@ -161,14 +169,23 @@ class ShowRepository @Inject constructor(
 
     /**
      * Returns shows airing in the next 7 days on the given provider IDs (pipe-separated, e.g. "8|9|337").
-     * Defaults to the top streaming platforms in Spain.
+     * Uses discover/tv so that with_watch_providers is properly supported.
      */
     suspend fun getShowsOnTheAir(
         providers: String = "8|9|337|384|531"
     ): Resource<List<MediaContent>> {
+        val today = LocalDate.now()
+        val weekLater = today.plusDays(7)
+        val fmt = DateTimeFormatter.ISO_LOCAL_DATE
         return safeApiCall {
             withTimeoutOrNull(API_TIMEOUT_MS) {
-                apiService.getOnTheAirShows(withProviders = providers)
+                apiService.discoverMedia(
+                    airDateGte = today.format(fmt),
+                    airDateLte = weekLater.format(fmt),
+                    watchProviders = providers,
+                    watchRegion = "ES",
+                    sortBy = "popularity.desc"
+                )
             }?.results ?: throw Exception("Tiempo de espera agotado")
         }
     }

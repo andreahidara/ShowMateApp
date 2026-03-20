@@ -24,12 +24,17 @@ import android.util.Log
 data class HomeUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    val userName: String = "",
     val upNextShows: List<MediaContent> = emptyList(),
+    val upNextProgress: Map<Int, Float> = emptyMap(),
     val trendingShows: List<MediaContent> = emptyList(),
     val actionShows: List<MediaContent> = emptyList(),
     val comedyShows: List<MediaContent> = emptyList(),
     val mysteryShows: List<MediaContent> = emptyList(),
     val thisWeekShows: List<MediaContent> = emptyList(),
+    val selectedPlatform: String? = null,
+    val platformShows: Map<String, List<MediaContent>> = emptyMap(),
+    val isPlatformLoading: Boolean = false,
     val errorMessage: UiText? = null,
     val whatToWatchToday: MediaContent? = null
 )
@@ -52,6 +57,48 @@ class HomeViewModel @Inject constructor(
 
     fun loadData() = fetchHomeData(isInitialLoad = true)
     fun refresh() = fetchHomeData(isInitialLoad = false)
+
+    companion object {
+        val PLATFORM_PROVIDER_IDS = mapOf(
+            "Netflix"    to "8",
+            "Prime"      to "9",
+            "Disney+"    to "337",
+            "Max"        to "384",
+            "Paramount+" to "531"
+        )
+    }
+
+    fun selectPlatform(name: String?) {
+        val current = _uiState.value.selectedPlatform
+        // Toggle off if already selected
+        val newSelection = if (current == name) null else name
+        _uiState.update { it.copy(selectedPlatform = newSelection) }
+        if (newSelection == null) return
+
+        // Return cached result if already loaded
+        if (_uiState.value.platformShows.containsKey(newSelection)) return
+
+        val providerId = PLATFORM_PROVIDER_IDS[newSelection] ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isPlatformLoading = true) }
+            try {
+                val result = repository.getShowsOnTheAir(providers = providerId)
+                if (result is Resource.Success) {
+                    val scored = getRecommendationsUseCase.scoreShows(result.data.take(15))
+                    _uiState.update { state ->
+                        state.copy(
+                            platformShows = state.platformShows + (newSelection to scored),
+                            isPlatformLoading = false
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isPlatformLoading = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isPlatformLoading = false) }
+            }
+        }
+    }
 
     fun pickWhatToWatchToday() {
         viewModelScope.launch {
@@ -114,12 +161,17 @@ class HomeViewModel @Inject constructor(
 
                 // Fetch Up Next shows in parallel
                 val profile = userRepository.getUserProfile()
+                val userName = profile?.username?.takeIf { it.isNotBlank() }
+                    ?: userRepository.getCurrentUserEmail()?.substringBefore("@")
+                        ?.replaceFirstChar { it.uppercaseChar() }
+                    ?: ""
                 val recentShowIds = profile?.watchedEpisodes?.keys
                     ?.toList()
                     ?.takeLast(7)
                     ?.mapNotNull { it.toIntOrNull() }
                     ?: emptyList()
 
+                val episodesMap = profile?.watchedEpisodes ?: emptyMap()
                 if (recentShowIds.isNotEmpty()) {
                     val deferred = recentShowIds.map { showId ->
                         async { repository.getShowDetails(showId) }
@@ -131,11 +183,19 @@ class HomeViewModel @Inject constructor(
                         .distinctBy { it.id }
                 }
 
+                val progressMap = upNextList.associate { show ->
+                    val watched = episodesMap[show.id.toString()]?.size ?: 0
+                    val total = ((show.numberOfSeasons ?: 1) * 10).coerceAtLeast(1)
+                    show.id to (watched.toFloat() / total).coerceIn(0f, 1f)
+                }
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
+                        userName = userName,
                         upNextShows = upNextList,
+                        upNextProgress = progressMap,
                         trendingShows = trendingList,
                         actionShows = actionList,
                         comedyShows = comedyList,

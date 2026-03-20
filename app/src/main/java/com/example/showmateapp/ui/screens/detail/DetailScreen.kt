@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
@@ -50,14 +51,17 @@ import com.example.showmateapp.ui.theme.TextGray
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import com.example.showmateapp.data.network.CountryProviders
 import kotlinx.coroutines.launch
@@ -81,9 +85,9 @@ fun DetailScreen(
     DetailScreenContent(
         uiState = uiState,
         onBackClick = { navController.popBackStack() },
-        onLikeClick = { viewModel.toggleLiked() },
+        onLikeClick = { viewModel.requestToggleLiked() },
         onEssentialClick = { viewModel.toggleEssential() },
-        onWatchedClick = { viewModel.toggleWatched() },
+        onWatchedClick = { viewModel.requestToggleWatched() },
         onRateClick = { viewModel.rateShow(it) },
         onClearRateClick = { viewModel.clearRating() },
         onRetry = { viewModel.loadShowDetails(showId) },
@@ -97,10 +101,53 @@ fun DetailScreen(
         onSaveReview = { viewModel.saveReview() },
         onDeleteReview = { viewModel.deleteReview() },
         onMarkNextEpisode = { viewModel.markNextEpisodeWatched() },
+        onShowAddToListDialog = { viewModel.showAddToListDialog() },
+        onHideAddToListDialog = { viewModel.hideAddToListDialog() },
+        onAddToList = { viewModel.addToList(it) },
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         sharedElementTag = sharedElementTag
     )
+
+    if (uiState.showUnlikeConfirm) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelConfirm() },
+            containerColor = Color(0xFF1A1A2E),
+            title = { Text("Quitar de favoritos", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text("¿Seguro que quieres quitar esta serie de tus favoritos?", color = TextGray) },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.toggleLiked() },
+                    colors = ButtonDefaults.buttonColors(containerColor = HeartRed)
+                ) { Text("Quitar", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelConfirm() }) {
+                    Text("Cancelar", color = TextGray)
+                }
+            }
+        )
+    }
+
+    if (uiState.showUnwatchConfirm) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelConfirm() },
+            containerColor = Color(0xFF1A1A2E),
+            title = { Text("Marcar como no vista", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text("¿Seguro que quieres marcar esta serie como no vista?", color = TextGray) },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.toggleWatched() },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                ) { Text("Confirmar", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelConfirm() }) {
+                    Text("Cancelar", color = TextGray)
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -122,6 +169,9 @@ fun DetailScreenContent(
     onSaveReview: () -> Unit = {},
     onDeleteReview: () -> Unit = {},
     onMarkNextEpisode: () -> Unit = {},
+    onShowAddToListDialog: () -> Unit = {},
+    onHideAddToListDialog: () -> Unit = {},
+    onAddToList: (String) -> Unit = {},
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedElementTag: String?
@@ -129,6 +179,7 @@ fun DetailScreenContent(
     val snackbarHostState = remember { SnackbarHostState() }
     var showScoreDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
     if (showScoreDialog) {
         AlertDialog(
@@ -175,6 +226,68 @@ fun DetailScreenContent(
         )
     }
 
+    if (uiState.showAddToListDialog) {
+        AlertDialog(
+            onDismissRequest = onHideAddToListDialog,
+            containerColor = Color(0xFF1A1A2E),
+            title = {
+                Text("Añadir a lista", color = Color.White, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                if (uiState.customLists.isEmpty()) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, tint = PrimaryPurple.copy(alpha = 0.5f), modifier = Modifier.size(40.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "Aún no tienes listas. Crea una desde tu perfil.",
+                            color = TextGray,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    Column {
+                        uiState.customLists.entries.toList().forEach { (name, ids) ->
+                            val alreadyAdded = uiState.media?.id?.let { ids.contains(it) } == true
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = !alreadyAdded) { onAddToList(name) }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(PrimaryPurple.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(20.dp))
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(name, color = if (alreadyAdded) TextGray else Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("${ids.size} series", color = TextGray, fontSize = 12.sp)
+                                }
+                                if (alreadyAdded) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = onHideAddToListDialog) {
+                    Text("Cerrar", color = TextGray)
+                }
+            }
+        )
+    }
+
     LaunchedEffect(uiState.actionError) {
         uiState.actionError?.let {
             scope.launch {
@@ -185,7 +298,7 @@ fun DetailScreenContent(
     }
 
     if (uiState.isLoading) {
-        PulseLoader()
+        DetailScreenSkeleton()
         return
     }
 
@@ -317,7 +430,10 @@ fun DetailScreenContent(
                                 containerColor = watchedColor,
                                 contentColor = if (uiState.isWatched) Color.White else TextGray,
                                 modifier = Modifier.weight(1.2f),
-                                onClick = onWatchedClick
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onWatchedClick()
+                                }
                             )
 
                             val likeColor by animateColorAsState(
@@ -330,7 +446,10 @@ fun DetailScreenContent(
                                 containerColor = likeColor,
                                 contentColor = Color.White,
                                 modifier = Modifier.weight(1f),
-                                onClick = onLikeClick
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onLikeClick()
+                                }
                             )
 
                             val essentialColor by animateColorAsState(
@@ -343,139 +462,272 @@ fun DetailScreenContent(
                                 containerColor = essentialColor,
                                 contentColor = Color.White,
                                 modifier = Modifier.weight(0.8f),
-                                onClick = onEssentialClick
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onEssentialClick()
+                                }
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = onShowAddToListDialog,
+                            modifier = Modifier.fillMaxWidth().height(46.dp),
+                            border = BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Añadir a lista", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+
+                        val trailerKey = show.videos?.results?.firstOrNull { it.site == "YouTube" && it.type == "Trailer" }?.key
+                        if (trailerKey != null) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            val uriHandler = LocalUriHandler.current
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { uriHandler.openUri("https://www.youtube.com/watch?v=$trailerKey") }
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data("https://img.youtube.com/vi/$trailerKey/mqdefault.jpg")
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Tráiler de ${show.name}",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    placeholder = painterResource(R.drawable.ic_logo_placeholder)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.35f))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .align(Alignment.Center)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.92f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(34.dp)
+                                    )
+                                }
+                                Surface(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(12.dp),
+                                    color = Color.Black.copy(alpha = 0.6f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        "Tráiler Oficial",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
-                        val trailerKey = show.videos?.results?.firstOrNull { it.site == "YouTube" && it.type == "Trailer" }?.key
-                        if (trailerKey != null) {
-                            val uriHandler = LocalUriHandler.current
-                            Button(
-                                onClick = { uriHandler.openUri("https://www.youtube.com/watch?v=$trailerKey") },
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.White)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Ver Tráiler Oficial", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                            }
-                        }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        // Tabs: Información / Mi reseña
+                        var selectedDetailTab by remember { mutableIntStateOf(0) }
+                        val detailTabs = listOf("Información", "Mi reseña")
 
-                        val esProviders = show.watchProviders?.results?.get("ES")
-                        if (esProviders != null &&
-                            (!esProviders.flatrate.isNullOrEmpty() ||
-                             !esProviders.rent.isNullOrEmpty() ||
-                             !esProviders.buy.isNullOrEmpty())
+                        val hasReviewContent = uiState.userRating != null || uiState.isReviewSaved
+
+                        TabRow(
+                            selectedTabIndex = selectedDetailTab,
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White,
+                            indicator = { tabPositions ->
+                                if (selectedDetailTab < tabPositions.size) {
+                                    TabRowDefaults.SecondaryIndicator(
+                                        Modifier.tabIndicatorOffset(tabPositions[selectedDetailTab]),
+                                        color = PrimaryPurple
+                                    )
+                                }
+                            },
+                            divider = { HorizontalDivider(color = Color.White.copy(alpha = 0.1f)) }
                         ) {
-                            WatchProvidersSection(providers = esProviders, showName = show.name)
-                            Spacer(modifier = Modifier.height(32.dp))
-                        }
-
-                        var isSynopsisExpanded by remember { mutableStateOf(false) }
-                        Text(
-                            text = stringResource(R.string.detail_synopsis),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = show.overview.ifEmpty { stringResource(R.string.detail_no_synopsis) },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = TextGray,
-                            lineHeight = 24.sp,
-                            maxLines = if (isSynopsisExpanded) Int.MAX_VALUE else 3,
-                            modifier = Modifier
-                                .animateContentSize()
-                                .clickable { isSynopsisExpanded = !isSynopsisExpanded }
-                        )
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        ReviewSection(
-                            reviewText = uiState.userReview,
-                            userRating = uiState.userRating,
-                            isSaving = uiState.isSavingReview,
-                            isReviewSaved = uiState.isReviewSaved,
-                            onTextChange = onReviewTextChange,
-                            onSave = onSaveReview,
-                            onDelete = onDeleteReview,
-                            onRateClick = onRateClick,
-                            onClearRateClick = onClearRateClick
-                        )
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        if (!show.seasons.isNullOrEmpty()) {
-                            EpisodesSection(
-                                seasons = show.seasons,
-                                selectedSeason = uiState.selectedSeason,
-                                isSeasonLoading = uiState.isSeasonLoading,
-                                watchedEpisodes = uiState.watchedEpisodes,
-                                onEpisodeToggle = onEpisodeToggle,
-                                onSeasonChange = { seasonNum ->
-                                    (uiState.media?.id)?.let { id ->
-                                        onSeasonChange(id, seasonNum)
+                            detailTabs.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedDetailTab == index,
+                                    onClick = { selectedDetailTab = index },
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = title,
+                                                fontWeight = if (selectedDetailTab == index) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (selectedDetailTab == index) PrimaryPurple else TextGray
+                                            )
+                                            if (index == 1 && hasReviewContent) {
+                                                Spacer(modifier = Modifier.width(5.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(6.dp)
+                                                        .clip(CircleShape)
+                                                        .background(PrimaryPurple)
+                                                )
+                                            }
+                                        }
                                     }
-                                },
-                                onMarkNextEpisode = onMarkNextEpisode
-                            )
-                            Spacer(modifier = Modifier.height(32.dp))
-                        }
-
-                        Text(
-                            text = stringResource(R.string.detail_top_cast),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            val cast = show.credits?.cast ?: emptyList()
-                            items(cast.take(10), key = { it.id }) { member ->
-                                CastMemberItem(member)
+                                )
                             }
                         }
 
-                        if (uiState.isSimilarLoading || uiState.similarShows.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        AnimatedContent(
+                            targetState = selectedDetailTab,
+                            transitionSpec = {
+                                val direction = if (targetState > initialState) 1 else -1
+                                (slideInHorizontally(tween(300)) { it * direction } + fadeIn(tween(200))) togetherWith
+                                (slideOutHorizontally(tween(300)) { -it * direction } + fadeOut(tween(200)))
+                            },
+                            label = "detail_tab_anim"
+                        ) { tab ->
+                        if (tab == 0) {
+                            // Tab Información
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                            val esProviders = show.watchProviders?.results?.get("ES")
+                            if (esProviders != null &&
+                                (!esProviders.flatrate.isNullOrEmpty() ||
+                                 !esProviders.rent.isNullOrEmpty() ||
+                                 !esProviders.buy.isNullOrEmpty())
+                            ) {
+                                WatchProvidersSection(providers = esProviders, showName = show.name)
+                                Spacer(modifier = Modifier.height(32.dp))
+                            }
+
+                            var isSynopsisExpanded by remember { mutableStateOf(false) }
                             Text(
-                                text = "Te puede gustar",
+                                text = stringResource(R.string.detail_synopsis),
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            if (uiState.isSimilarLoading) {
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    items(5) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(120.dp)
-                                                .height(170.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(Color.White.copy(alpha = 0.08f))
-                                        )
-                                    }
-                                }
-                            } else {
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    items(uiState.similarShows, key = { it.id }) { similarShow ->
-                                        ShowCard(
-                                            media = similarShow,
-                                            sharedTransitionScope = sharedTransitionScope,
-                                            animatedVisibilityScope = animatedVisibilityScope,
-                                            onClick = { s, t -> onSimilarShowClick(s, t) },
-                                            tag = "similar"
-                                        )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = show.overview.ifEmpty { stringResource(R.string.detail_no_synopsis) },
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = TextGray,
+                                lineHeight = 24.sp,
+                                maxLines = if (isSynopsisExpanded) Int.MAX_VALUE else 3,
+                                modifier = Modifier
+                                    .animateContentSize()
+                                    .clickable { isSynopsisExpanded = !isSynopsisExpanded }
+                            )
+
+                            if (!show.seasons.isNullOrEmpty()) {
+                                Spacer(modifier = Modifier.height(32.dp))
+                                EpisodesSection(
+                                    seasons = show.seasons,
+                                    selectedSeason = uiState.selectedSeason,
+                                    isSeasonLoading = uiState.isSeasonLoading,
+                                    watchedEpisodes = uiState.watchedEpisodes,
+                                    onEpisodeToggle = onEpisodeToggle,
+                                    onSeasonChange = { seasonNum ->
+                                        (uiState.media?.id)?.let { id ->
+                                            onSeasonChange(id, seasonNum)
+                                        }
+                                    },
+                                    onMarkNextEpisode = onMarkNextEpisode
+                                )
+                            }
+
+                            val cast = show.credits?.cast ?: emptyList()
+                            if (cast.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(32.dp))
+                                Text(
+                                    text = stringResource(R.string.detail_top_cast),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    items(cast.take(10), key = { it.id }) { member ->
+                                        CastMemberItem(member)
                                     }
                                 }
                             }
+
+                            if (uiState.isSimilarLoading || uiState.similarShows.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(32.dp))
+                                Text(
+                                    text = "Te puede gustar",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                if (uiState.isSimilarLoading) {
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        items(5) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(120.dp)
+                                                    .height(170.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(Color.White.copy(alpha = 0.08f))
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        items(uiState.similarShows, key = { it.id }) { similarShow ->
+                                            ShowCard(
+                                                media = similarShow,
+                                                sharedTransitionScope = sharedTransitionScope,
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                onClick = { s, t -> onSimilarShowClick(s, t) },
+                                                tag = "similar"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            } // cierra Column tab 0
+                        } else {
+                            // Tab Mi reseña
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                StarRatingSection(
+                                    userRating = uiState.userRating,
+                                    onRateClick = onRateClick,
+                                    onClearRateClick = onClearRateClick
+                                )
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                ReviewSection(
+                                    reviewText = uiState.userReview,
+                                    isSaving = uiState.isSavingReview,
+                                    isReviewSaved = uiState.isReviewSaved,
+                                    onTextChange = onReviewTextChange,
+                                    onSave = onSaveReview,
+                                    onDelete = onDeleteReview
+                                )
+                            } // cierra Column tab 1
                         }
+                        } // cierra AnimatedContent lambda
                     }
                 }
             }
@@ -644,31 +896,111 @@ fun CastMemberItem(member: com.example.showmateapp.data.network.CastMember, modi
     }
 }
 
-private const val REVIEW_MAX_CHARS = 500
-
 @Composable
-fun ReviewSection(
-    reviewText: String,
+fun StarRatingSection(
     userRating: Int?,
-    isSaving: Boolean,
-    isReviewSaved: Boolean,
-    onTextChange: (String) -> Unit,
-    onSave: () -> Unit,
-    onDelete: () -> Unit,
     onRateClick: (Int) -> Unit,
     onClearRateClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val starCount = 5
+    val haptic = LocalHapticFeedback.current
     val visualRating = userRating?.let { ((it + 1) / 2).coerceIn(1, 5) } ?: 0
 
+    Surface(
+        color = Color.White.copy(alpha = 0.05f),
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Tu puntuación",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (userRating != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "$userRating/10",
+                            color = StarYellow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = onClearRateClick,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Quitar valoración",
+                                tint = Color.White.copy(alpha = 0.4f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                repeat(starCount) { index ->
+                    val filled = index < visualRating
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onRateClick((index + 1) * 2)
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (filled) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = "Estrella ${index + 1}",
+                            tint = if (filled) StarYellow else Color.White.copy(alpha = 0.25f),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+                if (userRating == null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Toca para valorar",
+                        color = Color.White.copy(alpha = 0.3f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val REVIEW_MAX_CHARS = 500
+
+@Composable
+fun ReviewSection(
+    reviewText: String,
+    isSaving: Boolean,
+    isReviewSaved: Boolean,
+    onTextChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var isEditing by remember(isReviewSaved) {
         mutableStateOf(reviewText.isBlank() || !isReviewSaved)
     }
 
     Column(modifier = modifier) {
         Text(
-            text = "Mi valoración",
+            text = "Mi reseña",
             style = MaterialTheme.typography.titleLarge,
             color = Color.White,
             fontWeight = FontWeight.Bold
@@ -681,56 +1013,6 @@ fun ReviewSection(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    repeat(starCount) { index ->
-                        val filled = index < visualRating
-                        IconButton(
-                            onClick = { onRateClick((index + 1) * 2) },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (filled) Icons.Default.Star else Icons.Default.StarBorder,
-                                contentDescription = "Estrella ${index + 1}",
-                                tint = if (filled) StarYellow else Color.White.copy(alpha = 0.3f),
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    if (userRating != null) {
-                        Text(
-                            text = "$userRating/10",
-                            color = StarYellow,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        IconButton(
-                            onClick = onClearRateClick,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Quitar valoración",
-                                tint = Color.White.copy(alpha = 0.4f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "Toca para valorar",
-                            color = Color.White.copy(alpha = 0.3f),
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
-                Spacer(modifier = Modifier.height(20.dp))
 
                 if (!isEditing && reviewText.isNotBlank()) {
                     Column {
@@ -1061,6 +1343,72 @@ private fun ScoreFactorRow(label: String, weight: String) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun DetailScreenSkeleton() {
+    val shimmer = shimmerBrush()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Hero image area
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(450.dp)
+                .background(shimmer)
+        )
+        // Content overlay
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 270.dp)
+        ) {
+            // Title shimmer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.75f)
+                    .height(28.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(shimmer)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.45f)
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(shimmer)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            // Action buttons row
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(shimmer)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            // Synopsis lines
+            repeat(3) { i ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(if (i == 2) 0.6f else 1f)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(shimmer)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
         }
     }
 }

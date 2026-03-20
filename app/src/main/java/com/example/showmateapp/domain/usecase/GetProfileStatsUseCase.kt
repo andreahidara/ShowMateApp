@@ -10,13 +10,19 @@ class GetProfileStatsUseCase @Inject constructor() {
     fun execute(watchedShows: List<MediaContent>, userProfile: UserProfile?): ProfileStats {
         val watchedEpisodesMap = userProfile?.watchedEpisodes ?: emptyMap()
         var totalMinutes = 0
+        var totalEpisodes = 0
         watchedShows.forEach { show ->
-            val watchedEpCount = watchedEpisodesMap[show.id.toString()]?.size ?: 0
-            if (watchedEpCount > 0) {
-                // Use actual episode runtime if available, otherwise fall back to 45 min
-                val avgRuntime = show.episodeRunTime?.firstOrNull()?.takeIf { it > 0 } ?: 45
-                totalMinutes += watchedEpCount * avgRuntime
+            val episodesForShow = watchedEpisodesMap[show.id.toString()]
+            // If the show has an entry in watchedEpisodes, use that count (even if 0).
+            // Only fall back to the season-based estimate when there is no entry at all.
+            val effectiveEpCount = when {
+                episodesForShow != null && episodesForShow.isNotEmpty() -> episodesForShow.size
+                episodesForShow != null -> 0
+                else -> (show.numberOfSeasons ?: 1) * 10
             }
+            val avgRuntime = show.episodeRunTime?.firstOrNull()?.takeIf { it > 0 } ?: 45
+            totalMinutes += effectiveEpCount * avgRuntime
+            totalEpisodes += effectiveEpCount
         }
         val totalHours = totalMinutes / 60
 
@@ -37,6 +43,7 @@ class GetProfileStatsUseCase @Inject constructor() {
         return ProfileStats(
             totalWatchedHours = totalHours,
             watchedCount = watchedShows.size,
+            totalEpisodes = totalEpisodes,
             topGenre = topGenreName,
             favoriteActorId = topActorId,
             topGenres = topGenresList
@@ -46,6 +53,7 @@ class GetProfileStatsUseCase @Inject constructor() {
     data class ProfileStats(
         val totalWatchedHours: Int,
         val watchedCount: Int,
+        val totalEpisodes: Int = 0,
         val topGenre: String = "N/A",
         val favoriteActorId: String? = null,
         val topGenres: List<Pair<String, Float>> = emptyList()

@@ -4,11 +4,13 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +44,7 @@ fun SearchScreen(
     globalNavController: NavController,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    scrollToTopTrigger: Int = 0,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     var query by remember { mutableStateOf("") }
@@ -49,12 +52,15 @@ fun SearchScreen(
     val trendingShows by viewModel.trendingShows.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isFilterActive by viewModel.isFilterActive.collectAsState()
+    val recentSearches by viewModel.recentSearches.collectAsState()
+    val suggestions by viewModel.suggestions.collectAsState()
 
     var showFilters by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
     val selectedGenre by viewModel.selectedGenre.collectAsState()
-    val selectedYear by viewModel.selectedYear.collectAsState()
+    val yearFrom by viewModel.yearFrom.collectAsState()
+    val yearTo by viewModel.yearTo.collectAsState()
     val selectedRating by viewModel.selectedRating.collectAsState()
 
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -75,6 +81,7 @@ fun SearchScreen(
                     value = query,
                     onValueChange = {
                         query = it
+                        viewModel.updateSuggestions(it)
                         viewModel.searchMedia(it)
                     },
                     modifier = Modifier
@@ -128,12 +135,7 @@ fun SearchScreen(
                 )
 
                 // Quick Genre Filters
-                val genres = listOf(
-                    "10759" to "Acción", "16" to "Animación", "35" to "Comedia", 
-                    "80" to "Crimen", "99" to "Docu", "18" to "Drama", 
-                    "10751" to "Familia", "10762" to "Kids", "9648" to "Misterio",
-                    "10765" to "Sci-Fi"
-                )
+                val genres = SearchViewModel.AVAILABLE_GENRES
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -155,14 +157,113 @@ fun SearchScreen(
                         )
                     }
                 }
+
+                // Inline suggestions
+                if (suggestions.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        color = Color(0xFF1A1A2E),
+                        shape = RoundedCornerShape(12.dp),
+                        tonalElevation = 4.dp
+                    ) {
+                        Column {
+                            suggestions.forEachIndexed { idx, media ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            query = media.name
+                                            viewModel.updateSuggestions("")
+                                            viewModel.searchMedia(media.name)
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = TextGray,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(media.name, color = Color.White, fontSize = 14.sp)
+                                }
+                                if (idx < suggestions.lastIndex) {
+                                    HorizontalDivider(
+                                        color = Color.White.copy(alpha = 0.06f),
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
             }
         }
     ) { padding ->
+        val showRecent = query.isBlank() && !isFilterActive && recentSearches.isNotEmpty()
         val listToShow = if (query.isBlank() && !isFilterActive) trendingShows else searchResults
         val titleToShow = if (query.isBlank() && !isFilterActive) "Tendencias" else "Resultados de búsqueda"
         val listTag = if (query.isBlank() && !isFilterActive) "search_trending" else "search_results"
 
         Column(modifier = Modifier.padding(padding)) {
+            if (showRecent) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "BÚSQUEDAS RECIENTES",
+                            color = TextGray,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                        TextButton(
+                            onClick = { viewModel.clearRecentSearches() },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("Borrar", color = PrimaryPurple, fontSize = 12.sp)
+                        }
+                    }
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        items(recentSearches) { recent ->
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = SurfaceDark,
+                                modifier = Modifier.clickable {
+                                    query = recent
+                                    viewModel.searchMedia(recent)
+                                }
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(recent, color = Color.White, fontSize = 13.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Eliminar",
+                                        tint = TextGray,
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clickable { viewModel.removeRecentSearch(recent) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     PulseLoader()
@@ -173,6 +274,10 @@ fun SearchScreen(
                     onRetry = { viewModel.searchMedia(query) }
                 )
             } else if (listToShow.isNotEmpty()) {
+                val gridState = rememberLazyGridState()
+                LaunchedEffect(scrollToTopTrigger) {
+                    if (scrollToTopTrigger > 0) gridState.animateScrollToItem(0)
+                }
                 Text(
                     text = titleToShow,
                     color = TextGray,
@@ -182,6 +287,7 @@ fun SearchScreen(
                     letterSpacing = 1.sp
                 )
                 LazyVerticalGrid(
+                    state = gridState,
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -217,10 +323,11 @@ fun SearchScreen(
         ) {
             FilterSheetContent(
                 selectedGenre = selectedGenre,
-                selectedYear = selectedYear,
+                yearFrom = yearFrom,
+                yearTo = yearTo,
                 selectedRating = selectedRating,
                 onGenreSelected = { viewModel.updateGenre(it) },
-                onYearSelected = { viewModel.updateYear(it) },
+                onYearRangeSelected = { from, to -> viewModel.updateYearRange(from, to) },
                 onRatingSelected = { viewModel.updateRating(it) },
                 onClear = { viewModel.clearFilters() }
             )
@@ -228,23 +335,20 @@ fun SearchScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun FilterSheetContent(
     selectedGenre: String?,
-    selectedYear: Int?,
+    yearFrom: Int = SearchViewModel.MIN_YEAR,
+    yearTo: Int = SearchViewModel.CURRENT_YEAR,
     selectedRating: Float?,
     onGenreSelected: (String?) -> Unit,
-    onYearSelected: (Int?) -> Unit,
+    onYearRangeSelected: (Int, Int) -> Unit,
     onRatingSelected: (Float?) -> Unit,
     onClear: () -> Unit
 ) {
-    val genres = listOf(
-        "10759" to "Acción", "16" to "Animación", "35" to "Comedia", 
-        "80" to "Crimen", "99" to "Docu", "18" to "Drama", 
-        "10751" to "Familia", "10762" to "Kids", "9648" to "Misterio",
-        "10765" to "Sci-Fi"
-    )
+    val currentYear = SearchViewModel.CURRENT_YEAR
+    val genres = SearchViewModel.AVAILABLE_GENRES
 
     Column(
         modifier = Modifier
@@ -259,7 +363,7 @@ fun FilterSheetContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Refinar búsqueda", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
-            if (selectedGenre != null || selectedYear != null || selectedRating != null) {
+            if (selectedGenre != null || yearFrom > 1990 || yearTo < currentYear || selectedRating != null) {
                 TextButton(onClick = onClear) {
                     Text("Restablecer", color = PrimaryPurple, fontWeight = FontWeight.Bold)
                 }
@@ -293,27 +397,31 @@ fun FilterSheetContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        SectionTitle("Año de estreno")
-        val years = (2020..2025).reversed().toList()
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(vertical = 12.dp)
-        ) {
-            years.forEach { year ->
-                FilterChip(
-                    selected = selectedYear == year,
-                    onClick = { onYearSelected(if (selectedYear == year) null else year) },
-                    label = { Text(year.toString()) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = PrimaryPurple,
-                        selectedLabelColor = Color.White,
-                        containerColor = Color.White.copy(alpha = 0.05f)
-                    ),
-                    border = null
-                )
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SectionTitle("Año de estreno")
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (yearFrom == 1990 && yearTo == currentYear) "Todos"
+                       else "$yearFrom – $yearTo",
+                color = PrimaryPurple,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp
+            )
         }
+        RangeSlider(
+            value = yearFrom.toFloat()..yearTo.toFloat(),
+            onValueChange = { range ->
+                onYearRangeSelected(range.start.toInt(), range.endInclusive.toInt())
+            },
+            valueRange = 1990f..currentYear.toFloat(),
+            steps = currentYear - 1990 - 1,
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = PrimaryPurple,
+                inactiveTrackColor = Color.White.copy(alpha = 0.1f)
+            ),
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 

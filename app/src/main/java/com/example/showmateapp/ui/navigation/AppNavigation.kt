@@ -13,7 +13,9 @@ import com.example.showmateapp.ui.screens.main.MainScreen
 import com.example.showmateapp.ui.screens.onboarding.OnboardingScreen
 import com.example.showmateapp.ui.screens.profile.about.AboutScreen
 import com.example.showmateapp.ui.screens.profile.friends.FriendCompareScreen
+import com.example.showmateapp.ui.screens.profile.allshows.AllShowsScreen
 import com.example.showmateapp.ui.screens.profile.lists.CustomListsScreen
+import com.example.showmateapp.ui.screens.profile.lists.ListDetailScreen
 import com.example.showmateapp.ui.screens.profile.settings.SettingsScreen
 import com.example.showmateapp.ui.screens.stats.StatsScreen
 import com.example.showmateapp.ui.screens.splash.SplashScreen
@@ -78,6 +80,8 @@ fun AppNavigation() {
             composable<Screen.About> { AboutScreen(navController = navController) }
             composable<Screen.Stats> { StatsScreen(navController = navController) }
             composable<Screen.CustomLists> { CustomListsScreen(navController = navController) }
+            composable<Screen.ListDetail> { ListDetailScreen(navController = navController) }
+            composable<Screen.AllShows> { AllShowsScreen(navController = navController) }
             composable<Screen.FriendCompare> { FriendCompareScreen(navController = navController) }
 
             composable<Screen.Detail> { backStackEntry ->

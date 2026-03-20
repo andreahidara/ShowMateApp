@@ -2,11 +2,13 @@ package com.example.showmateapp.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -18,6 +20,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,14 +40,20 @@ import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.TextGray
 
 @Composable
-fun BottomNavBar(navController: NavController) {
+fun BottomNavBar(
+    navController: NavController,
+    onScrollToTop: (Any) -> Unit = {}
+) {
     val items = listOf(
         BottomNavItem(Screen.Home, "Inicio", Icons.Default.Home),
         BottomNavItem(Screen.Search, "Buscar", Icons.Default.Search),
         BottomNavItem(Screen.Discover, "Descubrir", Icons.Default.Star),
-        BottomNavItem(Screen.Favorites, "Favoritos", Icons.Default.Favorite),
+        BottomNavItem(Screen.Friends, "Amigos", Icons.Default.Group),
         BottomNavItem(Screen.Profile, "Perfil", Icons.Default.Person)
     )
+
+    var lastClickedRoute by remember { mutableStateOf<Any?>(null) }
+    var lastClickTime by remember { mutableLongStateOf(0L) }
 
     Box {
         Box(
@@ -105,6 +114,12 @@ fun BottomNavBar(navController: NavController) {
                     },
                     selected = isSelected,
                     onClick = {
+                        val now = System.currentTimeMillis()
+                        if (isSelected && lastClickedRoute == item.route && now - lastClickTime < 400L) {
+                            onScrollToTop(item.route)
+                        }
+                        lastClickedRoute = item.route
+                        lastClickTime = now
                         navController.navigate(item.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true

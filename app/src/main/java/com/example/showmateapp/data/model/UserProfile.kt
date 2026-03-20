@@ -2,6 +2,7 @@ package com.example.showmateapp.data.model
 
 data class UserProfile(
     val userId: String = "",
+    val username: String = "",
     // Affinity scores
     val genreScores: Map<String, Float> = emptyMap(),
     val preferredKeywords: Map<String, Float> = emptyMap(),

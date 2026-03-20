@@ -80,7 +80,7 @@ class GetRecommendationsUseCase @Inject constructor(
             if (userProfile == null || userProfile.genreScores.isEmpty()) return shows
             val now = System.currentTimeMillis()
             val decayedProfile = applyTimeDecay(userProfile, now)
-            shows.map { scoreShow(it, decayedProfile) }
+            shows.map { scoreShow(it, decayedProfile) }.sortedByDescending { it.affinityScore }
         } catch (e: Exception) {
             android.util.Log.e("GetRecommendations", "Error scoring shows", e)
             shows

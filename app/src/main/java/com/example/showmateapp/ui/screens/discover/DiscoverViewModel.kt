@@ -106,7 +106,7 @@ class DiscoverViewModel @Inject constructor(
                     _uiState.update { it.copy(timeTravelShows = getRecommendationsUseCase.scoreShows(timeTravelRes.data.shuffled().take(10))) }
                 }
                 if (topRatedRes is Resource.Success && topRatedRes.data.isNotEmpty()) {
-                    _uiState.update { it.copy(topRatedShows = topRatedRes.data.take(10)) }
+                    _uiState.update { it.copy(topRatedShows = topRatedRes.data.take(10).sortedByDescending { it.voteAverage }) }
                 }
                 if (thirdGenreId != null) {
                     val res3 = repository.getShowsByGenres(thirdGenreId)

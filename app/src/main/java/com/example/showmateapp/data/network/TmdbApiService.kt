@@ -10,6 +10,7 @@ interface TmdbApiService {
     @GET("tv/{tv_id}")
     suspend fun getMediaDetails(
         @Path("tv_id") tvId: Int,
+        @Query("language") language: String = "es-ES",
         @Query("append_to_response") appendToResponse: String? = "credits,keywords,watch/providers,content_ratings,videos"
     ): MediaContent
 
@@ -38,7 +39,11 @@ interface TmdbApiService {
         @Query("watch_region") watchRegion: String? = null,
         @Query("with_watch_providers") watchProviders: String? = null,
         @Query("with_keywords") keywords: String? = null,
-        @Query("with_cast") withCast: String? = null
+        @Query("with_cast") withCast: String? = null,
+        @Query("air_date.gte") airDateGte: String? = null,
+        @Query("air_date.lte") airDateLte: String? = null,
+        @Query("first_air_date.gte") firstAirDateGte: String? = null,
+        @Query("first_air_date.lte") firstAirDateLte: String? = null
     ): MediaResponse
 
     @GET("person/{person_id}")

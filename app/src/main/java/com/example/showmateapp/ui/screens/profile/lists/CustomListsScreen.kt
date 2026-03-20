@@ -1,5 +1,6 @@
 package com.example.showmateapp.ui.screens.profile.lists
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.showmateapp.ui.components.premium.CardSurface
 import com.example.showmateapp.ui.components.premium.outlinedTextFieldColors
+import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.TextGray
 
@@ -161,7 +163,7 @@ fun CustomListsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(uiState.lists.entries.toList(), key = { it.key }) { (name, ids) ->
-                    CardSurface(modifier = Modifier.fillMaxWidth()) {
+                    CardSurface(modifier = Modifier.fillMaxWidth().clickable { navController.navigate(Screen.ListDetail(name)) }) {
                         Row(
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                             verticalAlignment = Alignment.CenterVertically

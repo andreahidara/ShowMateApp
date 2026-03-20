@@ -36,7 +36,11 @@ data class DetailUiState(
     val actionError: String? = null,
     val watchedEpisodes: List<Int> = emptyList(),
     val selectedSeason: SeasonResponse? = null,
-    val isSeasonLoading: Boolean = false
+    val isSeasonLoading: Boolean = false,
+    val customLists: Map<String, List<Int>> = emptyMap(),
+    val showAddToListDialog: Boolean = false,
+    val showUnlikeConfirm: Boolean = false,
+    val showUnwatchConfirm: Boolean = false
 )
 
 @HiltViewModel
@@ -72,6 +76,7 @@ class DetailViewModel @Inject constructor(
 
                         // Secondary content is fire-and-forget; it updates the UI when ready
                         launch { loadSimilarShows(showId) }
+                        launch { loadCustomLists() }
                         scoredDetails.seasons?.firstOrNull()?.let {
                             launch { loadSeasonDetails(showId, it.seasonNumber) }
                         }
@@ -124,7 +129,28 @@ class DetailViewModel @Inject constructor(
         }
     }
 
+    fun requestToggleLiked() {
+        if (_uiState.value.isLiked) {
+            _uiState.update { it.copy(showUnlikeConfirm = true) }
+        } else {
+            toggleLiked()
+        }
+    }
+
+    fun requestToggleWatched() {
+        if (_uiState.value.isWatched) {
+            _uiState.update { it.copy(showUnwatchConfirm = true) }
+        } else {
+            toggleWatched()
+        }
+    }
+
+    fun cancelConfirm() {
+        _uiState.update { it.copy(showUnlikeConfirm = false, showUnwatchConfirm = false) }
+    }
+
     fun toggleLiked() {
+        _uiState.update { it.copy(showUnlikeConfirm = false) }
         val currentShow = _uiState.value.media ?: return
         val previousState = _uiState.value.isLiked
         val newState = !previousState
@@ -177,6 +203,7 @@ class DetailViewModel @Inject constructor(
     }
 
     fun toggleWatched() {
+        _uiState.update { it.copy(showUnwatchConfirm = false) }
         val currentShow = _uiState.value.media ?: return
         val previousState = _uiState.value.isWatched
         val newState = !previousState
@@ -248,7 +275,42 @@ class DetailViewModel @Inject constructor(
 
     private suspend fun loadUserReview(showId: Int) {
         val review = try { userRepository.getReview(showId) } catch (_: Exception) { null }
-        _uiState.update { it.copy(userReview = review ?: "") }
+        _uiState.update { it.copy(
+            userReview = review ?: "",
+            isReviewSaved = !review.isNullOrBlank()
+        ) }
+    }
+
+    fun loadCustomLists() {
+        viewModelScope.launch {
+            try {
+                val lists = userRepository.getCustomLists()
+                _uiState.update { it.copy(customLists = lists) }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun showAddToListDialog() {
+        if (_uiState.value.customLists.isEmpty()) loadCustomLists()
+        _uiState.update { it.copy(showAddToListDialog = true) }
+    }
+
+    fun hideAddToListDialog() {
+        _uiState.update { it.copy(showAddToListDialog = false) }
+    }
+
+    fun addToList(listName: String) {
+        val showId = _uiState.value.media?.id ?: return
+        _uiState.update { it.copy(showAddToListDialog = false) }
+        viewModelScope.launch {
+            try {
+                userRepository.addToCustomList(listName, showId)
+                _uiState.update { it.copy(actionError = "Añadido a «$listName»") }
+                loadCustomLists()
+            } catch (_: Exception) {
+                _uiState.update { it.copy(actionError = "Error al añadir a la lista") }
+            }
+        }
     }
 
     fun onReviewTextChange(text: String) {
@@ -285,14 +347,11 @@ class DetailViewModel @Inject constructor(
 
     fun rateShow(rating: Int) {
         val currentShow = _uiState.value.media ?: return
-        val previousRating = _uiState.value.userRating
         _uiState.update { it.copy(userRating = rating) }
 
         viewModelScope.launch {
-            var ratingSaved = false
             try {
                 userRepository.updateRating(currentShow.id, rating)
-                ratingSaved = true
                 userRepository.trackMediaInteraction(
                     mediaId = currentShow.id,
                     genres = currentShow.safeGenreIds.map { it.toString() },
@@ -301,9 +360,7 @@ class DetailViewModel @Inject constructor(
                     interactionType = UserRepository.InteractionType.Rate(rating)
                 )
             } catch (e: Exception) {
-                if (!ratingSaved) {
-                    _uiState.update { it.copy(userRating = previousRating, actionError = "Error al guardar") }
-                }
+                _uiState.update { it.copy(actionError = "Error al guardar la valoración") }
             }
         }
     }

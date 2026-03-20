@@ -223,14 +223,14 @@ fun GenreProgressIndicator(selectedCount: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "$selectedCount/3",
+                text = "$selectedCount",
                 color = if (selectedCount >= 3) Color(0xFF4CAF50) else PrimaryPurple,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Black
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (selectedCount >= 3) "¡Perfecto!" else "seleccionados",
+                text = if (selectedCount >= 3) "seleccionados · ¡Perfecto!" else "seleccionados (mínimo 3)",
                 color = TextGray,
                 fontSize = 14.sp
             )

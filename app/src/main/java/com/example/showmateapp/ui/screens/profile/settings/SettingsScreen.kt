@@ -14,23 +14,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.showmateapp.R
 import com.example.showmateapp.ui.components.premium.PrimaryButton
+import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
-import com.example.showmateapp.ui.theme.ShowMateAppTheme
 import com.example.showmateapp.ui.theme.TextGray
 import kotlinx.coroutines.launch
 
@@ -40,10 +37,25 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
+    val loggedOut by viewModel.loggedOut.collectAsState()
+    val currentEmail by viewModel.currentEmail.collectAsState()
+
+    LaunchedEffect(loggedOut) {
+        if (loggedOut) {
+            navController.navigate(Screen.Login) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     SettingsScreenContent(
         onBackClick = { navController.popBackStack() },
         isDarkMode = isDarkTheme,
-        onDarkModeChange = viewModel::setDarkTheme
+        onDarkModeChange = viewModel::setDarkTheme,
+        currentEmail = currentEmail,
+        onLogout = viewModel::logout,
+        onUpdateDisplayName = { name, cb -> viewModel.updateDisplayName(name, cb) },
+        onSendPasswordReset = { cb -> viewModel.sendPasswordReset(cb) }
     )
 }
 
@@ -52,24 +64,98 @@ fun SettingsScreen(
 fun SettingsScreenContent(
     onBackClick: () -> Unit,
     isDarkMode: Boolean = true,
-    onDarkModeChange: (Boolean) -> Unit = {}
+    onDarkModeChange: (Boolean) -> Unit = {},
+    currentEmail: String = "",
+    onLogout: () -> Unit = {},
+    onUpdateDisplayName: (String, (Boolean) -> Unit) -> Unit = { _, _ -> },
+    onSendPasswordReset: ((Boolean) -> Unit) -> Unit = {}
 ) {
     var notificationsEnabled by remember { mutableStateOf(true) }
-    
-    var autoplayVideo by remember { mutableStateOf(false) }
-    var privateMode by remember { mutableStateOf(false) }
-    
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var editNameValue by remember { mutableStateOf("") }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     fun showFeedback(message: String) {
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short
-            )
+            snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
         }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            containerColor = Color(0xFF1A1A2E),
+            title = { Text("Cerrar sesión", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text("¿Seguro que quieres salir de ShowMate?", color = TextGray) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HeartRed)
+                ) { Text("Salir", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar", color = TextGray)
+                }
+            }
+        )
+    }
+
+    if (showEditProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            containerColor = Color(0xFF1A1A2E),
+            title = { Text("Editar nombre", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (currentEmail.isNotBlank()) {
+                        Text(currentEmail, color = TextGray, fontSize = 13.sp)
+                    }
+                    OutlinedTextField(
+                        value = editNameValue,
+                        onValueChange = { editNameValue = it },
+                        label = { Text("Nombre de usuario", color = TextGray) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryPurple,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = PrimaryPurple,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val name = editNameValue.trim()
+                        if (name.isNotBlank()) {
+                            onUpdateDisplayName(name) { success ->
+                                showEditProfileDialog = false
+                                showFeedback(if (success) "Nombre actualizado" else "Error al actualizar")
+                            }
+                        }
+                    },
+                    enabled = editNameValue.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                ) { Text("Guardar", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfileDialog = false }) {
+                    Text("Cancelar", color = TextGray)
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -111,14 +197,25 @@ fun SettingsScreenContent(
                 SettingsSection(title = "Cuenta") {
                     SettingsItem(
                         title = "Editar Perfil",
+                        subtitle = if (currentEmail.isNotBlank()) currentEmail else null,
                         icon = Icons.Default.Person,
-                        onClick = { showFeedback("Abriendo perfil...") }
+                        onClick = {
+                            editNameValue = ""
+                            showEditProfileDialog = true
+                        }
                     )
                     SettingsDivider()
                     SettingsItem(
                         title = "Cambiar Contraseña",
                         icon = Icons.Default.Lock,
-                        onClick = { showFeedback("Redirigiendo a seguridad...") }
+                        onClick = {
+                            onSendPasswordReset { success ->
+                                showFeedback(
+                                    if (success) "Email de recuperación enviado. Revisa tu correo."
+                                    else "Error al enviar el email. Inténtalo de nuevo."
+                                )
+                            }
+                        }
                     )
                 }
             }
@@ -140,7 +237,7 @@ fun SettingsScreenContent(
                         title = "Idioma",
                         icon = Icons.Default.Language,
                         value = "Español",
-                        onClick = { showFeedback("Seleccionando idioma...") }
+                        onClick = { showFeedback("El idioma se gestiona desde los ajustes del dispositivo") }
                     )
                 }
             }
@@ -148,39 +245,13 @@ fun SettingsScreenContent(
             item {
                 SettingsSection(title = "Notificaciones") {
                     SettingsItemSwitch(
-                        title = "Permitir Notificaciones Push",
-                        subtitle = "Nuevos episodios y recomendaciones",
+                        title = "Notificaciones Push",
+                        subtitle = if (notificationsEnabled) "Nuevos episodios y recomendaciones" else "Desactivadas",
                         icon = Icons.Default.Notifications,
                         checked = notificationsEnabled,
-                        onCheckedChange = { 
+                        onCheckedChange = {
                             notificationsEnabled = it
                             showFeedback(if (it) "Notificaciones activadas" else "Notificaciones desactivadas")
-                        }
-                    )
-                }
-            }
-
-            item {
-                SettingsSection(title = "Reproducción y Privacidad") {
-                    SettingsItemSwitch(
-                        title = "Autoplay de Tráilers (Solo Wi-Fi)",
-                        subtitle = "Reproduce sin sonido por defecto",
-                        icon = Icons.Default.PlayCircle,
-                        checked = autoplayVideo,
-                        onCheckedChange = { 
-                            autoplayVideo = it
-                            showFeedback(if (it) "Autoplay activado en Wi-Fi" else "Autoplay desactivado")
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsItemSwitch(
-                        title = "Navegación Privada",
-                        subtitle = "Tus vistas no afectarán tus recomendaciones",
-                        icon = Icons.Default.Security,
-                        checked = privateMode,
-                        onCheckedChange = { 
-                            privateMode = it
-                            showFeedback(if (it) "Modo privado activado" else "Modo privado desactivado")
                         }
                     )
                 }
@@ -191,12 +262,12 @@ fun SettingsScreenContent(
                     SettingsItem(
                         title = "Borrar cuenta (RGPD)",
                         icon = Icons.Default.Delete,
-                        onClick = { showFeedback("Solicitud de borrado en proceso...") }
+                        onClick = { showFeedback("Solicitud de borrado enviada. Recibirás un correo de confirmación.") }
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(40.dp))
-                
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -205,7 +276,7 @@ fun SettingsScreenContent(
                 ) {
                     PrimaryButton(
                         text = "Cerrar Sesión",
-                        onClick = { showFeedback("Sesión cerrada correctamente") },
+                        onClick = { showLogoutDialog = true },
                         colorOverride = HeartRed,
                         modifier = Modifier
                             .widthIn(max = 320.dp)
@@ -262,11 +333,15 @@ fun SettingsItem(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     value: String? = null,
+    subtitle: String? = null,
     showChevron: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
     ListItem(
         headlineContent = { Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp) },
+        supportingContent = if (subtitle != null) {
+            { Text(text = subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 12.sp) }
+        } else null,
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (value != null) {
@@ -351,12 +426,4 @@ fun SettingsItemSwitch(
                 role = Role.Switch
             )
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SettingsScreenPreview() {
-    ShowMateAppTheme {
-        SettingsScreenContent(onBackClick = {})
-    }
 }
