@@ -1,6 +1,6 @@
 # --- ANDROID & KOTLIN ---
 *.iml
-.gradle
+.gradle/
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -12,12 +12,13 @@
 .cxx
 
 # --- BUILD OUTPUT ---
-/build
+build/
 /*/build
 /captures
 *.log
 *.txt
 out/
+
 
 # --- IDEA / INTELIJ ---
 .idea/
