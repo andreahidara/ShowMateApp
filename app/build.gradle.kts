@@ -11,10 +11,10 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localProperties.load(localPropertiesFile.inputStream())
+val secretProperties = Properties()
+val secretPropertiesFile = rootProject.file("secret.properties")
+if (secretPropertiesFile.exists()) {
+    secretProperties.load(secretPropertiesFile.inputStream())
 }
 
 android {
@@ -33,7 +33,7 @@ android {
         buildConfigField(
             "String",
             "TMDB_API_TOKEN",
-            "\"${localProperties.getProperty("TMDB_API_TOKEN") ?: ""}\""
+            "\"${secretProperties.getProperty("TMDB_API_TOKEN") ?: ""}\""
         )
     }
 

@@ -1,26 +1,19 @@
 # --- ANDROID & KOTLIN ---
 *.iml
 .gradle/
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.externalNativeBuild
-.cxx
+local.properties
+.externalNativeBuild/
+.cxx/
 
 # --- BUILD OUTPUT ---
 build/
-/*/build
-/captures
-*.log
-*.txt
+/*/build/
+/captures/
 out/
+*.log
+/*.txt
 
-
-# --- IDEA / INTELIJ ---
+# --- IDEA / ANDROID STUDIO ---
 .idea/
 *.iws
 *.ipr
@@ -28,11 +21,13 @@ out/
 # --- OS SPECIFIC ---
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# --- SECRETS (IMPORTANTE) ---
-.env
+# --- SECRETS ---
+secret.properties
 *.jks
 *.keystore
-google-services.json
+**/google-services.json
+.env
 CLAUDE.md
 .claude

@@ -1,11 +1,11 @@
-# ▷ ShowMate — Recomendación Personalizada de Series
+# ▷ ShowMate — Recomendación Personalizada de Series y Películas
 
-> Aplicación Android nativa que aprende de ti para recomendarte exactamente lo que te va a gustar ver.
+> Aplicación Android nativa que aprende de tus gustos para recomendarte exactamente lo que te va a gustar ver.
 
-![Android](https://img.shields.io/badge/Android-API%2034-3DDC84?style=flat-square&logo=android&logoColor=white)
-![Kotlin](https://img.shields.io/badge/Kotlin-1.9-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
-![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-2024-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%2B%20Auth-FFCA28?style=flat-square&logo=firebase&logoColor=black)
+![Android](https://img.shields.io/badge/Android-API%2026%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-FFCA28?style=flat-square&logo=firebase&logoColor=black)
 ![TMDB](https://img.shields.io/badge/TMDB-API%20v3-01B4E4?style=flat-square)
 
 ---
@@ -16,59 +16,62 @@ ShowMate resuelve la **sobrecarga de elección** en las plataformas de streaming
 
 ---
 
-## ✨ Funcionalidades principales
+## ✨ Funcionalidades
 
 - **Onboarding con selección de géneros** — establece tu perfil desde el primer uso
 - **Swipe de calibración** — desliza tarjetas para afinar el algoritmo al instante
 - **Recomendaciones personalizadas** — pantalla Home y sección Discover con tu match %
-- **Búsqueda avanzada** — filtra por género, año de estreno y puntuación mínima
-- **Detalle completo de serie** — sinopsis, reparto, temporadas, géneros desde TMDB
-- **Sistema de valoración** — puntúa de 1 a 5 estrellas y actualiza tu perfil automáticamente
-- **Favoritos y series vistas** — gestión completa con impacto en el algoritmo
+- **Recomendaciones explicables (XAI)** — el sistema te muestra por qué te recomienda cada título
+- **Búsqueda avanzada** — filtra por género, año y puntuación mínima
+- **Detalle completo** — sinopsis, reparto, temporadas y géneros desde TMDB
+- **Sistema de valoración** — puntúa de 1 a 5 estrellas con impacto inmediato en el algoritmo
+- **Favoritos y series vistas** — gestión completa integrada en el algoritmo
 - **Perfil con estadísticas** — horas vistas, favoritos totales y géneros top
 - **Reinicio de gustos** — vuelve a empezar desde cero cuando quieras
-- **Modo offline** — funciona sin conexión con la caché local de Room
+- **Modo offline** — funciona sin conexión gracias a la caché local de Room
 
 ---
 
 ## 🧠 Cómo funciona el algoritmo
 
-Cada serie recibe una **puntuación final** calculada así:
+Cada título recibe una **puntuación final** combinando preferencias personales y calidad global:
 
 ```
-Puntuación Final = 0.7 × Afinidad Personal + 0.3 × Calidad Global
+Puntuación Final = 0.7 × Afinidad Personal + 0.3 × Calidad Global (Bayesiana)
 ```
 
-La **afinidad personal** se construye a partir de pesos dinámicos por géneros, palabras clave y actores, que se actualizan con cada interacción:
+La **afinidad personal** se construye a partir de pesos dinámicos por géneros, palabras clave y actores (`0.5 / 0.3 / 0.2`), normalizados con Min-Max para evitar la acumulación de pesos con el tiempo.
 
-| Acción | Impacto en pesos |
+Los pesos se actualizan con cada interacción:
+
+| Acción | Impacto |
 |---|---|
-| ⭐⭐⭐⭐⭐ (5 estrellas) | +4 pts |
-| ⭐⭐⭐⭐ (4 estrellas) | +2 pts |
-| ⭐⭐⭐ (3 estrellas) | 0 pts |
-| ⭐⭐ (2 estrellas) | -1 pts |
-| ⭐ (1 estrella) | -3 pts |
-| Añadir a favoritos | +5 pts |
-| Eliminar de favoritos | -2 pts |
 | Swipe derecho (like) | +5 pts |
-| Swipe izquierdo (skip) | -2 pts |
+| Marcar como esencial | +10 pts |
+| Swipe izquierdo (skip) | −2 pts |
+| Añadir a favoritos | +5 pts |
+| Eliminar de favoritos | −2 pts |
+| Marcar como vista | +3 pts |
+| Valorar (1–5 estrellas) | adaptativo |
 
-Las series ya vistas o rechazadas **nunca vuelven a aparecer** en las recomendaciones.
+Los títulos ya vistos o rechazados **nunca vuelven a aparecer** en las recomendaciones.
 
 ---
 
 ## 🏗️ Arquitectura
 
-ShowMate sigue **MVVM + Clean Architecture** con tres capas claramente separadas:
+ShowMate sigue **MVVM + Clean Architecture** con tres capas bien separadas:
 
 ```
-📦 ShowMate
- ┣ 📂 presentation/     → Pantallas Compose + ViewModels (StateFlow)
- ┣ 📂 domain/           → Use Cases (algoritmo de recomendación)
- ┗ 📂 data/             → Repositories → TMDB API / Room / Firebase
+📦 ShowMateApp
+ ┣ 📂 data/          → Repositories · TMDB API (Retrofit) · Room · Firebase
+ ┣ 📂 domain/        → Use Cases (algoritmo de recomendación, estadísticas, intereses)
+ ┗ 📂 ui/            → Pantallas Compose + ViewModels (StateFlow<UiState>)
 ```
 
-La inyección de dependencias se gestiona con **Hilt** en todas las capas.
+- Una única `Activity` con `NavHost` y transiciones de elementos compartidos (`SharedTransitionLayout`)
+- Rutas type-safe mediante `@Serializable` data objects (kotlinx.serialization)
+- Inyección de dependencias con **Hilt** en todas las capas
 
 ---
 
@@ -76,20 +79,19 @@ La inyección de dependencias se gestiona con **Hilt** en todas las capas.
 
 | Tecnología | Uso |
 |---|---|
-| **Kotlin** | Lenguaje principal |
-| **Jetpack Compose** | UI declarativa (13 pantallas) |
+| **Kotlin 2.0** | Lenguaje principal |
+| **Jetpack Compose + Material 3** | UI declarativa |
 | **Firebase Authentication** | Registro e inicio de sesión |
 | **Firebase Firestore** | Perfil de usuario y pesos del algoritmo en la nube |
-| **Room (SQLite)** | Caché local de series para modo offline |
-| **Retrofit + Gson** | Consumo de la API de TMDB |
-| **Hilt** | Inyección de dependencias |
-| **Coil Compose** | Carga asíncrona de imágenes |
-| **Navigation Compose** | Navegación type-safe entre pantallas |
-| **Coroutines** | Operaciones asíncronas |
 | **Firebase Cloud Messaging** | Notificaciones push |
-| **WorkManager** | Tareas en background |
+| **Room 2.6** | Caché local para modo offline |
+| **Retrofit 2 + OkHttp** | Consumo de la API de TMDB |
+| **Hilt 2.52** | Inyección de dependencias |
+| **Coil 2.7** | Carga asíncrona de imágenes |
+| **Navigation Compose 2.8** | Navegación type-safe |
+| **WorkManager 2.9** | Tareas en background |
+| **Coroutines + Flow** | Operaciones asíncronas |
 | **Mockito** | Tests unitarios |
-| **Material Design 3** | Sistema de diseño |
 
 ---
 
@@ -100,7 +102,7 @@ La inyección de dependencias se gestiona con **Hilt** en todas las capas.
 - Android Studio Hedgehog o superior
 - JDK 17
 - Cuenta en [Firebase](https://firebase.google.com) (plan Spark gratuito)
-- API key de [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api)
+- Token de API de [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api)
 
 ### 1. Clonar el repositorio
 
@@ -111,23 +113,25 @@ cd ShowMateApp
 
 ### 2. Configurar TMDB
 
-Crea o edita el archivo `local.properties` en la raíz del proyecto y añade:
+Crea el archivo `secret.properties` en la raíz del proyecto:
 
 ```properties
-TMDB_API_KEY=tu_api_key_aqui
+TMDB_API_TOKEN=Bearer <tu_token_aqui>
 ```
+
+> `secret.properties` está en `.gitignore` y nunca se sube al repositorio.
 
 ### 3. Conectar Firebase
 
 1. Ve a [Firebase Console](https://console.firebase.google.com) y crea un nuevo proyecto
-2. Añade una app Android con el package name `com.andreahidara.showmate`
-3. Descarga el archivo `google-services.json` y colócalo en `/app/`
+2. Añade una app Android con el package name `com.example.showmateapp`
+3. Descarga `google-services.json` y colócalo en `app/`
 4. Activa **Authentication** → método Email/Contraseña
 5. Activa **Firestore Database** en modo de prueba
 
 ### 4. Ejecutar
 
-Abre el proyecto en Android Studio, sincroniza Gradle y ejecuta en un emulador con **API 34 (Android 14)** o dispositivo físico.
+Abre el proyecto en Android Studio, sincroniza Gradle y ejecuta en un emulador o dispositivo físico con **Android 8.0 (API 26) o superior**.
 
 ---
 
@@ -144,9 +148,9 @@ users/
     ├── likedMediaIds      → [1234, 5678, ...]
     ├── dislikedMediaIds   → [9012, ...]
     ├── favorites/
-    │     {showId} → datos básicos de la serie
+    │     {showId} → datos básicos del título
     ├── views/
-    │     {showId} → datos básicos de la serie
+    │     {showId} → datos básicos del título
     └── ratings/
           {showId} → { rating: 4, timestamp: ... }
 ```
@@ -155,32 +159,25 @@ users/
 
 ## 🧪 Tests
 
-Los tests unitarios cubren el `GetRecommendationsUseCase` y el sistema de pesos. Para ejecutarlos:
+Los tests unitarios cubren `GetRecommendationsUseCase` y el sistema de pesos del algoritmo:
 
 ```bash
-./gradlew test
+./gradlew test                   # Tests unitarios
+./gradlew connectedAndroidTest   # Tests instrumentados (requiere dispositivo/emulador)
 ```
-
----
-
-## 📸 Capturas de pantalla
-
-| Splash | Login | Onboarding | Home |
-|---|---|---|---|
-| *(próximamente)* | *(próximamente)* | *(próximamente)* | *(próximamente)* |
 
 ---
 
 ## 👩‍💻 Autora
 
-**Andrea Hidalgo Arana**  
-Proyecto de Fin de Grado — Desarrollo de Aplicaciones Multiplataforma  
-Prometeo by thePower | Arturo Soria · 2025-2026  
+**Andrea Hidalgo Arana**
+Proyecto de Fin de Grado — Desarrollo de Aplicaciones Multiplataforma
+Prometeo by thePower | Arturo Soria · 2025-2026
 Tutor: José Manuel Villar Ferradal
 
 ---
 
 ## 📄 Licencia
 
-Proyecto académico. Los datos de series son propiedad de [The Movie Database (TMDB)](https://www.themoviedb.org).  
+Proyecto académico. Los datos de series y películas son propiedad de [The Movie Database (TMDB)](https://www.themoviedb.org).
 Este producto usa la API de TMDB pero no está respaldado ni certificado por TMDB.
