@@ -609,9 +609,7 @@ fun DetailScreenContent(
                                     watchedEpisodes = uiState.watchedEpisodes,
                                     onEpisodeToggle = onEpisodeToggle,
                                     onSeasonChange = { seasonNum ->
-                                        (uiState.media?.id)?.let { id ->
-                                            onSeasonChange(id, seasonNum)
-                                        }
+                                        onSeasonChange(show.id, seasonNum)
                                     },
                                     onMarkNextEpisode = onMarkNextEpisode
                                 )
@@ -913,7 +911,7 @@ fun ProviderTypeRow(
 }
 
 @Composable
-fun ProviderLogo(provider: Provider, onClick: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun ProviderLogo(provider: Provider, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     AsyncImage(
         model = "https://image.tmdb.org/t/p/original${provider.logoPath}",
         contentDescription = provider.providerName,
@@ -1209,7 +1207,7 @@ fun EpisodesSection(
         Spacer(modifier = Modifier.height(16.dp))
 
         var selectedTabIndex by remember(selectedSeason) { 
-            mutableIntStateOf(seasons.indexOfFirst { it.seasonNumber == selectedSeason?.season_number }.coerceAtLeast(0)) 
+            mutableIntStateOf(seasons.indexOfFirst { it.seasonNumber == selectedSeason?.seasonNumber }.coerceAtLeast(0)) 
         }
 
         val filteredSeasons = remember(seasons) { seasons.filter { it.seasonNumber > 0 } }
@@ -1297,7 +1295,7 @@ fun EpisodesSection(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Siguiente: ${nextEpisode.episode_number}. ${nextEpisode.name}",
+                        text = "Siguiente: ${nextEpisode.episodeNumber}. ${nextEpisode.name}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         maxLines = 1,
@@ -1338,8 +1336,8 @@ fun EpisodesSection(
                         .clickable { onEpisodeToggle(episode.id) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val imageModel = if (episode.still_path != null)
-                        "https://image.tmdb.org/t/p/w300${episode.still_path}"
+                    val imageModel = if (episode.stillPath != null)
+                        "https://image.tmdb.org/t/p/w300${episode.stillPath}"
                     else null
                     AsyncImage(
                         model = imageModel,
@@ -1351,7 +1349,7 @@ fun EpisodesSection(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "${episode.episode_number}. ${episode.name}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(text = "${episode.episodeNumber}. ${episode.name}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         val runtimeText = episode.runtime?.takeIf { it > 0 }?.let { "$it min" } ?: "N/A"
                         Text(text = runtimeText, color = TextGray, fontSize = 12.sp)
                     }
@@ -1368,28 +1366,6 @@ fun EpisodesSection(
     }
 }
 
-@Composable
-private fun ScoreFactorRow(label: String, weight: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, color = Color.White, fontSize = 13.sp)
-        Surface(
-            color = PrimaryPurple.copy(alpha = 0.15f),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(
-                text = weight,
-                color = PrimaryPurple,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-            )
-        }
-    }
-}
 
 @Composable
 private fun DetailScreenSkeleton() {
