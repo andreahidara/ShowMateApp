@@ -21,6 +21,19 @@ import com.example.showmateapp.util.UiText
 import com.example.showmateapp.R
 import android.util.Log
 
+enum class MoodOption(val label: String, val emoji: String, val genreIds: List<Int>) {
+    RELAX("Relajarme", "😌", listOf(35, 10751)),
+    ACTION("Adrenalina", "⚡", listOf(10759)),
+    EMOTIONAL("Emocionarme", "😢", listOf(18)),
+    THRILLER("Suspenso", "😰", listOf(9648, 80))
+}
+
+enum class TimeOption(val label: String, val maxRuntime: Int?) {
+    SHORT("30 min", 32),
+    MEDIUM("1 hora", 65),
+    MARATHON("Maratón", null)
+}
+
 data class HomeUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -28,6 +41,8 @@ data class HomeUiState(
     val upNextShows: List<MediaContent> = emptyList(),
     val upNextProgress: Map<Int, Float> = emptyMap(),
     val trendingShows: List<MediaContent> = emptyList(),
+    val top10Shows: List<MediaContent> = emptyList(),
+    val newReleasesShows: List<MediaContent> = emptyList(),
     val actionShows: List<MediaContent> = emptyList(),
     val comedyShows: List<MediaContent> = emptyList(),
     val mysteryShows: List<MediaContent> = emptyList(),
@@ -36,6 +51,7 @@ data class HomeUiState(
     val platformShows: Map<String, List<MediaContent>> = emptyMap(),
     val isPlatformLoading: Boolean = false,
     val errorMessage: UiText? = null,
+    val showContextSelector: Boolean = false,
     val whatToWatchToday: MediaContent? = null
 )
 
@@ -100,16 +116,45 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun pickWhatToWatchToday() {
+    fun requestWhatToWatch() {
+        _uiState.update { it.copy(showContextSelector = true) }
+    }
+
+    fun dismissContextSelector() {
+        _uiState.update { it.copy(showContextSelector = false) }
+    }
+
+    fun pickWhatToWatchToday(mood: MoodOption? = null, time: TimeOption? = null) {
         viewModelScope.launch {
-            val recommendations = try {
+            _uiState.update { it.copy(showContextSelector = false) }
+            // Reuse already-scored shows from state to avoid a full algorithm re-run.
+            val currentState = _uiState.value
+            val cachedPool = (currentState.trendingShows + currentState.actionShows +
+                              currentState.comedyShows + currentState.mysteryShows).distinctBy { it.id }
+            val recommendations = cachedPool.takeIf { it.isNotEmpty() } ?: try {
                 getRecommendationsUseCase.execute()
             } catch (e: Exception) {
-                _uiState.value.trendingShows
+                emptyList()
             }
-            val pick = recommendations
-                .filter { it.posterPath != null }
-                .maxByOrNull { it.affinityScore }
+
+            var candidates = recommendations.filter { it.posterPath != null }
+
+            if (mood != null) {
+                val moodFiltered = candidates.filter { show ->
+                    show.safeGenreIds.any { it in mood.genreIds }
+                }
+                if (moodFiltered.isNotEmpty()) candidates = moodFiltered
+            }
+
+            if (time?.maxRuntime != null) {
+                val runtimeFiltered = candidates.filter { show ->
+                    val runtime = show.episodeRunTime?.firstOrNull() ?: Int.MAX_VALUE
+                    runtime <= time.maxRuntime
+                }
+                if (runtimeFiltered.isNotEmpty()) candidates = runtimeFiltered
+            }
+
+            val pick = candidates.maxByOrNull { it.affinityScore }
                 ?: _uiState.value.trendingShows.filter { it.posterPath != null }.firstOrNull()
             _uiState.update { it.copy(whatToWatchToday = pick) }
         }
@@ -128,30 +173,55 @@ class HomeViewModel @Inject constructor(
             }
 
             try {
-                val trendingDeferred  = async { repository.getTrendingShows() }
-                val actionDeferred   = async { repository.discoverShows(genreId = "10759") }
-                val comedyDeferred   = async { repository.discoverShows(genreId = "35") }
-                val mysteryDeferred  = async { repository.discoverShows(genreId = "9648") }
-                val thisWeekDeferred = async { repository.getShowsOnTheAir() }
+                val trendingDeferred     = async { repository.getTrendingShows() }
+                val top10Deferred        = async { repository.getTrendingThisWeek() }
+                val newReleasesDeferred  = async {
+                    val threeMonthsAgo = java.time.LocalDate.now().minusMonths(3).toString()
+                    repository.discoverShows(firstAirDateGte = threeMonthsAgo, sortBy = "popularity.desc")
+                }
+                val actionDeferred       = async { repository.discoverShows(genreId = "10759") }
+                val comedyDeferred       = async { repository.discoverShows(genreId = "35") }
+                val mysteryDeferred      = async { repository.discoverShows(genreId = "9648") }
+                val thisWeekDeferred     = async { repository.getShowsOnTheAir() }
 
-                val trendingRes  = trendingDeferred.await()
-                val actionRes    = actionDeferred.await()
-                val comedyRes    = comedyDeferred.await()
-                val mysteryRes   = mysteryDeferred.await()
-                val thisWeekRes  = thisWeekDeferred.await()
+                val trendingRes     = trendingDeferred.await()
+                val top10Res        = top10Deferred.await()
+                val newReleasesRes  = newReleasesDeferred.await()
+                val actionRes       = actionDeferred.await()
+                val comedyRes       = comedyDeferred.await()
+                val mysteryRes      = mysteryDeferred.await()
+                val thisWeekRes     = thisWeekDeferred.await()
 
-                var upNextList   = emptyList<MediaContent>()
-                var trendingList = _uiState.value.trendingShows
-                var actionList   = _uiState.value.actionShows
-                var comedyList   = _uiState.value.comedyShows
-                var mysteryList  = _uiState.value.mysteryShows
-                var thisWeekList = _uiState.value.thisWeekShows
+                var upNextList        = emptyList<MediaContent>()
+                var trendingList     = _uiState.value.trendingShows
+                var top10List        = _uiState.value.top10Shows
+                var newReleasesList  = _uiState.value.newReleasesShows
+                var actionList       = _uiState.value.actionShows
+                var comedyList       = _uiState.value.comedyShows
+                var mysteryList      = _uiState.value.mysteryShows
+                var thisWeekList     = _uiState.value.thisWeekShows
                 var error: UiText? = null
 
                 when (trendingRes) {
                     is Resource.Success -> trendingList = getRecommendationsUseCase.scoreShows(trendingRes.data)
-                    is Resource.Error -> error = UiText.DynamicString(trendingRes.message)
+                    is Resource.Error   -> error = UiText.DynamicString(trendingRes.message)
                     else -> {}
+                }
+
+                // Top 10 esta semana: real TMDB weekly chart, only skip banner shows (top 5)
+                if (top10Res is Resource.Success) {
+                    val bannerIds = trendingList.take(5).map { it.id }.toSet()
+                    top10List = getRecommendationsUseCase.scoreShows(
+                        top10Res.data.filter { it.id !in bannerIds }.take(10)
+                    )
+                }
+
+                // New releases: recent shows not in trending or top10
+                if (newReleasesRes is Resource.Success) {
+                    val existingIds = (trendingList + top10List).map { it.id }.toSet()
+                    newReleasesList = getRecommendationsUseCase.scoreShows(
+                        newReleasesRes.data.filter { it.id !in existingIds }.take(15)
+                    )
                 }
 
                 if (actionRes is Resource.Success) actionList = getRecommendationsUseCase.scoreShows(actionRes.data)
@@ -197,6 +267,8 @@ class HomeViewModel @Inject constructor(
                         upNextShows = upNextList,
                         upNextProgress = progressMap,
                         trendingShows = trendingList,
+                        top10Shows = top10List,
+                        newReleasesShows = newReleasesList,
                         actionShows = actionList,
                         comedyShows = comedyList,
                         mysteryShows = mysteryList,

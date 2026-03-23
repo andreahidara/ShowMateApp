@@ -8,6 +8,7 @@ import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.data.repository.AuthRepository
 import com.example.showmateapp.data.repository.UserRepository
 import com.example.showmateapp.domain.usecase.GetProfileStatsUseCase
+import com.example.showmateapp.domain.usecase.GetViewerPersonalityUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -31,17 +32,21 @@ data class WatchedShowItem(
 class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val getProfileStatsUseCase: GetProfileStatsUseCase,
+    private val getViewerPersonalityUseCase: GetViewerPersonalityUseCase,
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val _userEmail = MutableStateFlow("Usuario")
-    val userEmail: StateFlow<String> = _userEmail.asStateFlow()
+    private val _displayName = MutableStateFlow("Usuario")
+    val displayName: StateFlow<String> = _displayName.asStateFlow()
 
     private val _stats = MutableStateFlow(GetProfileStatsUseCase.ProfileStats(totalWatchedHours = 0, watchedCount = 0))
     val stats: StateFlow<GetProfileStatsUseCase.ProfileStats> = _stats.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _viewerPersonality = MutableStateFlow<GetViewerPersonalityUseCase.PersonalityProfile?>(null)
+    val viewerPersonality: StateFlow<GetViewerPersonalityUseCase.PersonalityProfile?> = _viewerPersonality.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -88,16 +93,18 @@ class ProfileViewModel @Inject constructor(
                 userRepository.syncFavoritesAndWatchedToRoom()
                 val email = userRepository.getCurrentUserEmail()
                 val userProfile = userRepository.getUserProfile()
-                _userEmail.value = userProfile?.username?.takeIf { it.isNotBlank() }
+                _displayName.value = userProfile?.username?.takeIf { it.isNotBlank() }
                     ?: email?.substringBefore("@")?.replaceFirstChar {
                         if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString()
                     } ?: "Usuario"
                 _watchedEpisodesMap.value = userProfile?.watchedEpisodes ?: emptyMap()
                 _customLists.value = userProfile?.customLists ?: emptyMap()
                 _watchedRatings.value = userRepository.getAllRatings()
+                _viewerPersonality.value = userProfile?.let { getViewerPersonalityUseCase.execute(it) }
                 val watched = userRepository.getWatchedShows()
                 _stats.value = getProfileStatsUseCase.execute(watched, userProfile)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error refreshing profile", e)
             } finally {
                 _isRefreshing.value = false
             }
@@ -110,25 +117,27 @@ class ProfileViewModel @Inject constructor(
             try {
                 // Sync Firestore → Room and fetch profile in parallel
                 val email = userRepository.getCurrentUserEmail()
-                val (userProfile) = coroutineScope {
+                val (userProfile, ratingsMap, watchedList) = coroutineScope {
                     val syncJob = async { userRepository.syncFavoritesAndWatchedToRoom() }
                     val profileJob = async { userRepository.getUserProfile() }
+                    val ratingsJob = async { userRepository.getAllRatings() }
+                    val watchedJob = async { userRepository.getWatchedShows() }
                     syncJob.await()
-                    listOf(profileJob.await())
+                    Triple(profileJob.await(), ratingsJob.await(), watchedJob.await())
                 }
 
-                _userEmail.value = userProfile?.username?.takeIf { it.isNotBlank() }
+                _displayName.value = userProfile?.username?.takeIf { it.isNotBlank() }
                     ?: email?.substringBefore("@")?.replaceFirstChar {
                         if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
                     } ?: "Usuario"
 
                 _watchedEpisodesMap.value = userProfile?.watchedEpisodes ?: emptyMap()
                 _customLists.value = userProfile?.customLists ?: emptyMap()
-                _watchedRatings.value = userRepository.getAllRatings()
+                _watchedRatings.value = ratingsMap
 
-                // Stats siguen usando Firestore para estimar horas (necesitan numberOfSeasons)
-                val watched = userRepository.getWatchedShows()
-                _stats.value = getProfileStatsUseCase.execute(watched, userProfile)
+                _viewerPersonality.value = userProfile?.let { getViewerPersonalityUseCase.execute(it) }
+
+                _stats.value = getProfileStatsUseCase.execute(watchedList, userProfile)
             } catch (e: Exception) {
                 Log.e("ProfileViewModel", "Error loading profile data", e)
             } finally {
@@ -138,8 +147,11 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun logout(onSuccess: () -> Unit) {
-        authRepository.signOut()
-        onSuccess()
+        viewModelScope.launch {
+            try { userRepository.clearUserCache() } catch (_: Exception) {}
+            authRepository.signOut()
+            onSuccess()
+        }
     }
 
     fun resetAlgorithmData(onComplete: () -> Unit) {
@@ -156,15 +168,15 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun updateUsername(newName: String, onComplete: () -> Unit) {
+        val trimmed = newName.trim()
+        if (trimmed.isBlank()) { onComplete(); return }
         viewModelScope.launch {
-            _isLoading.value = true
             try {
-                userRepository.updateProfile(newName)
-                loadProfileData()
+                userRepository.updateProfile(trimmed)
+                _displayName.value = trimmed  // actualiza solo el nombre visible; evita recargar todo el perfil
             } catch (e: Exception) {
                 Log.e("ProfileViewModel", "Error updating profile", e)
             } finally {
-                _isLoading.value = false
                 onComplete()
             }
         }

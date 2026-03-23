@@ -10,6 +10,9 @@ import com.example.showmateapp.util.Resource
 import com.example.showmateapp.util.safeApiCall
 import javax.inject.Inject
 import android.util.Log
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -21,8 +24,14 @@ class ShowRepository @Inject constructor(
 
     companion object {
         private const val API_TIMEOUT_MS = 15_000L
-        // Cache entries older than 24 h are considered stale and replaced on next successful fetch
         private const val CACHE_TTL_MS = 24 * 60 * 60 * 1000L
+
+        const val CAT_DETAILS     = "details"
+        const val CAT_POPULAR     = "popular"
+        const val CAT_TRENDING    = "trending"
+        const val CAT_RECOMMENDED = "recommended"
+        const val CAT_LIKED       = "liked"
+        const val CAT_WATCHED     = "watched"
     }
 
     suspend fun getShowDetails(showId: Int): Resource<MediaContent> {
@@ -30,10 +39,10 @@ class ShowRepository @Inject constructor(
             withTimeoutOrNull(API_TIMEOUT_MS) { apiService.getMediaDetails(showId) }
                 ?: throw Exception("Tiempo de espera agotado")
         }
-        
+
         return when (networkResource) {
             is Resource.Success -> {
-                showDao.insertShows(listOf(networkResource.data.toEntity("details")))
+                showDao.insertShows(listOf(networkResource.data.toEntity(CAT_DETAILS)))
                 networkResource
             }
             is Resource.Error -> {
@@ -45,8 +54,11 @@ class ShowRepository @Inject constructor(
         }
     }
 
-    suspend fun getSeasonDetails(showId: Int, seasonNumber: Int): SeasonResponse {
-        return apiService.getSeasonDetails(showId, seasonNumber)
+    suspend fun getSeasonDetails(showId: Int, seasonNumber: Int): Resource<SeasonResponse> {
+        return safeApiCall {
+            withTimeoutOrNull(API_TIMEOUT_MS) { apiService.getSeasonDetails(showId, seasonNumber) }
+                ?: throw Exception("Tiempo de espera agotado")
+        }
     }
 
     suspend fun discoverShows(
@@ -57,6 +69,7 @@ class ShowRepository @Inject constructor(
         keywords: String? = null,
         watchRegion: String? = null,
         withCast: String? = null,
+        withCrew: String? = null,
         providers: String? = null,
         firstAirDateGte: String? = null,
         firstAirDateLte: String? = null
@@ -71,6 +84,7 @@ class ShowRepository @Inject constructor(
                     keywords = keywords,
                     watchRegion = watchRegion,
                     withCast = withCast,
+                    withCrew = withCrew,
                     watchProviders = providers,
                     firstAirDateGte = firstAirDateGte,
                     firstAirDateLte = firstAirDateLte
@@ -86,11 +100,18 @@ class ShowRepository @Inject constructor(
     }
 
     private suspend fun saveAndReturn(category: String, shows: List<MediaContent>): List<MediaContent> {
-        val staleThreshold = System.currentTimeMillis() - CACHE_TTL_MS
-        showDao.deleteStaleByCategory(category, staleThreshold)
+        if (shows.isEmpty()) return shows  // No borrar caché si la API devuelve vacío
         showDao.replaceCategory(category, shows.map { it.toEntity(category) })
         return shows
     }
+
+    suspend fun getShowDetailsInParallel(ids: List<Int>, maxCount: Int = 20): List<MediaContent> =
+        coroutineScope {
+            ids.take(maxCount)
+                .map { id -> async { getShowDetails(id) } }
+                .awaitAll()
+                .mapNotNull { (it as? Resource.Success)?.data }
+        }
 
     suspend fun getPopularShows(): Resource<List<MediaContent>> {
         val result = safeApiCall {
@@ -100,11 +121,29 @@ class ShowRepository @Inject constructor(
         
         return when (result) {
             is Resource.Success -> {
-                saveAndReturn("popular", result.data)
+                saveAndReturn(CAT_POPULAR, result.data)
                 result
             }
             is Resource.Error -> {
-                val localShows = showDao.getShowsByCategory("popular").map { it.toDomain() }
+                val localShows = showDao.getShowsByCategory(CAT_POPULAR).map { it.toDomain() }
+                if (localShows.isNotEmpty()) Resource.Success(localShows) else result
+            }
+            else -> result
+        }
+    }
+
+    suspend fun getTrendingThisWeek(): Resource<List<MediaContent>> {
+        val result = safeApiCall {
+            withTimeoutOrNull(API_TIMEOUT_MS) { apiService.getTrendingThisWeek() }?.results
+                ?: throw Exception("Tiempo de espera agotado")
+        }
+        return when (result) {
+            is Resource.Success -> {
+                saveAndReturn(CAT_TRENDING, result.data)
+                result
+            }
+            is Resource.Error -> {
+                val localShows = showDao.getShowsByCategory(CAT_TRENDING).map { it.toDomain() }
                 if (localShows.isNotEmpty()) Resource.Success(localShows) else result
             }
             else -> result
@@ -119,11 +158,11 @@ class ShowRepository @Inject constructor(
         
         return when (result) {
             is Resource.Success -> {
-                saveAndReturn("trending", result.data)
+                saveAndReturn(CAT_TRENDING, result.data)
                 result
             }
             is Resource.Error -> {
-                val localShows = showDao.getShowsByCategory("trending").map { it.toDomain() }
+                val localShows = showDao.getShowsByCategory(CAT_TRENDING).map { it.toDomain() }
                 if (localShows.isNotEmpty()) Resource.Success(localShows) else result
             }
             else -> result
@@ -138,11 +177,11 @@ class ShowRepository @Inject constructor(
         
         return when (result) {
             is Resource.Success -> {
-                saveAndReturn("recommended", result.data)
+                saveAndReturn(CAT_RECOMMENDED, result.data)
                 result
             }
             is Resource.Error -> {
-                val localShows = showDao.getShowsByCategory("recommended").map { it.toDomain() }
+                val localShows = showDao.getShowsByCategory(CAT_RECOMMENDED).map { it.toDomain() }
                 if (localShows.isNotEmpty()) Resource.Success(localShows) else result
             }
             else -> result
@@ -156,7 +195,9 @@ class ShowRepository @Inject constructor(
             return if (trending is Resource.Success) trending.data else emptyList()
         }
         val result = safeApiCall {
-            apiService.discoverMedia(genreId = genres, sortBy = "popularity.desc").results
+            withTimeoutOrNull(API_TIMEOUT_MS) {
+                apiService.discoverMedia(genreId = genres, sortBy = "popularity.desc")
+            }?.results ?: throw Exception("Tiempo de espera agotado")
         }
         val list = (result as? Resource.Success)?.data ?: emptyList()
         return if (list.isEmpty()) {
@@ -168,8 +209,8 @@ class ShowRepository @Inject constructor(
     }
 
     /**
-     * Returns shows airing in the next 7 days on the given provider IDs (pipe-separated, e.g. "8|9|337").
-     * Uses discover/tv so that with_watch_providers is properly supported.
+     * Devuelve series que se emiten en los próximos 7 días en los proveedores indicados (separados por |, ej. "8|9|337").
+     * Usa discover/tv para que with_watch_providers sea soportado correctamente.
      */
     suspend fun getShowsOnTheAir(
         providers: String = "8|9|337|384|531"

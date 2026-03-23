@@ -77,9 +77,15 @@ fun DetailScreen(
     viewModel: DetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val showWhyDialog by viewModel.showWhyDialog.collectAsState()
+    val whyFactors by viewModel.whyFactors.collectAsState()
 
     LaunchedEffect(showId) {
         viewModel.loadShowDetails(showId)
+    }
+
+    if (showWhyDialog) {
+        WhyRecommendedDialog(factors = whyFactors, onDismiss = { viewModel.dismissWhyDialog() })
     }
 
     DetailScreenContent(
@@ -104,6 +110,8 @@ fun DetailScreen(
         onShowAddToListDialog = { viewModel.showAddToListDialog() },
         onHideAddToListDialog = { viewModel.hideAddToListDialog() },
         onAddToList = { viewModel.addToList(it) },
+        onWhyDialogClick = { viewModel.showWhyDialog() },
+        whyFactors = whyFactors,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         sharedElementTag = sharedElementTag
@@ -172,59 +180,15 @@ fun DetailScreenContent(
     onShowAddToListDialog: () -> Unit = {},
     onHideAddToListDialog: () -> Unit = {},
     onAddToList: (String) -> Unit = {},
+    onWhyDialogClick: () -> Unit = {},
+    whyFactors: List<WhyFactor> = emptyList(),
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedElementTag: String?
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    var showScoreDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
-
-    if (showScoreDialog) {
-        AlertDialog(
-            onDismissRequest = { showScoreDialog = false },
-            containerColor = Color(0xFF1A1A2E),
-            title = {
-                Text(
-                    "¿Cómo funciona el Match?",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "El porcentaje de Match indica cuánto se alinea esta serie con tus gustos personales.",
-                        color = TextGray,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
-                    )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ScoreFactorRow("🎭 Géneros favoritos", "50%")
-                        ScoreFactorRow("🔑 Palabras clave", "30%")
-                        ScoreFactorRow("🎬 Actores preferidos", "20%")
-                    }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                    Text(
-                        "El score se actualiza automáticamente cada vez que marcas una serie como favorita, la valoras o la descartas.",
-                        color = TextGray,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showScoreDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
-                ) {
-                    Text("Entendido", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
 
     if (uiState.showAddToListDialog) {
         AlertDialog(
@@ -383,20 +347,20 @@ fun DetailScreenContent(
                                 color = Color.White,
                                 modifier = Modifier.weight(1f)
                             )
-                            if (show.affinityScore > 0f) {
+                            if (show.affinityScore > 0f && whyFactors.isNotEmpty()) {
                                 Column(horizontalAlignment = Alignment.End) {
                                     MatchBadge(
                                         score = show.affinityScore,
                                         isAffinity = true,
-                                        modifier = Modifier.clickable { showScoreDialog = true }
+                                        modifier = Modifier.clickable { onWhyDialogClick() }
                                     )
                                     Text(
-                                        text = "¿Qué es esto?",
+                                        text = "¿Por qué?",
                                         color = PrimaryPurple.copy(alpha = 0.7f),
                                         fontSize = 10.sp,
                                         modifier = Modifier
                                             .padding(top = 2.dp)
-                                            .clickable { showScoreDialog = true }
+                                            .clickable { onWhyDialogClick() }
                                     )
                                 }
                             }
@@ -744,6 +708,86 @@ fun DetailScreenContent(
             }
         }
     }
+}
+
+@Composable
+fun WhyRecommendedDialog(
+    factors: List<WhyFactor>,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1A1A2E),
+        title = {
+            Text(
+                "¿Por qué te lo recomendamos?",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                if (factors.isEmpty()) {
+                    Text(
+                        "Interactúa con más series para obtener recomendaciones personalizadas.",
+                        color = TextGray,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                } else {
+                    factors.forEach { factor ->
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(text = factor.emoji, fontSize = 16.sp)
+                                Text(
+                                    text = factor.label,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = "${(factor.score * 100).toInt()}%",
+                                    color = when {
+                                        factor.score > 0.7f -> Color(0xFF4CAF50)
+                                        factor.score > 0.4f -> Color(0xFFFFC107)
+                                        else -> PrimaryPurple
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            LinearProgressIndicator(
+                                progress = { factor.score },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(50)),
+                                color = when {
+                                    factor.score > 0.7f -> Color(0xFF4CAF50)
+                                    factor.score > 0.4f -> Color(0xFFFFC107)
+                                    else -> PrimaryPurple
+                                },
+                                trackColor = Color.White.copy(alpha = 0.1f)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+            ) {
+                Text("Entendido", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }
 
 @Composable
@@ -1168,36 +1212,36 @@ fun EpisodesSection(
             mutableIntStateOf(seasons.indexOfFirst { it.seasonNumber == selectedSeason?.season_number }.coerceAtLeast(0)) 
         }
 
-        ScrollableTabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = Color.Transparent,
-            contentColor = Color.White,
-            edgePadding = 0.dp,
-            indicator = { tabPositions ->
-                if (selectedTabIndex < tabPositions.size) {
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                        color = PrimaryPurple
-                    )
-                }
-            },
-            divider = { HorizontalDivider(color = Color.White.copy(alpha = 0.1f)) }
+        val filteredSeasons = remember(seasons) { seasons.filter { it.seasonNumber > 0 } }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 4.dp)
         ) {
-            seasons.filter { it.seasonNumber > 0 }.forEachIndexed { index, season ->
-                Tab(
-                    selected = selectedTabIndex == index,
+            items(filteredSeasons, key = { it.seasonNumber }) { season ->
+                val index = filteredSeasons.indexOf(season)
+                val isSelected = selectedTabIndex == index
+                Surface(
                     onClick = {
                         selectedTabIndex = index
                         onSeasonChange(season.seasonNumber)
                     },
-                    text = { 
+                    shape = RoundedCornerShape(50),
+                    color = if (isSelected) PrimaryPurple else Color.Transparent,
+                    border = if (isSelected) null else BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f)),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
                         Text(
-                            text = "T${season.seasonNumber}", 
-                            fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTabIndex == index) PrimaryPurple else TextGray
-                        ) 
+                            text = "T${season.seasonNumber}",
+                            color = if (isSelected) Color.White else TextGray,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 14.sp
+                        )
                     }
-                )
+                }
             }
         }
         

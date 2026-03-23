@@ -2,7 +2,7 @@ package com.example.showmateapp.util
 
 object KeywordMapper {
 
-    // Maps lowercase English keyword name (as stored from TMDB API) → Pair(tmdbKeywordId, spanishLabel)
+    // Mapea el nombre de la palabra clave en inglés (tal como se almacena en TMDB) → Pair(tmdbKeywordId, etiquetaEspañol)
     private val keywordMap = mapOf(
         "time travel"            to Pair("4363",   "Porque te gustan los viajes en el tiempo"),
         "dystopia"               to Pair("318",    "Porque te gustan las distopías"),
@@ -48,14 +48,14 @@ object KeywordMapper {
         "political"              to Pair("10768",  "Porque te gustan las series políticas"),
     )
 
-    /** Returns Pair(tmdbKeywordId, spanishLabel) for a known keyword name, or null. */
+    /** Devuelve Pair(tmdbKeywordId, etiquetaEspañol) para una palabra clave conocida, o null. */
     fun getKeywordInfo(keywordName: String): Pair<String, String>? =
         keywordMap[keywordName.lowercase().trim()]
 
     /**
-     * Finds the highest-scored keyword in [preferredKeywords] that has a mapping,
-     * excluding [excludeKeywordId] (so we don't duplicate the hardcoded section).
-     * Returns Triple(keywordName, tmdbKeywordId, spanishLabel) or null.
+     * Encuentra la palabra clave con mayor puntuación en [preferredKeywords] que tenga mapeo,
+     * excluyendo [excludeKeywordId] (para no duplicar la sección fija).
+     * Devuelve Triple(keywordName, tmdbKeywordId, etiquetaEspañol) o null.
      */
     fun getTopMappedKeyword(
         preferredKeywords: Map<String, Float>,

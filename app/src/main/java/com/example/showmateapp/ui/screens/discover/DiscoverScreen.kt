@@ -39,7 +39,9 @@ import com.example.showmateapp.ui.components.premium.ErrorView
 import com.example.showmateapp.ui.components.premium.MatchBadge
 import com.example.showmateapp.ui.components.premium.PulseLoader
 import com.example.showmateapp.ui.components.premium.ShowSection
+import com.example.showmateapp.ui.theme.AccentBlue
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleLight
 import com.example.showmateapp.ui.theme.StarYellow
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -51,27 +53,8 @@ fun DiscoverScreen(
     viewModel: DiscoverViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-
     DiscoverScreenContent(
-        heroShow = state.heroShow,
-        topGenreShows = state.topGenreShows,
-        secondGenreShows = state.secondGenreShows,
-        similarShows = state.similarShows,
-        topGenreName = state.topGenreName,
-        secondGenreName = state.secondGenreName,
-        similarToName = state.similarToName,
-        timeTravelShows = state.timeTravelShows,
-        actorShows = state.actorShows,
-        actorName = state.actorName,
-        secondActorShows = state.secondActorShows,
-        secondActorName = state.secondActorName,
-        thirdGenreShows = state.thirdGenreShows,
-        thirdGenreName = state.thirdGenreName,
-        topRatedShows = state.topRatedShows,
-        topKeywordShows = state.topKeywordShows,
-        topKeywordLabel = state.topKeywordLabel,
-        isLoading = state.isLoading,
-        errorMessage = state.errorMessage,
+        state = state,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         onMediaClick = { media, tag -> navigateToDetail(globalNavController, media, tag) },
@@ -82,25 +65,7 @@ fun DiscoverScreen(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun DiscoverScreenContent(
-    heroShow: MediaContent?,
-    topGenreShows: List<MediaContent>,
-    secondGenreShows: List<MediaContent>,
-    similarShows: List<MediaContent>,
-    topGenreName: String,
-    secondGenreName: String,
-    similarToName: String,
-    timeTravelShows: List<MediaContent>,
-    actorShows: List<MediaContent>,
-    actorName: String,
-    secondActorShows: List<MediaContent>,
-    secondActorName: String,
-    thirdGenreShows: List<MediaContent>,
-    thirdGenreName: String,
-    topRatedShows: List<MediaContent>,
-    topKeywordShows: List<MediaContent>,
-    topKeywordLabel: String,
-    isLoading: Boolean,
-    errorMessage: String?,
+    state: DiscoverUiState,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onMediaClick: (MediaContent, String) -> Unit,
@@ -112,18 +77,19 @@ fun DiscoverScreenContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        if (isLoading) {
+        if (state.isLoading) {
             PulseLoader()
-        } else if (errorMessage != null) {
-            ErrorView(message = errorMessage, onRetry = onRetry)
+        } else if (state.errorMessage != null) {
+            ErrorView(message = state.errorMessage, onRetry = onRetry)
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
+                // 1. Hero
                 item {
-                    heroShow?.let {
+                    state.heroShow?.let {
                         DiscoverHeroSection(
                             media = it,
                             sharedTransitionScope = sharedTransitionScope,
@@ -133,10 +99,43 @@ fun DiscoverScreenContent(
                     }
                 }
 
+                // 2. Context picks (new)
+                if (state.contextPicksShows.isNotEmpty() && state.contextPicksTitle.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = state.contextPicksTitle,
+                            items = state.contextPicksShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            accentColor = AccentBlue,
+                            tag = "discover_context",
+                            subtitle = "Adaptado a cómo consumes series"
+                        )
+                    }
+                }
+
+                // 3. Day-of-week (new)
+                if (state.dayOfWeekShows.isNotEmpty() && state.dayOfWeekTitle.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = state.dayOfWeekTitle,
+                            items = state.dayOfWeekShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            accentColor = PrimaryPurpleLight,
+                            tag = "discover_dayofweek",
+                            subtitle = "Basado en tu patrón de visualización"
+                        )
+                    }
+                }
+
+                // 4. Top genre
                 item {
                     ShowSection(
-                        title = "Porque te gusta: $topGenreName",
-                        items = topGenreShows,
+                        title = "Porque te gusta: ${state.topGenreName}",
+                        items = state.topGenreShows,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         onItemClick = onMediaClick,
@@ -144,10 +143,26 @@ fun DiscoverScreenContent(
                     )
                 }
 
+                // 5. Narrative style (new)
+                if (state.narrativeStyleShows.isNotEmpty() && state.narrativeStyleLabel.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = state.narrativeStyleLabel,
+                            items = state.narrativeStyleShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_narrative",
+                            subtitle = "Tu estilo narrativo preferido según el algoritmo"
+                        )
+                    }
+                }
+
+                // 6. Second genre
                 item {
                     ShowSection(
-                        title = "Más de: $secondGenreName",
-                        items = secondGenreShows,
+                        title = "Más de: ${state.secondGenreName}",
+                        items = state.secondGenreShows,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         onItemClick = onMediaClick,
@@ -155,11 +170,28 @@ fun DiscoverScreenContent(
                     )
                 }
 
-                if (thirdGenreShows.isNotEmpty() && thirdGenreName.isNotEmpty()) {
+                // 7. Hidden gems (new)
+                if (state.hiddenGemShows.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "También te puede gustar: $thirdGenreName",
-                            items = thirdGenreShows,
+                            title = "Joyas ocultas para ti",
+                            items = state.hiddenGemShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            accentColor = AccentBlue,
+                            tag = "discover_hidden",
+                            subtitle = "Alta afinidad, pocas valoraciones globales"
+                        )
+                    }
+                }
+
+                // 8. Third genre
+                if (state.thirdGenreShows.isNotEmpty() && state.thirdGenreName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "También te puede gustar: ${state.thirdGenreName}",
+                            items = state.thirdGenreShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
@@ -168,11 +200,43 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (timeTravelShows.isNotEmpty()) {
+                // 9. Mood section (new)
+                if (state.moodSectionShows.isNotEmpty() && state.moodSectionTitle.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = state.moodSectionTitle,
+                            items = state.moodSectionShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_mood",
+                            subtitle = "Seleccionado por tu tono favorito"
+                        )
+                    }
+                }
+
+                // 10. Exploration (new)
+                if (state.explorationShows.isNotEmpty() && state.explorationGenreName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Sal de tu zona de confort: ${state.explorationGenreName}",
+                            items = state.explorationShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            accentColor = Color(0xFFFF9800),
+                            tag = "discover_exploration",
+                            subtitle = "Tu género menos explorado con buenos scores"
+                        )
+                    }
+                }
+
+                // 11. Time travel
+                if (state.timeTravelShows.isNotEmpty()) {
                     item {
                         ShowSection(
                             title = "Porque te gustan los viajes en el tiempo",
-                            items = timeTravelShows,
+                            items = state.timeTravelShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
@@ -181,11 +245,12 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (topKeywordShows.isNotEmpty() && topKeywordLabel.isNotEmpty()) {
+                // 12. Top keyword
+                if (state.topKeywordShows.isNotEmpty() && state.topKeywordLabel.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = topKeywordLabel,
-                            items = topKeywordShows,
+                            title = state.topKeywordLabel,
+                            items = state.topKeywordShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
@@ -194,11 +259,12 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (topRatedShows.isNotEmpty() && topGenreName.isNotEmpty()) {
+                // 13. Top rated
+                if (state.topRatedShows.isNotEmpty() && state.topGenreName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Los mejor valorados en $topGenreName",
-                            items = topRatedShows,
+                            title = "Los mejor valorados en ${state.topGenreName}",
+                            items = state.topRatedShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
@@ -207,11 +273,12 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (similarShows.isNotEmpty() && similarToName.isNotEmpty()) {
+                // 14. Similar shows
+                if (state.similarShows.isNotEmpty() && state.similarToName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque viste $similarToName",
-                            items = similarShows,
+                            title = "Porque viste ${state.similarToName}",
+                            items = state.similarShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
@@ -220,11 +287,27 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (actorShows.isNotEmpty() && actorName.isNotEmpty()) {
+                // 15. Creator (new)
+                if (state.creatorShows.isNotEmpty() && state.creatorName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gusta $actorName",
-                            items = actorShows,
+                            title = "Del creador: ${state.creatorName}",
+                            items = state.creatorShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_creator",
+                            subtitle = "Series del showrunner que más te gusta"
+                        )
+                    }
+                }
+
+                // 16. Actor 1
+                if (state.actorShows.isNotEmpty() && state.actorName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Porque te gusta ${state.actorName}",
+                            items = state.actorShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
@@ -233,11 +316,12 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (secondActorShows.isNotEmpty() && secondActorName.isNotEmpty()) {
+                // 17. Actor 2
+                if (state.secondActorShows.isNotEmpty() && state.secondActorName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gusta $secondActorName",
-                            items = secondActorShows,
+                            title = "Porque te gusta ${state.secondActorName}",
+                            items = state.secondActorShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
@@ -246,6 +330,23 @@ fun DiscoverScreenContent(
                     }
                 }
 
+                // 18. Collaborative (new)
+                if (state.collaborativeShows.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Lo que ven usuarios con tu gusto",
+                            items = state.collaborativeShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            accentColor = Color(0xFF4CAF50),
+                            tag = "discover_collab",
+                            subtitle = "Popular entre usuarios con gustos similares"
+                        )
+                    }
+                }
+
+                // 19. Spacer
                 item { Spacer(modifier = Modifier.height(100.dp)) }
             }
         }

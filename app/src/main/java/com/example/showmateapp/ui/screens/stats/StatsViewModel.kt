@@ -3,6 +3,7 @@ package com.example.showmateapp.ui.screens.stats
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.repository.UserRepository
+import com.example.showmateapp.domain.usecase.GetViewerPersonalityUseCase
 import com.example.showmateapp.util.GenreMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,17 +17,19 @@ import javax.inject.Inject
 
 data class StatsUiState(
     val isLoading: Boolean = true,
-    val currentStreak: Int = 0,         // consecutive days with episodes watched
+    val currentStreak: Int = 0,
     val longestStreak: Int = 0,
-    val dailyRecord: Int = 0,           // max episodes in a single day
+    val dailyRecord: Int = 0,
     val totalEpisodesWatched: Int = 0,
-    val topGenresByMonth: Map<String, List<Pair<String, Int>>> = emptyMap(), // month -> [(genre, count)]
-    val activityByMonth: Map<String, Int> = emptyMap()  // "YYYY-MM" -> episode count
+    val topGenresByMonth: Map<String, List<Pair<String, Int>>> = emptyMap(),
+    val activityByMonth: Map<String, Int> = emptyMap(),
+    val personalityProfile: GetViewerPersonalityUseCase.PersonalityProfile? = null
 )
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val getViewerPersonalityUseCase: GetViewerPersonalityUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StatsUiState())
@@ -69,10 +72,12 @@ class StatsViewModel @Inject constructor(
                 // Daily record
                 val dailyRecord = episodesPerDay.values.maxOrNull() ?: 0
 
-                // Current streak (days from today backwards with ≥1 episode)
+                // Current streak: empieza desde hoy o ayer (el que tenga datos primero)
+                // Así la racha no se rompe si el usuario aún no ha visto nada hoy.
                 val today = LocalDate.now()
+                val streakStart = if (episodesPerDay.containsKey(today)) today else today.minusDays(1)
                 var streak = 0
-                var day = today
+                var day = streakStart
                 while (episodesPerDay.getOrDefault(day, 0) > 0) {
                     streak++
                     day = day.minusDays(1)
@@ -107,6 +112,8 @@ class StatsViewModel @Inject constructor(
                     mapOf(currentMonth to watchedByGenre)
                 } else emptyMap()
 
+                val personalityProfile = profile?.let { getViewerPersonalityUseCase.execute(it) }
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -115,7 +122,8 @@ class StatsViewModel @Inject constructor(
                         dailyRecord = dailyRecord,
                         totalEpisodesWatched = total,
                         topGenresByMonth = topGenresByMonth,
-                        activityByMonth = activityByMonth
+                        activityByMonth = activityByMonth,
+                        personalityProfile = personalityProfile
                     )
                 }
             } catch (e: Exception) {

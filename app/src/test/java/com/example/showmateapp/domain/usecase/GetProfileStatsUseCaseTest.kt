@@ -63,11 +63,11 @@ class GetProfileStatsUseCaseTest {
     }
 
     @Test
-    fun `topGenres proportions sum to 1 when profile has genre scores`() {
+    fun `topGenres are max-normalized and top genre has proportion 1`() {
         val profile = UserProfile(genreScores = mapOf("18" to 30f, "35" to 20f, "28" to 10f))
         val stats = useCase.execute(emptyList(), profile)
-        val total = stats.topGenres.sumOf { it.second.toDouble() }.toFloat()
-        assertTrue("Genre proportions should sum to 1.0", abs(total - 1.0f) < 0.01f)
+        assertTrue("All proportions should be in [0,1]", stats.topGenres.all { it.second in 0f..1f })
+        assertTrue("Top genre should have proportion 1.0", abs(stats.topGenres.first().second - 1.0f) < 0.01f)
     }
 
     @Test
@@ -83,5 +83,22 @@ class GetProfileStatsUseCaseTest {
         val profile = UserProfile(preferredActors = mapOf("42" to 100f, "7" to 20f))
         val stats = useCase.execute(emptyList(), profile)
         assertEquals("42", stats.favoriteActorId)
+    }
+
+    @Test
+    fun `likeRate is proportion of liked over liked plus disliked`() {
+        val profile = UserProfile(
+            likedMediaIds = listOf(1, 2, 3),
+            dislikedMediaIds = listOf(4)
+        )
+        val stats = useCase.execute(emptyList(), profile)
+        // 3 liked / (3 + 1) = 0.75
+        assertEquals(0.75f, stats.likeRate, 0.01f)
+    }
+
+    @Test
+    fun `likeRate is zero when no interactions`() {
+        val stats = useCase.execute(emptyList(), UserProfile())
+        assertEquals(0f, stats.likeRate, 0.01f)
     }
 }

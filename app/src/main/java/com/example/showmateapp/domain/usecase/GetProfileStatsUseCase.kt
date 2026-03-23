@@ -26,27 +26,41 @@ class GetProfileStatsUseCase @Inject constructor() {
         }
         val totalHours = totalMinutes / 60
 
-        // Obtener género favorito basado en puntuaciones del perfil
         val topGenreId = userProfile?.genreScores?.maxByOrNull { it.value }?.key
         val topGenreName = topGenreId?.let { GenreMapper.getGenreName(it) } ?: "Ninguno"
 
         val topActorId = userProfile?.preferredActors?.maxByOrNull { it.value }?.key
 
-        val sortedGenres = userProfile?.genreScores?.entries?.sortedByDescending { it.value } ?: emptyList()
-        val totalScore = sortedGenres.sumOf { it.value.toDouble() }.toFloat()
-        val topGenresList = if (totalScore > 0f) {
-            sortedGenres.take(3).map {
-                Pair(GenreMapper.getGenreName(it.key), it.value / totalScore)
-            }
-        } else emptyList()
-        
+        val sortedGenres = userProfile?.genreScores
+            ?.filter { it.value > 0 }
+            ?.entries
+            ?.sortedByDescending { it.value }
+            ?: emptyList()
+        val maxScore = sortedGenres.firstOrNull()?.value?.coerceAtLeast(1f) ?: 1f
+        val topGenresList = sortedGenres.take(5).map {
+            Pair(GenreMapper.getGenreName(it.key), it.value / maxScore)
+        }
+
+        val ratingsValues = userProfile?.ratings?.values ?: emptyList()
+        val avgRating = if (ratingsValues.isNotEmpty()) ratingsValues.average().toFloat() else 0f
+        val likedCount = userProfile?.likedMediaIds?.size ?: 0
+        val dislikedCount = userProfile?.dislikedMediaIds?.size ?: 0
+        val likeRate = if (likedCount + dislikedCount > 0)
+            likedCount.toFloat() / (likedCount + dislikedCount)
+        else 0f
+
         return ProfileStats(
             totalWatchedHours = totalHours,
             watchedCount = watchedShows.size,
             totalEpisodes = totalEpisodes,
             topGenre = topGenreName,
             favoriteActorId = topActorId,
-            topGenres = topGenresList
+            topGenres = topGenresList,
+            likedCount = likedCount,
+            essentialCount = userProfile?.essentialMediaIds?.size ?: 0,
+            ratingsCount = ratingsValues.size,
+            avgRating = avgRating,
+            likeRate = likeRate
         )
     }
 
@@ -56,6 +70,12 @@ class GetProfileStatsUseCase @Inject constructor() {
         val totalEpisodes: Int = 0,
         val topGenre: String = "N/A",
         val favoriteActorId: String? = null,
-        val topGenres: List<Pair<String, Float>> = emptyList()
+        val topGenres: List<Pair<String, Float>> = emptyList(),
+        // Extended stats for dashboard
+        val likedCount: Int = 0,
+        val essentialCount: Int = 0,
+        val ratingsCount: Int = 0,
+        val avgRating: Float = 0f,
+        val likeRate: Float = 0f   // fracción de interacciones positivas sobre el total valorado
     )
 }

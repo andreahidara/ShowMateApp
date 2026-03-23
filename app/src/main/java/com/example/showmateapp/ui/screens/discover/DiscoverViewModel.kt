@@ -12,16 +12,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.example.showmateapp.util.GenreMapper
 import com.example.showmateapp.util.KeywordMapper
+import com.example.showmateapp.util.NarrativeStyleMapper
+import com.example.showmateapp.util.TemporalPatternAnalyzer
+import java.time.DayOfWeek
+import java.time.LocalDate
 
 data class DiscoverUiState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
+    // Hero destacado
     val heroShow: MediaContent? = null,
+    // Secciones por género
     val topGenreShows: List<MediaContent> = emptyList(),
     val topGenreName: String = "",
     val secondGenreShows: List<MediaContent> = emptyList(),
@@ -37,7 +44,22 @@ data class DiscoverUiState(
     val secondActorName: String = "",
     val topRatedShows: List<MediaContent> = emptyList(),
     val topKeywordShows: List<MediaContent> = emptyList(),
-    val topKeywordLabel: String = ""
+    val topKeywordLabel: String = "",
+    // Secciones generadas por el algoritmo
+    val contextPicksShows: List<MediaContent> = emptyList(),
+    val contextPicksTitle: String = "",
+    val dayOfWeekShows: List<MediaContent> = emptyList(),
+    val dayOfWeekTitle: String = "",
+    val narrativeStyleShows: List<MediaContent> = emptyList(),
+    val narrativeStyleLabel: String = "",
+    val hiddenGemShows: List<MediaContent> = emptyList(),
+    val moodSectionShows: List<MediaContent> = emptyList(),
+    val moodSectionTitle: String = "",
+    val explorationShows: List<MediaContent> = emptyList(),
+    val explorationGenreName: String = "",
+    val creatorShows: List<MediaContent> = emptyList(),
+    val creatorName: String = "",
+    val collaborativeShows: List<MediaContent> = emptyList()
 )
 
 @HiltViewModel
@@ -65,13 +87,10 @@ class DiscoverViewModel @Inject constructor(
                 val profile = userRepository.getUserProfile()
                 val sortedGenres = profile?.genreScores?.entries?.sortedByDescending { it.value } ?: emptyList()
 
-                var topGenreId = "18"
-                var topName = "Drama"
-                var secondGenreId = "35"
-                var secondName = "Comedia"
-                var thirdGenreId: String? = null
-                var thirdName = ""
-
+                // ── Extract all params synchronously from profile ─────────────────────
+                var topGenreId = "18"; var topName = "Drama"
+                var secondGenreId = "35"; var secondName = "Comedia"
+                var thirdGenreId: String? = null; var thirdName = ""
                 if (sortedGenres.isNotEmpty()) {
                     topGenreId = sortedGenres[0].key
                     topName = GenreMapper.getGenreName(topGenreId)
@@ -85,115 +104,230 @@ class DiscoverViewModel @Inject constructor(
                     }
                 }
 
-                _uiState.update { it.copy(topGenreName = topName, secondGenreName = secondName, thirdGenreName = thirdName) }
+                val kwResult   = KeywordMapper.getTopMappedKeyword(profile?.preferredKeywords ?: emptyMap(), excludeKeywordId = "4363")
+                val kwId       = kwResult?.second
+                val kwLabel    = kwResult?.third
 
-                val res1 = repository.getShowsByGenres(topGenreId)
-                val res2 = repository.getShowsByGenres(secondGenreId)
-                val timeTravelRes = repository.discoverShows(keywords = "4363")
-                val topRatedRes = repository.discoverShows(
-                    genreId = topGenreId,
-                    minRating = 8.0f,
-                    sortBy = "vote_average.desc"
-                )
+                val sortedActors  = profile?.preferredActors?.entries?.sortedByDescending { it.value } ?: emptyList()
+                val actorIdStr1   = sortedActors.getOrNull(0)?.key
+                val actorId1      = actorIdStr1?.toIntOrNull()
+                val actorIdStr2   = sortedActors.getOrNull(1)?.key
+                val actorId2      = actorIdStr2?.toIntOrNull()
 
-                if (res1 is Resource.Success) {
-                    _uiState.update { it.copy(topGenreShows = getRecommendationsUseCase.scoreShows(res1.data.shuffled().take(10))) }
-                }
-                if (res2 is Resource.Success) {
-                    _uiState.update { it.copy(secondGenreShows = getRecommendationsUseCase.scoreShows(res2.data.shuffled().take(10))) }
-                }
-                if (timeTravelRes is Resource.Success) {
-                    _uiState.update { it.copy(timeTravelShows = getRecommendationsUseCase.scoreShows(timeTravelRes.data.shuffled().take(10))) }
-                }
-                if (topRatedRes is Resource.Success && topRatedRes.data.isNotEmpty()) {
-                    _uiState.update { it.copy(topRatedShows = topRatedRes.data.take(10).sortedByDescending { it.voteAverage }) }
-                }
-                if (thirdGenreId != null) {
-                    val res3 = repository.getShowsByGenres(thirdGenreId)
-                    if (res3 is Resource.Success) {
-                        _uiState.update { it.copy(thirdGenreShows = getRecommendationsUseCase.scoreShows(res3.data.shuffled().take(10))) }
-                    }
-                }
-
-                val keywordResult = KeywordMapper.getTopMappedKeyword(
-                    profile?.preferredKeywords ?: emptyMap(),
-                    excludeKeywordId = "4363"
-                )
-                if (keywordResult != null) {
-                    val (_, kwId, kwLabel) = keywordResult
-                    val kwRes = repository.discoverShows(keywords = kwId)
-                    if (kwRes is Resource.Success && kwRes.data.isNotEmpty()) {
-                        _uiState.update { it.copy(
-                            topKeywordLabel = kwLabel,
-                            topKeywordShows = getRecommendationsUseCase.scoreShows(kwRes.data.shuffled().take(10))
-                        ) }
-                    }
-                }
-
-                val sortedActors = profile?.preferredActors?.entries?.sortedByDescending { it.value } ?: emptyList()
-                if (sortedActors.isNotEmpty()) {
-                    val actorIdStr = sortedActors.first().key
-                    val actorId = actorIdStr.toIntOrNull()
-                    if (actorId != null) {
-                        val personRes = repository.getPersonDetails(actorId)
-                        if (personRes is Resource.Success) {
-                            val actorShowsRes = repository.discoverShows(withCast = actorIdStr)
-                            if (actorShowsRes is Resource.Success) {
-                                _uiState.update { it.copy(
-                                    actorName = personRes.data.name,
-                                    actorShows = getRecommendationsUseCase.scoreShows(actorShowsRes.data.shuffled().take(10))
-                                ) }
-                            }
-                        }
-                    }
-                    if (sortedActors.size > 1) {
-                        val secondActorIdStr = sortedActors[1].key
-                        val secondActorId = secondActorIdStr.toIntOrNull()
-                        if (secondActorId != null) {
-                            val personRes2 = repository.getPersonDetails(secondActorId)
-                            if (personRes2 is Resource.Success) {
-                                val secondActorShowsRes = repository.discoverShows(withCast = secondActorIdStr)
-                                if (secondActorShowsRes is Resource.Success) {
-                                    _uiState.update { it.copy(
-                                        secondActorName = personRes2.data.name,
-                                        secondActorShows = getRecommendationsUseCase.scoreShows(secondActorShowsRes.data.shuffled().take(10))
-                                    ) }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                val recommendations = getRecommendationsUseCase.execute()
-                val hero = recommendations.firstOrNull() ?: _uiState.value.topGenreShows.randomOrNull()
-                _uiState.update { it.copy(heroShow = hero) }
-
-                val likedMedia = profile?.likedMediaIds?.toList() ?: emptyList()
+                val likedMedia    = profile?.likedMediaIds?.toList() ?: emptyList()
                 val topRatedMedia = profile?.ratings?.filterValues { it >= 4f }?.keys?.mapNotNull { it.toIntOrNull() } ?: emptyList()
-                val candidates = (likedMedia + topRatedMedia).distinct()
-                if (candidates.isNotEmpty()) {
-                    val targetId = candidates.random()
-                    val details = repository.getShowDetails(targetId)
-                    if (details is Resource.Success) {
-                        _uiState.update { it.copy(
-                            similarToName = details.data.name,
-                            similarShows = getRecommendationsUseCase.scoreShows(
-                                repository.getSimilarShows(targetId).shuffled().take(10)
-                            )
-                        ) }
-                    }
-                }
+                val targetId      = (likedMedia + topRatedMedia).distinct().randomOrNull()
 
-                if (_uiState.value.heroShow == null && _uiState.value.topGenreShows.isEmpty()) {
-                    _uiState.update { it.copy(errorMessage = "No se pudo cargar el contenido. Por favor, reintenta.") }
+                val topNarrativeStyle = profile?.narrativeStyleScores?.filter { it.value > 0 }?.maxByOrNull { it.value }
+                val (nsGenreId, nsKeyword) = if (topNarrativeStyle != null) narrativeStyleToDiscoverParams(topNarrativeStyle.key) else null to null
+                val (moodGenreId, moodTitle) = if (topNarrativeStyle != null) narrativeStyleToMoodSection(topNarrativeStyle.key) else null to ""
+
+                val creatorEntry  = profile?.preferredCreators?.filter { it.value > 0 }?.maxByOrNull { it.value }
+                val creatorId     = creatorEntry?.key?.toIntOrNull()
+
+                val totalScore    = profile?.genreScores?.values?.filter { it > 0 }?.sum() ?: 0f
+                val topScore      = sortedGenres.firstOrNull()?.value ?: 0f
+                val underexploredGenre = if (totalScore > 0 && sortedGenres.isNotEmpty() && topScore / totalScore > 0.45f) {
+                    profile?.genreScores?.filter { it.value > 0 }?.entries
+                        ?.sortedBy { it.value }
+                        ?.firstOrNull { it.key != sortedGenres.first().key }
+                } else null
+
+                // ── Launch ALL independent API calls in parallel ───────────────────────
+                val res1Def          = async { repository.getShowsByGenres(topGenreId) }
+                val res2Def          = async { repository.getShowsByGenres(secondGenreId) }
+                val timeTravelDef    = async { repository.discoverShows(keywords = "4363") }
+                val topRatedDef      = async { repository.discoverShows(genreId = topGenreId, minRating = 8.0f, sortBy = "vote_average.desc") }
+                val res3Def          = thirdGenreId?.let { id -> async { repository.getShowsByGenres(id) } }
+                val kwShowsDef       = kwId?.let { id -> async { repository.discoverShows(keywords = id) } }
+                val person1Def       = actorId1?.let { id -> async { repository.getPersonDetails(id) } }
+                val actor1ShowsDef   = actorIdStr1?.let { id -> async { repository.discoverShows(withCast = id) } }
+                val person2Def       = actorId2?.let { id -> async { repository.getPersonDetails(id) } }
+                val actor2ShowsDef   = actorIdStr2?.let { id -> async { repository.discoverShows(withCast = id) } }
+                val recsDef          = async { getRecommendationsUseCase.execute() }
+                val targetDetailsDef = targetId?.let { id -> async { repository.getShowDetails(id) } }
+                val similarShowsDef  = targetId?.let { id -> async { repository.getSimilarShows(id) } }
+                val nsShowsDef       = if (nsGenreId != null || nsKeyword != null) async { repository.discoverShows(genreId = nsGenreId, keywords = nsKeyword) } else null
+                val moodShowsDef     = if (moodGenreId != null && moodTitle.isNotEmpty()) async { repository.discoverShows(genreId = moodGenreId, minRating = 7.0f) } else null
+                val creatorPersonDef = creatorId?.let { id -> async { repository.getPersonDetails(id) } }
+                val creatorShowsDef  = creatorEntry?.key?.let { key -> async { repository.discoverShows(withCrew = key) } }
+                val explorationDef   = underexploredGenre?.key?.let { key -> async { repository.getShowsByGenres(key) } }
+
+                // ── Await all results ─────────────────────────────────────────────────
+                val res1            = res1Def.await()
+                val res2            = res2Def.await()
+                val timeTravelRes   = timeTravelDef.await()
+                val topRatedRes     = topRatedDef.await()
+                val res3            = res3Def?.await()
+                val kwShows         = kwShowsDef?.await()
+                val person1         = person1Def?.await()
+                val actor1Shows     = actor1ShowsDef?.await()
+                val person2         = person2Def?.await()
+                val actor2Shows     = actor2ShowsDef?.await()
+                val recommendations = recsDef.await()
+                val targetDetails   = targetDetailsDef?.await()
+                val similarShowsRaw = similarShowsDef?.await()
+                val nsShows         = nsShowsDef?.await()
+                val moodShows       = moodShowsDef?.await()
+                val creatorPerson   = creatorPersonDef?.await()
+                val creatorShowsRaw = creatorShowsDef?.await()
+                val explorationRaw  = explorationDef?.await()
+
+                // ── Derive all section data ───────────────────────────────────────────
+                val topGenreShows    = if (res1 is Resource.Success) getRecommendationsUseCase.scoreShows(res1.data.shuffled().take(10)) else emptyList()
+                val secondGenreShows = if (res2 is Resource.Success) getRecommendationsUseCase.scoreShows(res2.data.shuffled().take(10)) else emptyList()
+                val timeTravelShows  = if (timeTravelRes is Resource.Success) getRecommendationsUseCase.scoreShows(timeTravelRes.data.shuffled().take(10)) else emptyList()
+                val topRatedShows    = if (topRatedRes is Resource.Success && topRatedRes.data.isNotEmpty()) topRatedRes.data.take(10).sortedByDescending { it.voteAverage } else emptyList()
+                val thirdGenreShows  = if (res3 is Resource.Success) getRecommendationsUseCase.scoreShows(res3.data.shuffled().take(10)) else emptyList()
+                val topKeywordShows  = if (kwShows is Resource.Success && kwShows.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(kwShows.data.shuffled().take(10)) else emptyList()
+
+                val actorName        = if (person1 is Resource.Success && actor1Shows is Resource.Success) person1.data.name else ""
+                val actorShows       = if (person1 is Resource.Success && actor1Shows is Resource.Success) getRecommendationsUseCase.scoreShows(actor1Shows.data.shuffled().take(10)) else emptyList()
+                val secondActorName  = if (person2 is Resource.Success && actor2Shows is Resource.Success) person2.data.name else ""
+                val secondActorShows = if (person2 is Resource.Success && actor2Shows is Resource.Success) getRecommendationsUseCase.scoreShows(actor2Shows.data.shuffled().take(10)) else emptyList()
+
+                val hero            = recommendations.firstOrNull() ?: topGenreShows.randomOrNull()
+                val similarToName   = if (targetDetails is Resource.Success) targetDetails.data.name else ""
+                val similarShows    = if (targetDetails is Resource.Success && !similarShowsRaw.isNullOrEmpty()) getRecommendationsUseCase.scoreShows(similarShowsRaw.shuffled().take(10)) else emptyList()
+
+                // Sección 1 — Joyas ocultas
+                val hiddenGems      = recommendations.filter { it.voteCount in 1..499 && it.affinityScore >= 5.5f }.take(10)
+
+                // Sección 2 — Picks contextuales
+                val temporalPattern = TemporalPatternAnalyzer.analyze(profile?.viewingHistory ?: emptyList())
+                val isBinger        = temporalPattern.avgEpisodesPerSession >= 3f
+                val contextPicks    = if (isBinger) recommendations.filter { (it.numberOfSeasons ?: 0) >= 3 }.take(10)
+                                      else recommendations.filter { (it.numberOfSeasons ?: 1) <= 2 && it.status in listOf("Ended", "Canceled") }.take(10)
+                val contextTitle    = if (contextPicks.isNotEmpty()) (if (isBinger) "Perfectas para el finde" else "Para ver esta noche") else ""
+
+                // Sección 3 — Por día de la semana
+                val (dayTitle, dayShows) = buildDayOfWeekSection(recommendations)
+
+                // Sección 4 — Estilo narrativo
+                val narrativeStyleLabel = if (topNarrativeStyle != null) "Porque te gusta: ${NarrativeStyleMapper.getStyleLabel(topNarrativeStyle.key)}" else ""
+                val narrativeStyleShows = if (nsShows is Resource.Success && nsShows.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(nsShows.data.shuffled().take(10)) else emptyList()
+
+                // Sección 5 — Estado de ánimo
+                val moodSectionShows = if (moodShows is Resource.Success && moodShows.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(moodShows.data.shuffled().take(10)) else emptyList()
+
+                // Sección 6 — Exploración
+                val explorationGenreName = underexploredGenre?.key?.let { GenreMapper.getGenreName(it) } ?: ""
+                val explorationShowsList = if (explorationRaw is Resource.Success && explorationRaw.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(explorationRaw.data.shuffled().take(10)) else emptyList()
+
+                // Sección 7 — Creador/showrunner
+                val creatorName      = if (creatorPerson is Resource.Success && creatorShowsRaw is Resource.Success && creatorShowsRaw.data.isNotEmpty()) creatorPerson.data.name else ""
+                val creatorShowsList = if (creatorPerson is Resource.Success && creatorShowsRaw is Resource.Success && creatorShowsRaw.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(creatorShowsRaw.data.shuffled().take(10)) else emptyList()
+
+                // Sección 8 — Colaborativa
+                val heroId             = hero?.id
+                val collaborativeShows = recommendations.filter { it.id != heroId && it.voteCount in 100..4999 }.sortedByDescending { it.affinityScore }.take(12)
+
+                // ── Single state update ───────────────────────────────────────────────
+                _uiState.update { current ->
+                    val hasContent = hero != null || topGenreShows.isNotEmpty()
+                    current.copy(
+                        isLoading = false,
+                        heroShow = hero,
+                        topGenreName = topName,
+                        secondGenreName = secondName,
+                        thirdGenreName = thirdName,
+                        topGenreShows = topGenreShows,
+                        secondGenreShows = secondGenreShows,
+                        thirdGenreShows = thirdGenreShows,
+                        timeTravelShows = timeTravelShows,
+                        topRatedShows = topRatedShows,
+                        topKeywordLabel = kwLabel ?: "",
+                        topKeywordShows = topKeywordShows,
+                        actorName = actorName,
+                        actorShows = actorShows,
+                        secondActorName = secondActorName,
+                        secondActorShows = secondActorShows,
+                        similarToName = similarToName,
+                        similarShows = similarShows,
+                        hiddenGemShows = hiddenGems,
+                        contextPicksTitle = contextTitle,
+                        contextPicksShows = contextPicks,
+                        dayOfWeekTitle = dayTitle,
+                        dayOfWeekShows = dayShows,
+                        narrativeStyleLabel = narrativeStyleLabel,
+                        narrativeStyleShows = narrativeStyleShows,
+                        moodSectionTitle = moodTitle,
+                        moodSectionShows = moodSectionShows,
+                        explorationGenreName = explorationGenreName,
+                        explorationShows = explorationShowsList,
+                        creatorName = creatorName,
+                        creatorShows = creatorShowsList,
+                        collaborativeShows = collaborativeShows,
+                        errorMessage = if (!hasContent) "No se pudo cargar el contenido. Por favor, reintenta." else null
+                    )
                 }
 
             } catch (e: Exception) {
                 Log.e("DiscoverViewModel", "Error loading discover content", e)
-                _uiState.update { it.copy(errorMessage = "Error al cargar el contenido: ${e.localizedMessage ?: "Comprueba tu conexión"}") }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al cargar el contenido: ${e.localizedMessage ?: "Comprueba tu conexión"}") }
             }
         }
+    }
+
+    private fun buildDayOfWeekSection(recommendations: List<MediaContent>): Pair<String, List<MediaContent>> {
+        return when (LocalDate.now().dayOfWeek) {
+            DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY -> {
+                val shows = recommendations.filter {
+                    (it.episodeRunTime?.firstOrNull() ?: 45) <= 30
+                }.take(10)
+                "Para después del trabajo" to shows
+            }
+            DayOfWeek.THURSDAY -> {
+                val shows = recommendations.filter {
+                    (it.episodeRunTime?.firstOrNull() ?: 45) <= 45
+                }.take(10)
+                "Ya es casi viernes, empieza algo nuevo" to shows
+            }
+            DayOfWeek.FRIDAY -> {
+                val shows = recommendations.filter {
+                    it.safeGenreIds.any { id -> id in listOf(10759, 53, 9648) }
+                }.take(10)
+                "Arranca el finde con esto" to shows
+            }
+            DayOfWeek.SATURDAY -> {
+                val shows = recommendations.filter { (it.numberOfSeasons ?: 0) >= 2 }.take(10)
+                "Maratón del sábado" to shows
+            }
+            DayOfWeek.SUNDAY -> {
+                val shows = recommendations.filter {
+                    it.status in listOf("Ended", "Canceled") && (it.numberOfSeasons ?: 4) <= 3
+                }.take(10)
+                "Domingo tranquilo" to shows
+            }
+            else -> "" to emptyList()
+        }
+    }
+
+    private fun narrativeStyleToDiscoverParams(style: String): Pair<String?, String?> = when (style) {
+        "narrativa_compleja"     -> Pair("9648",  null)
+        "protagonista_detective" -> Pair("80",    null)
+        "protagonista_antihero"  -> Pair("18|80", null)
+        "protagonista_genio"     -> Pair("18",    null)
+        "tono_oscuro"            -> Pair("53",    null)
+        "tono_emocional"         -> Pair("18",    null)
+        "tono_ligero"            -> Pair("35",    null)
+        "ritmo_intenso"          -> Pair("10759", null)
+        "ritmo_lento"            -> Pair("18",    null)
+        "ritmo_episodico"        -> Pair("35",    null)
+        "ritmo_largo"            -> Pair("18|80", null)
+        else                     -> Pair(null,    null)
+    }
+
+    private fun narrativeStyleToMoodSection(style: String): Pair<String?, String> = when (style) {
+        "tono_oscuro"            -> Pair("53|80",  "Para una noche de suspense")
+        "tono_emocional"         -> Pair("18",     "Para llorar un buen rato")
+        "tono_ligero"            -> Pair("35",     "Para reírte esta noche")
+        "ritmo_intenso"          -> Pair("10759",  "Noche de acción")
+        "narrativa_compleja"     -> Pair("9648",   "Thrillers psicológicos")
+        "protagonista_detective" -> Pair("80",     "Crimen y misterio")
+        "protagonista_antihero"  -> Pair("18|80",  "Antihéroes y dilemas morales")
+        "protagonista_genio"     -> Pair("18",     "Genios en pantalla")
+        "ritmo_lento"            -> Pair("18",     "Para saborear con calma")
+        else                     -> Pair(null,     "")
     }
 }

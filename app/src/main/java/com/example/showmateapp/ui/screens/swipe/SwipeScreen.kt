@@ -4,7 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +43,7 @@ import coil.compose.AsyncImage
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.components.premium.MatchBadge
 import com.example.showmateapp.ui.theme.*
+import com.example.showmateapp.util.GenreMapper
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
@@ -50,6 +54,7 @@ fun SwipeScreen(navController: NavController) {
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val ratedCount by viewModel.ratedCount.collectAsState()
+    val lastRemovedShow by viewModel.lastRemovedShow.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadShows()
@@ -60,8 +65,10 @@ fun SwipeScreen(navController: NavController) {
         errorMessage = errorMessage,
         isLoading = isLoading,
         ratedCount = ratedCount,
+        lastRemovedShow = lastRemovedShow,
         onLikeShow = { viewModel.likeTopShow() },
         onSkipShow = { viewModel.skipTopShow() },
+        onUndoAction = { viewModel.undoLastAction() },
         onNavigateToHome = {
             navController.navigate(Screen.Main) {
                 popUpTo(Screen.Swipe) { inclusive = true }
@@ -76,8 +83,10 @@ fun SwipeScreenContent(
     errorMessage: String?,
     isLoading: Boolean,
     ratedCount: Int,
+    lastRemovedShow: MediaContent?,
     onLikeShow: () -> Unit,
     onSkipShow: () -> Unit,
+    onUndoAction: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
     val maxRatings = 10
@@ -209,10 +218,9 @@ fun SwipeScreenContent(
                 modifier = Modifier
                     .padding(bottom = 32.dp)
                     .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botón Descartar (X)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconButton(
                         onClick = { onSkipShow() },
@@ -227,7 +235,33 @@ fun SwipeScreenContent(
                     Text("Paso", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
 
-                // Botón Like (Corazón)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(
+                        onClick = { onUndoAction() },
+                        enabled = lastRemovedShow != null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                Color.White.copy(alpha = if (lastRemovedShow != null) 0.15f else 0.05f),
+                                CircleShape
+                            )
+                    ) {
+                        Icon(
+                            Icons.Default.Undo,
+                            contentDescription = "Deshacer",
+                            tint = if (lastRemovedShow != null) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.25f),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Deshacer",
+                        color = if (lastRemovedShow != null) TextGray else TextGray.copy(alpha = 0.4f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconButton(
                         onClick = { onLikeShow() },
@@ -367,7 +401,6 @@ fun SwipeableCard(
             placeholder = painterResource(R.drawable.ic_logo_placeholder)
         )
 
-        // Overlay de color + etiqueta al deslizar
         if (isTopCard && offsetX.value != 0f) {
             val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 0.45f)
             val isLiking = offsetX.value > 0
@@ -377,7 +410,6 @@ fun SwipeableCard(
                     .fillMaxSize()
                     .background(overlayColor.copy(alpha = swipeAlpha))
             )
-            // Etiqueta de acción
             val labelAlpha = ((offsetX.value.absoluteValue - 80f) / 200f).coerceIn(0f, 1f)
             if (labelAlpha > 0f) {
                 Box(
@@ -437,9 +469,71 @@ fun SwipeableCard(
                 fontWeight = FontWeight.Black,
                 lineHeight = 40.sp
             )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val year = media.firstAirDate?.take(4)?.takeIf { it.isNotBlank() }
+            val runtime = media.episodeRunTime?.firstOrNull()?.takeIf { it > 0 }?.let { "$it min" }
+            val seasons = media.numberOfSeasons?.takeIf { it > 0 }?.let { "$it temp." }
+            val metaParts = listOfNotNull(year, runtime, seasons)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                metaParts.forEachIndexed { index, part ->
+                    if (index > 0) {
+                        Text("·", color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp)
+                    }
+                    Text(part, color = Color.White.copy(alpha = 0.65f), fontSize = 12.sp)
+                }
+                if (media.voteAverage > 0f) {
+                    if (metaParts.isNotEmpty()) {
+                        Text("·", color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp)
+                    }
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = StarYellow,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = "%.1f".format(media.voteAverage),
+                        color = StarYellow,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Genre chips
+            val genreNames = media.safeGenreIds.take(3).map { GenreMapper.getGenreName(it.toString()) }
+            if (genreNames.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    genreNames.forEach { genre ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = genre,
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Text(
                 text = media.overview,
                 color = Color.White.copy(alpha = 0.7f),

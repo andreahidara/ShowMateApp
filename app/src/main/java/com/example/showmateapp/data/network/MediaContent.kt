@@ -26,6 +26,18 @@ data class MediaContent(
 ) {
     val safeGenreIds: List<Int>
         get() = genreIds ?: genres?.map { it.id } ?: emptyList()
+
+    val creatorIds: List<Int>
+        get() = credits?.crew
+            ?.filter { it.job in CREATOR_JOBS }
+            ?.map { it.id } ?: emptyList()
+
+    val keywordNames: List<String>
+        get() = keywords?.results?.map { it.name } ?: emptyList()
+
+    companion object {
+        val CREATOR_JOBS = setOf("Creator", "Executive Producer", "Showrunner", "Series Director")
+    }
 }
 
 data class Genre(val id: Int = 0, val name: String = "")
@@ -40,12 +52,20 @@ data class Keyword(
 )
 
 data class CreditsResponse(
-    val cast: List<CastMember> = emptyList()
+    val cast: List<CastMember> = emptyList(),
+    val crew: List<CrewMember> = emptyList()
 )
 
 data class CastMember(
     val id: Int = 0,
     val name: String = "",
+    @SerializedName("profile_path") val profilePath: String? = null
+)
+
+data class CrewMember(
+    val id: Int = 0,
+    val name: String = "",
+    val job: String = "",
     @SerializedName("profile_path") val profilePath: String? = null
 )
 

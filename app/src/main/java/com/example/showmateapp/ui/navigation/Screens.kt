@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 sealed interface Screen {
     @Serializable object Splash : Screen
+    @Serializable object Welcome : Screen
     @Serializable object Login : Screen
     @Serializable object SignUp : Screen
     @Serializable object Onboarding : Screen
@@ -23,4 +24,5 @@ sealed interface Screen {
     @Serializable data class ListDetail(val listName: String) : Screen
     @Serializable data class AllShows(val type: String) : Screen
     @Serializable data class Detail(val showId: Int, val sharedElementTag: String? = null) : Screen
+    @Serializable data class GroupMatch(val memberEmails: String) : Screen
 }

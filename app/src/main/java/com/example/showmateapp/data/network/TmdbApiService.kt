@@ -1,6 +1,7 @@
 package com.example.showmateapp.data.network
 
 import com.example.showmateapp.data.model.MediaResponse
+import com.google.gson.annotations.SerializedName
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -13,6 +14,11 @@ interface TmdbApiService {
         @Query("language") language: String = "es-ES",
         @Query("append_to_response") appendToResponse: String? = "credits,keywords,watch/providers,content_ratings,videos"
     ): MediaContent
+
+    @GET("trending/tv/week")
+    suspend fun getTrendingThisWeek(
+        @Query("language") language: String = "es-ES"
+    ): MediaResponse
 
     @GET("tv/popular")
     suspend fun getPopularMedia(
@@ -40,6 +46,7 @@ interface TmdbApiService {
         @Query("with_watch_providers") watchProviders: String? = null,
         @Query("with_keywords") keywords: String? = null,
         @Query("with_cast") withCast: String? = null,
+        @Query("with_crew") withCrew: String? = null,
         @Query("air_date.gte") airDateGte: String? = null,
         @Query("air_date.lte") airDateLte: String? = null,
         @Query("first_air_date.gte") firstAirDateGte: String? = null,
@@ -75,33 +82,33 @@ interface TmdbApiService {
 }
 
 data class SeasonResponse(
-    val _id: String,
-    val air_date: String?,
-    val episodes: List<Episode>,
-    val name: String,
-    val overview: String,
-    val id: Int,
-    val poster_path: String?,
-    val season_number: Int
+    @SerializedName("_id") val tmdbId: String = "",
+    @SerializedName("air_date") val airDate: String? = null,
+    val episodes: List<Episode> = emptyList(),
+    val name: String = "",
+    val overview: String = "",
+    val id: Int = 0,
+    @SerializedName("poster_path") val posterPath: String? = null,
+    @SerializedName("season_number") val seasonNumber: Int = 0
 )
 
 data class Episode(
-    val air_date: String?,
-    val episode_number: Int,
-    val id: Int,
-    val name: String,
-    val overview: String,
-    val production_code: String?,
-    val runtime: Int?,
-    val season_number: Int,
-    val show_id: Int,
-    val still_path: String?,
-    val vote_average: Float,
-    val vote_count: Int
+    @SerializedName("air_date") val airDate: String? = null,
+    @SerializedName("episode_number") val episodeNumber: Int = 0,
+    val id: Int = 0,
+    val name: String = "",
+    val overview: String = "",
+    @SerializedName("production_code") val productionCode: String? = null,
+    val runtime: Int? = null,
+    @SerializedName("season_number") val seasonNumber: Int = 0,
+    @SerializedName("show_id") val showId: Int = 0,
+    @SerializedName("still_path") val stillPath: String? = null,
+    @SerializedName("vote_average") val voteAverage: Float = 0f,
+    @SerializedName("vote_count") val voteCount: Int = 0
 )
 
 data class PersonResponse(
-    val id: Int,
-    val name: String,
-    val profile_path: String?
+    val id: Int = 0,
+    val name: String = "",
+    @SerializedName("profile_path") val profilePath: String? = null
 )

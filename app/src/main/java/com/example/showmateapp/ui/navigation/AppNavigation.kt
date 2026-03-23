@@ -11,7 +11,9 @@ import com.example.showmateapp.ui.screens.detail.DetailScreen
 import com.example.showmateapp.ui.screens.login.LoginScreen
 import com.example.showmateapp.ui.screens.main.MainScreen
 import com.example.showmateapp.ui.screens.onboarding.OnboardingScreen
+import com.example.showmateapp.ui.screens.welcome.WelcomeScreen
 import com.example.showmateapp.ui.screens.profile.about.AboutScreen
+import com.example.showmateapp.ui.screens.friends.GroupMatchScreen
 import com.example.showmateapp.ui.screens.profile.friends.FriendCompareScreen
 import com.example.showmateapp.ui.screens.profile.allshows.AllShowsScreen
 import com.example.showmateapp.ui.screens.profile.lists.CustomListsScreen
@@ -40,11 +42,18 @@ fun AppNavigation() {
                         }
                     },
                     onNavigateToLogin = {
-                        navController.navigate(Screen.Login) { 
-                            popUpTo(Screen.Splash) { inclusive = true } 
+                        navController.navigate(Screen.Welcome) {
+                            popUpTo(Screen.Splash) { inclusive = true }
                         }
                     }
                 )
+            }
+            composable<Screen.Welcome> {
+                WelcomeScreen(onGetStarted = {
+                    navController.navigate(Screen.Login) {
+                        popUpTo(Screen.Welcome) { inclusive = true }
+                    }
+                })
             }
             composable<Screen.Login> { LoginScreen(navController = navController) }
             composable<Screen.SignUp> {
@@ -59,8 +68,8 @@ fun AppNavigation() {
             }
             composable<Screen.Onboarding> {
                 OnboardingScreen(onFinish = {
-                    navController.navigate(Screen.Swipe) { 
-                        popUpTo(Screen.Onboarding) { inclusive = true } 
+                    navController.navigate(Screen.Main) {
+                        popUpTo(Screen.Onboarding) { inclusive = true }
                     }
                 })
             }
@@ -83,6 +92,11 @@ fun AppNavigation() {
             composable<Screen.ListDetail> { ListDetailScreen(navController = navController) }
             composable<Screen.AllShows> { AllShowsScreen(navController = navController) }
             composable<Screen.FriendCompare> { FriendCompareScreen(navController = navController) }
+            composable<Screen.GroupMatch> { backStackEntry ->
+                val route = backStackEntry.toRoute<Screen.GroupMatch>()
+                val emails = route.memberEmails.split(",").filter { it.isNotBlank() }
+                GroupMatchScreen(navController = navController, memberEmails = emails)
+            }
 
             composable<Screen.Detail> { backStackEntry ->
                 val detailRoute = backStackEntry.toRoute<Screen.Detail>()

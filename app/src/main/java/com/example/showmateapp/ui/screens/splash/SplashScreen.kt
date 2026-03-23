@@ -15,17 +15,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.showmateapp.R
 import com.example.showmateapp.ui.components.premium.AuthBackground
 import com.example.showmateapp.ui.theme.PrimaryPurple
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun SplashScreen(
     onNavigateToMain: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    viewModel: SplashViewModel = hiltViewModel()
 ) {
     val logoAlpha = remember { Animatable(0f) }
     val titleAlpha = remember { Animatable(0f) }
@@ -36,7 +37,6 @@ fun SplashScreen(
     
     val scale = remember { Animatable(0.8f) }
     
-    // Animación de "respiración" para el logo después de entrar
     val infiniteTransition = rememberInfiniteTransition(label = "breathing")
     val breatheScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -49,7 +49,6 @@ fun SplashScreen(
     )
 
     LaunchedEffect(key1 = true) {
-        // Secuencia de entrada
         launch { 
             logoAlpha.animateTo(1f, animationSpec = tween(1000, easing = LinearOutSlowInEasing)) 
         }
@@ -75,9 +74,7 @@ fun SplashScreen(
         // Espera mínima para que el usuario vea el logo (2.5 segundos total)
         delay(2500)
 
-        // Verificación de Auth
-        val auth = FirebaseAuth.getInstance()
-        if (auth.currentUser != null) {
+        if (viewModel.isLoggedIn()) {
             onNavigateToMain()
         } else {
             onNavigateToLogin()
@@ -95,7 +92,6 @@ fun SplashScreen(
                     .scale(scale.value * breatheScale)
                     .padding(bottom = 40.dp)
             ) {
-                // Sombra sutil o resplandor se podría añadir aquí con un Box de fondo
                 Image(
                     painter = painterResource(id = R.drawable.logo),
                     contentDescription = "Logo ShowMate",
@@ -132,7 +128,6 @@ fun SplashScreen(
                 )
             }
 
-            // Indicador de carga muy sutil en la parte inferior
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -149,7 +144,6 @@ fun SplashScreen(
                 )
             }
             
-            // Footer de marca
             Text(
                 text = "Powered by TMDB",
                 color = Color.White.copy(alpha = 0.3f),

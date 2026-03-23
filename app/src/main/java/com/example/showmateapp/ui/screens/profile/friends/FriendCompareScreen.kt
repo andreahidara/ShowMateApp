@@ -26,6 +26,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.showmateapp.ui.components.premium.CardSurface
 import com.example.showmateapp.ui.components.premium.outlinedTextFieldColors
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextAlign
 import com.example.showmateapp.ui.theme.AccentBlue
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.StarYellow
@@ -129,6 +133,12 @@ fun FriendCompareScreen(
             }
 
             if (uiState.hasSearched) {
+                uiState.compatibilityScore?.let { score ->
+                    item {
+                        CompatibilityScoreCard(score = score, friendEmail = uiState.friendEmail)
+                    }
+                }
+
                 if (uiState.commonShows.isEmpty()) {
                     item {
                         CardSurface(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
@@ -161,7 +171,7 @@ fun FriendCompareScreen(
                 } else {
                     item {
                         Text(
-                            "${uiState.commonShows.size} series en común",
+                            "${uiState.commonShows.size} ${if (uiState.commonShows.size == 1) "serie" else "series"} en común",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -220,6 +230,64 @@ fun FriendCompareScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CompatibilityScoreCard(score: Int, friendEmail: String) {
+    val scoreColor = when {
+        score >= 75 -> Color(0xFF4CAF50)
+        score >= 50 -> AccentBlue
+        score >= 25 -> Color(0xFFFFC107)
+        else        -> TextGray
+    }
+    val scoreLabel = when {
+        score >= 75 -> "¡Almas gemelas del streaming!"
+        score >= 50 -> "Muy buen match de gustos"
+        score >= 25 -> "Tenéis algo en común"
+        else        -> "Gustos muy diferentes"
+    }
+
+    CardSurface(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Compatibilidad con ${friendEmail.substringBefore("@")}",
+                color = TextGray,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center
+            )
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(scoreColor.copy(alpha = 0.25f), scoreColor.copy(alpha = 0.05f))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "$score%",
+                    color = scoreColor,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+            Text(
+                text = scoreLabel,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

@@ -4,6 +4,7 @@ import com.example.showmateapp.data.model.UserProfile
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.data.repository.ShowRepository
 import com.example.showmateapp.data.repository.UserRepository
+import com.example.showmateapp.domain.usecase.GetCollaborativeBoostUseCase
 import com.example.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.example.showmateapp.util.Resource
 import kotlinx.coroutines.test.runTest
@@ -11,6 +12,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -19,6 +22,7 @@ class GetRecommendationsUseCaseTest {
     private lateinit var useCase: GetRecommendationsUseCase
     private val userRepository: UserRepository = mock()
     private val showRepository: ShowRepository = mock()
+    private val getCollaborativeBoostUseCase: GetCollaborativeBoostUseCase = mock()
 
     private val dramaProfile = UserProfile(
         userId = "test",
@@ -44,8 +48,10 @@ class GetRecommendationsUseCaseTest {
     )
 
     @Before
-    fun setup() {
-        useCase = GetRecommendationsUseCase(userRepository, showRepository)
+    fun setup() = kotlinx.coroutines.runBlocking {
+        useCase = GetRecommendationsUseCase(userRepository, showRepository, getCollaborativeBoostUseCase)
+        // Explicit stub so tests don't rely on exception-swallowing inside execute()
+        whenever(getCollaborativeBoostUseCase.execute(any())).thenReturn(emptyMap())
     }
 
     @Test
@@ -55,7 +61,7 @@ class GetRecommendationsUseCaseTest {
 
         whenever(userRepository.getUserProfile()).thenReturn(dramaProfile)
         whenever(userRepository.getWatchedMediaIds()).thenReturn(emptySet())
-        whenever(showRepository.getDetailedRecommendations("18,35")).thenReturn(listOf(dramaShow, comedyShow))
+        whenever(showRepository.getDetailedRecommendations(anyOrNull())).thenReturn(listOf(dramaShow, comedyShow))
 
         val result = useCase.execute()
 
@@ -70,7 +76,7 @@ class GetRecommendationsUseCaseTest {
 
         whenever(userRepository.getUserProfile()).thenReturn(dramaProfile)
         whenever(userRepository.getWatchedMediaIds()).thenReturn(emptySet())
-        whenever(showRepository.getDetailedRecommendations("18,35")).thenReturn(listOf(endedShow, ongoingShow))
+        whenever(showRepository.getDetailedRecommendations(anyOrNull())).thenReturn(listOf(endedShow, ongoingShow))
 
         val result = useCase.execute()
         val ended   = result.first { it.id == 1 }
@@ -80,17 +86,19 @@ class GetRecommendationsUseCaseTest {
     }
 
     @Test
-    fun `watched shows are excluded from recommendations`() = runTest {
-        val watchedShow = makeShow(1, genreIds = listOf(18))
+    fun `substantially watched shows are excluded from recommendations`() = runTest {
+        val watchedShow = makeShow(1, genreIds = listOf(18), seasons = 1)
         val newShow     = makeShow(2, genreIds = listOf(18))
+        // 8 episodes watched out of estimated 10 (1 season * 10) = 80% > 50% threshold
+        val profileWithWatched = dramaProfile.copy(watchedEpisodes = mapOf("1" to List(8) { it }))
 
-        whenever(userRepository.getUserProfile()).thenReturn(dramaProfile)
+        whenever(userRepository.getUserProfile()).thenReturn(profileWithWatched)
         whenever(userRepository.getWatchedMediaIds()).thenReturn(setOf(1))
-        whenever(showRepository.getDetailedRecommendations("18,35")).thenReturn(listOf(watchedShow, newShow))
+        whenever(showRepository.getDetailedRecommendations(anyOrNull())).thenReturn(listOf(watchedShow, newShow))
 
         val result = useCase.execute()
 
-        assertTrue("Watched show should not appear", result.none { it.id == 1 })
+        assertTrue("Substantially watched show should not appear", result.none { it.id == 1 })
         assertEquals(1, result.size)
     }
 
@@ -101,7 +109,7 @@ class GetRecommendationsUseCaseTest {
 
         whenever(userRepository.getUserProfile()).thenReturn(dramaProfile)
         whenever(userRepository.getWatchedMediaIds()).thenReturn(emptySet())
-        whenever(showRepository.getDetailedRecommendations("18,35"))
+        whenever(showRepository.getDetailedRecommendations(anyOrNull()))
             .thenReturn(dramaShows + comedyShows)
 
         val result = useCase.execute()
@@ -167,7 +175,7 @@ class GetRecommendationsUseCaseTest {
 
         whenever(userRepository.getUserProfile()).thenReturn(dramaProfile)
         whenever(userRepository.getWatchedMediaIds()).thenReturn(emptySet())
-        whenever(showRepository.getDetailedRecommendations("18,35"))
+        whenever(showRepository.getDetailedRecommendations(anyOrNull()))
             .thenReturn(listOf(popularShow, obscureShow))
 
         val result = useCase.execute()

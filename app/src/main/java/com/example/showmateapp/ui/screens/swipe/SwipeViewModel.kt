@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 import com.example.showmateapp.domain.usecase.GetRecommendationsUseCase
+import com.example.showmateapp.util.NarrativeStyleMapper
 import android.util.Log
 
 @HiltViewModel
@@ -22,22 +23,35 @@ class SwipeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _shows = MutableStateFlow<List<MediaContent>>(emptyList())
-    val shows: StateFlow<List<MediaContent>> = _shows
+    val shows: StateFlow<List<MediaContent>> = _shows.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     // Persists across tab switches unlike composable remember state
     private val _ratedCount = MutableStateFlow(0)
     val ratedCount: StateFlow<Int> = _ratedCount.asStateFlow()
 
+    private val _lastRemovedShow = MutableStateFlow<MediaContent?>(null)
+    val lastRemovedShow: StateFlow<MediaContent?> = _lastRemovedShow.asStateFlow()
+
+    fun undoLastAction() {
+        val show = _lastRemovedShow.value ?: return
+        val currentList = _shows.value.toMutableList()
+        currentList.add(0, show)
+        _shows.value = currentList
+        _ratedCount.value = (_ratedCount.value - 1).coerceAtLeast(0)
+        _lastRemovedShow.value = null
+    }
+
     fun likeTopShow() {
         val currentList = _shows.value.toMutableList()
         if (currentList.isNotEmpty()) {
             val show = currentList.removeAt(0)
+            _lastRemovedShow.value = show
             _shows.value = currentList
             _ratedCount.value++
             viewModelScope.launch {
@@ -45,8 +59,12 @@ class SwipeViewModel @Inject constructor(
                 userRepository.trackMediaInteraction(
                     mediaId = show.id,
                     genres = show.safeGenreIds.map { it.toString() },
-                    keywords = show.keywords?.results?.map { it.name } ?: emptyList(),
+                    keywords = show.keywordNames,
                     actors = show.credits?.cast?.map { it.id } ?: emptyList(),
+                    narrativeStyles = NarrativeStyleMapper.extractStyles(
+                        show.keywordNames, show.episodeRunTime?.firstOrNull()
+                    ),
+                    creators = show.creatorIds,
                     interactionType = UserRepository.InteractionType.Like
                 )
             }
@@ -57,14 +75,19 @@ class SwipeViewModel @Inject constructor(
         val currentList = _shows.value.toMutableList()
         if (currentList.isNotEmpty()) {
             val show = currentList.removeAt(0)
+            _lastRemovedShow.value = show
             _shows.value = currentList
             _ratedCount.value++
             viewModelScope.launch {
                 userRepository.trackMediaInteraction(
                     mediaId = show.id,
                     genres = show.safeGenreIds.map { it.toString() },
-                    keywords = show.keywords?.results?.map { it.name } ?: emptyList(),
+                    keywords = show.keywordNames,
                     actors = show.credits?.cast?.map { it.id } ?: emptyList(),
+                    narrativeStyles = NarrativeStyleMapper.extractStyles(
+                        show.keywordNames, show.episodeRunTime?.firstOrNull()
+                    ),
+                    creators = show.creatorIds,
                     interactionType = UserRepository.InteractionType.Dislike
                 )
             }

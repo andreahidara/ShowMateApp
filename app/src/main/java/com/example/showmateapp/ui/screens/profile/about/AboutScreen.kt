@@ -97,16 +97,21 @@ fun AboutScreen(navController: NavController) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Algoritmo de Recomendación", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        "El motor de recomendación utiliza una fórmula híbrida que pondera dos componentes principales:",
+                        "Fórmula híbrida: 70% afinidad personal + 30% valoración global bayesiana.",
                         color = TextGray, fontSize = 13.sp, lineHeight = 20.sp
                     )
-                    AlgorithmWeightRow("Afinidad personal", "70%", "Basada en géneros, keywords y actores favoritos del usuario con decaimiento temporal")
-                    AlgorithmWeightRow("Valoración bayesiana", "30%", "Ajusta la nota TMDB penalizando series con pocas votaciones")
+                    AlgorithmWeightRow("Géneros", "37%", "Géneros favoritos del usuario con decaimiento temporal exponencial (semivida: 90 días)")
+                    AlgorithmWeightRow("Estilo narrativo", "19%", "11 clusters narrativos detectados automáticamente a partir de keywords de TMDB")
+                    AlgorithmWeightRow("Keywords", "22%", "Temas, ambientaciones y elementos temáticos de cada serie")
+                    AlgorithmWeightRow("Actores", "12%", "Actores del reparto con los que el usuario ha interactuado positivamente")
+                    AlgorithmWeightRow("Creadores", "10%", "Showrunners y directores de las series mejor valoradas por el usuario")
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                     Text("Características avanzadas:", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    BulletPoint("Decaimiento temporal exponencial (semivida: 90 días)")
-                    BulletPoint("Filtro de diversidad: ningún género supera el 35% de resultados")
-                    BulletPoint("Boost de completitud para series finalizadas y de pocos episodios")
+                    BulletPoint("Valoración bayesiana: ajusta la nota TMDB penalizando series con pocas votaciones")
+                    BulletPoint("Filtrado colaborativo: boost para series populares entre usuarios con gustos similares")
+                    BulletPoint("Serendipia: el 15% de resultados son descubrimientos de alta valoración y baja afinidad")
+                    BulletPoint("Saturación de género: penaliza géneros que dominen más del 45% del score acumulado")
+                    BulletPoint("Diversidad: ningún género ocupa más del 35% de los resultados finales")
                 }
             }
 

@@ -11,23 +11,22 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.components.premium.*
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.HeartRed
-import com.example.showmateapp.ui.theme.SurfaceDark
+import com.example.showmateapp.ui.theme.PrimaryPurple
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -38,18 +37,19 @@ fun FavoritesScreen(
     onExploreClick: () -> Unit = {},
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
-    val favorites by viewModel.favorites.collectAsState()
+    val state by viewModel.uiState.collectAsState()
+    var showSortDropdown by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
-            .padding(16.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 24.dp, top = 8.dp)
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Favorite,
@@ -62,35 +62,130 @@ fun FavoritesScreen(
                 text = "Mis Favoritos",
                 color = Color.White,
                 fontSize = 28.sp,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.weight(1f)
             )
-            if (favorites.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Surface(
-                    color = HeartRed.copy(alpha = 0.15f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+            Box {
+                OutlinedButton(
+                    onClick = { showSortDropdown = true },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f))
                 ) {
-                    Text(
-                        text = "${favorites.size}",
-                        color = HeartRed,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    Icon(
+                        imageVector = Icons.Default.Sort,
+                        contentDescription = "Ordenar",
+                        modifier = Modifier.size(16.dp)
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = state.sortOption.label,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                DropdownMenu(
+                    expanded = showSortDropdown,
+                    onDismissRequest = { showSortDropdown = false }
+                ) {
+                    SortOption.entries.forEach { option ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = option.label,
+                                    fontWeight = if (option == state.sortOption) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (option == state.sortOption) PrimaryPurple else Color.Unspecified
+                                )
+                            },
+                            onClick = {
+                                viewModel.setSortOption(option)
+                                showSortDropdown = false
+                            }
+                        )
+                    }
                 }
             }
         }
 
-        if (favorites.isEmpty()) {
-            EmptyFavoritesState(onExploreClick = onExploreClick)
+        val tabIndex = FavoriteTab.entries.indexOf(state.selectedTab)
+        TabRow(
+            selectedTabIndex = tabIndex,
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = Color.White,
+            indicator = { tabPositions ->
+                if (tabIndex < tabPositions.size) {
+                    val pos = tabPositions[tabIndex]
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentSize(Alignment.BottomStart)
+                            .offset(x = pos.left)
+                            .width(pos.width)
+                            .height(3.dp)
+                            .background(PrimaryPurple)
+                    )
+                }
+            }
+        ) {
+            FavoriteTab.entries.forEachIndexed { index, tab ->
+                val count = when (tab) {
+                    FavoriteTab.LIKED -> state.favorites.size
+                    FavoriteTab.ESSENTIAL -> state.essentials.size
+                    FavoriteTab.WATCHED -> state.watched.size
+                }
+                Tab(
+                    selected = index == tabIndex,
+                    onClick = { viewModel.selectTab(tab) },
+                    text = {
+                        Text(
+                            text = "${tab.label} ($count)",
+                            fontSize = 12.sp,
+                            fontWeight = if (index == tabIndex) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1
+                        )
+                    },
+                    selectedContentColor = PrimaryPurple,
+                    unselectedContentColor = Color.Gray
+                )
+            }
+        }
+
+        val currentList = when (state.selectedTab) {
+            FavoriteTab.LIKED -> state.favorites
+            FavoriteTab.ESSENTIAL -> state.essentials
+            FavoriteTab.WATCHED -> state.watched
+        }
+
+        if (currentList.isEmpty()) {
+            val (emptyTitle, emptySubtitle) = when (state.selectedTab) {
+                FavoriteTab.LIKED -> Pair(
+                    "Sin favoritos aún",
+                    "Aún no tienes favoritos. Desliza en Swipe para guardar series."
+                )
+                FavoriteTab.ESSENTIAL -> Pair(
+                    "Sin imprescindibles",
+                    "Ninguna serie marcada como imprescindible todavía."
+                )
+                FavoriteTab.WATCHED -> Pair(
+                    "Sin series vistas",
+                    "No has marcado ninguna serie como vista."
+                )
+            }
+            EmptyTabState(
+                title = emptyTitle,
+                subtitle = emptySubtitle,
+                showExploreButton = state.selectedTab == FavoriteTab.LIKED,
+                onExploreClick = onExploreClick
+            )
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(favorites, key = { it.id }) { media ->
+                items(currentList, key = { it.id }) { media ->
                     ShowCard(
                         media = media,
                         sharedTransitionScope = sharedTransitionScope,
@@ -98,7 +193,11 @@ fun FavoritesScreen(
                         onClick = { selectedMedia, tag ->
                             globalNavController.navigate(Screen.Detail(selectedMedia.id, tag))
                         },
-                        tag = "favorite"
+                        tag = when (state.selectedTab) {
+                            FavoriteTab.LIKED -> "favorite"
+                            FavoriteTab.ESSENTIAL -> "essential"
+                            FavoriteTab.WATCHED -> "watched"
+                        }
                     )
                 }
             }
@@ -107,7 +206,12 @@ fun FavoritesScreen(
 }
 
 @Composable
-fun EmptyFavoritesState(onExploreClick: () -> Unit = {}) {
+fun EmptyTabState(
+    title: String,
+    subtitle: String,
+    showExploreButton: Boolean,
+    onExploreClick: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -121,32 +225,46 @@ fun EmptyFavoritesState(onExploreClick: () -> Unit = {}) {
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Sin favoritos aún",
+            text = title,
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.ExtraBold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Dale ♥ a cualquier serie para guardarla aquí",
+            text = subtitle,
             color = Color.Gray,
-            fontSize = 14.sp
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp)
         )
-        Spacer(modifier = Modifier.height(28.dp))
-        Button(
-            onClick = onExploreClick,
-            colors = ButtonDefaults.buttonColors(containerColor = HeartRed),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Explore,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Explorar series", color = Color.White, fontWeight = FontWeight.Bold)
+        if (showExploreButton) {
+            Spacer(modifier = Modifier.height(28.dp))
+            Button(
+                onClick = onExploreClick,
+                colors = ButtonDefaults.buttonColors(containerColor = HeartRed),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Explore,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Explorar series", color = Color.White, fontWeight = FontWeight.Bold)
+            }
         }
     }
+}
+
+@Composable
+fun EmptyFavoritesState(onExploreClick: () -> Unit = {}) {
+    EmptyTabState(
+        title = "Sin favoritos aún",
+        subtitle = "Dale ♥ a cualquier serie para guardarla aquí",
+        showExploreButton = true,
+        onExploreClick = onExploreClick
+    )
 }

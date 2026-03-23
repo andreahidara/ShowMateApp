@@ -37,6 +37,9 @@ interface ShowDao {
     @Query("DELETE FROM media_content WHERE id = :id AND category = 'watched'")
     suspend fun deleteWatchedShow(id: Int)
 
+    @Query("DELETE FROM media_content WHERE category IN ('liked', 'watched')")
+    suspend fun clearUserData()
+
     @androidx.room.Transaction
     suspend fun replaceCategory(category: String, shows: List<MediaEntity>) {
         deleteShowsByCategory(category)

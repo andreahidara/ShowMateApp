@@ -17,6 +17,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class SearchMode(val label: String) {
+    TITLE("Título"),
+    ACTOR("Actor"),
+    CREATOR("Creador/Director")
+}
+
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val showRepository: ShowRepository,
@@ -29,7 +35,7 @@ class SearchViewModel @Inject constructor(
         private const val PREFS_NAME = "search_prefs"
         private const val KEY_RECENT = "recent_searches"
         private const val MAX_RECENT = 6
-        val CURRENT_YEAR: Int = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val CURRENT_YEAR: Int = java.time.Year.now().value
         val AVAILABLE_GENRES = listOf(
             "10759" to "Acción", "16" to "Animación", "35" to "Comedia",
             "80" to "Crimen", "99" to "Docu", "18" to "Drama",
@@ -39,37 +45,40 @@ class SearchViewModel @Inject constructor(
     }
 
     private val _searchResults = MutableStateFlow<List<MediaContent>>(emptyList())
-    val searchResults: StateFlow<List<MediaContent>> = _searchResults
+    val searchResults: StateFlow<List<MediaContent>> = _searchResults.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     private val _trendingShows = MutableStateFlow<List<MediaContent>>(emptyList())
-    val trendingShows: StateFlow<List<MediaContent>> = _trendingShows
+    val trendingShows: StateFlow<List<MediaContent>> = _trendingShows.asStateFlow()
 
     private val _selectedGenre = MutableStateFlow<String?>(null)
-    val selectedGenre: StateFlow<String?> = _selectedGenre
+    val selectedGenre: StateFlow<String?> = _selectedGenre.asStateFlow()
 
     private val _yearFrom = MutableStateFlow(MIN_YEAR)
-    val yearFrom: StateFlow<Int> = _yearFrom
+    val yearFrom: StateFlow<Int> = _yearFrom.asStateFlow()
 
     private val _yearTo = MutableStateFlow(CURRENT_YEAR)
-    val yearTo: StateFlow<Int> = _yearTo
+    val yearTo: StateFlow<Int> = _yearTo.asStateFlow()
 
     private val _selectedRating = MutableStateFlow<Float?>(null)
-    val selectedRating: StateFlow<Float?> = _selectedRating
+    val selectedRating: StateFlow<Float?> = _selectedRating.asStateFlow()
 
     private val _isFilterActive = MutableStateFlow(false)
-    val isFilterActive: StateFlow<Boolean> = _isFilterActive
+    val isFilterActive: StateFlow<Boolean> = _isFilterActive.asStateFlow()
 
     private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
     val recentSearches: StateFlow<List<String>> = _recentSearches.asStateFlow()
 
     private val _suggestions = MutableStateFlow<List<MediaContent>>(emptyList())
     val suggestions: StateFlow<List<MediaContent>> = _suggestions.asStateFlow()
+
+    private val _searchMode = MutableStateFlow(SearchMode.TITLE)
+    val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
 
     private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
@@ -102,6 +111,10 @@ class SearchViewModel @Inject constructor(
     fun clearRecentSearches() {
         _recentSearches.value = emptyList()
         prefs.edit().remove(KEY_RECENT).apply()
+    }
+
+    fun setSearchMode(mode: SearchMode) {
+        _searchMode.value = mode
     }
 
     private fun loadTrendingShows() {
@@ -141,7 +154,8 @@ class SearchViewModel @Inject constructor(
         }
 
         searchJob = viewModelScope.launch {
-            delay(500)
+            // Debounce sólo para búsquedas por texto; los filtros sin texto no necesitan esperar
+            if (query.isNotBlank()) delay(500)
 
             _isLoading.value = true
             _errorMessage.value = null

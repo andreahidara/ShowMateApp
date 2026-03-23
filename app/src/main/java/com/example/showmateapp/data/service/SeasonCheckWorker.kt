@@ -16,10 +16,13 @@ import com.example.showmateapp.ui.MainActivity
 import com.example.showmateapp.util.Resource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 /**
- * Periodic worker (daily) that checks if any watched show has added a new season
- * since the user last watched it, then sends a local notification.
+ * Worker periódico (diario) que comprueba si alguna serie vista ha añadido una nueva
+ * temporada desde la última vez que el usuario la vio, y envía una notificación local.
  */
 @HiltWorker
 class SeasonCheckWorker @AssistedInject constructor(
@@ -39,21 +42,25 @@ class SeasonCheckWorker @AssistedInject constructor(
 
             val watchedWithCount = userRepository.getWatchedShowsWithSeasonCount()
 
-            watchedWithCount.forEach { entity ->
-                val result = showRepository.getShowDetails(entity.mediaId)
-                if (result is Resource.Success) {
-                    val currentSeasons = result.data.numberOfSeasons ?: entity.lastKnownSeasons
-                    if (currentSeasons > entity.lastKnownSeasons && entity.lastKnownSeasons > 0) {
-                        sendNotification(result.data.name, currentSeasons)
+            coroutineScope {
+                watchedWithCount.map { entity ->
+                    async {
+                        val result = showRepository.getShowDetails(entity.mediaId)
+                        if (result is Resource.Success) {
+                            val currentSeasons = result.data.numberOfSeasons ?: entity.lastKnownSeasons
+                            if (currentSeasons > entity.lastKnownSeasons && entity.lastKnownSeasons > 0) {
+                                sendNotification(entity.mediaId, result.data.name, currentSeasons)
+                            }
+                            if (currentSeasons != entity.lastKnownSeasons) {
+                                userRepository.updateLastKnownSeasons(entity.mediaId, currentSeasons)
+                            }
+                        }
                     }
-                    if (currentSeasons != entity.lastKnownSeasons) {
-                        userRepository.updateLastKnownSeasons(entity.mediaId, currentSeasons)
-                    }
-                }
+                }.awaitAll()
             }
             Result.success()
         } catch (e: Exception) {
-            Result.retry()
+            if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }
 
@@ -71,7 +78,7 @@ class SeasonCheckWorker @AssistedInject constructor(
         nm.createNotificationChannel(channel)
     }
 
-    private fun sendNotification(showName: String, newSeasonCount: Int) {
+    private fun sendNotification(showId: Int, showName: String, newSeasonCount: Int) {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Tap → abre la app en MainActivity
@@ -81,7 +88,7 @@ class SeasonCheckWorker @AssistedInject constructor(
         }
         val pendingIntent = PendingIntent.getActivity(
             ctx,
-            showName.hashCode(),
+            showId,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -108,6 +115,6 @@ class SeasonCheckWorker @AssistedInject constructor(
             )
             .build()
 
-        nm.notify(showName.hashCode(), notification)
+        nm.notify(showId, notification)
     }
 }

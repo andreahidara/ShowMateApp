@@ -12,6 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -89,7 +90,7 @@ class ShowRepositoryTest {
     @Test
     fun `getShowDetails returns success and caches result`() = runTest {
         val detail = MediaContent(id = 42, name = "Stranger Things")
-        whenever(apiService.getMediaDetails(any(), any())).thenReturn(detail)
+        whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenReturn(detail)
         whenever(showDao.insertShows(any())).thenReturn(Unit)
 
         val result = repository.getShowDetails(42)
@@ -101,7 +102,7 @@ class ShowRepositoryTest {
 
     @Test
     fun `getShowDetails falls back to Room when network fails`() = runTest {
-        whenever(apiService.getMediaDetails(any(), any())).thenAnswer { throw IOException("offline") }
+        whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenAnswer { throw IOException("offline") }
         val cached = MediaEntity(id = 42, name = "Cached Detail", overview = "", posterPath = "", category = "details")
         whenever(showDao.getShowById(42)).thenReturn(cached)
 
@@ -113,7 +114,7 @@ class ShowRepositoryTest {
 
     @Test
     fun `getShowDetails returns error when network fails and cache is empty`() = runTest {
-        whenever(apiService.getMediaDetails(any(), any())).thenAnswer { throw IOException("offline") }
+        whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenAnswer { throw IOException("offline") }
         whenever(showDao.getShowById(99)).thenReturn(null)
 
         val result = repository.getShowDetails(99)

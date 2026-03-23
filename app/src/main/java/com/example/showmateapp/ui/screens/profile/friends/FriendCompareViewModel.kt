@@ -1,14 +1,15 @@
 package com.example.showmateapp.ui.screens.profile.friends
 
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.data.repository.ShowRepository
 import com.example.showmateapp.data.repository.UserRepository
-import com.example.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.showmateapp.data.model.UserProfile
+import com.example.showmateapp.util.GenreMapper
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ import javax.inject.Inject
 data class FriendCompareUiState(
     val friendEmail: String = "",
     val commonShows: List<MediaContent> = emptyList(),
+    val compatibilityScore: Int? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val hasSearched: Boolean = false
@@ -43,22 +45,40 @@ class FriendCompareViewModel @Inject constructor(
             _uiState.update { it.copy(error = "Introduce el email de tu amigo") }
             return
         }
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _uiState.update { it.copy(error = "Introduce un email válido") }
+            return
+        }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, commonShows = emptyList()) }
-            val commonIds = userRepository.compareWithFriend(email)
-            if (commonIds.isEmpty()) {
-                _uiState.update { it.copy(isLoading = false, hasSearched = true, commonShows = emptyList()) }
+            _uiState.update { it.copy(isLoading = true, error = null, commonShows = emptyList(), compatibilityScore = null) }
+
+            val myProfileDeferred = async { userRepository.getUserProfile() }
+            val friendProfileDeferred = async { userRepository.getFriendProfile(email) }
+            val myProfile = myProfileDeferred.await()
+            val friendProfile = friendProfileDeferred.await()
+
+            if (friendProfile == null) {
+                _uiState.update { it.copy(isLoading = false, hasSearched = true, error = "No se encontró ningún usuario con ese email") }
                 return@launch
             }
-            val shows = commonIds.map { id ->
-                async {
-                    when (val result = showRepository.getShowDetails(id)) {
-                        is Resource.Success -> result.data
-                        else -> null
-                    }
-                }
-            }.awaitAll().filterNotNull()
-            _uiState.update { it.copy(isLoading = false, hasSearched = true, commonShows = shows) }
+
+            val commonIds = run {
+                val myLiked = myProfile?.likedMediaIds?.toSet() ?: emptySet()
+                val friendLiked = friendProfile.likedMediaIds.toSet()
+                (myLiked intersect friendLiked).toList()
+            }
+
+            val compatibility = if (myProfile != null) calculateCompatibility(myProfile, friendProfile) else null
+
+            val shows = showRepository.getShowDetailsInParallel(commonIds)
+
+            _uiState.update {
+                it.copy(isLoading = false, hasSearched = true, commonShows = shows, compatibilityScore = compatibility)
+            }
         }
     }
+
+    private fun calculateCompatibility(mine: UserProfile, friend: UserProfile): Int =
+        (GenreMapper.jaccardSimilarity(mine.genreScores, friend.genreScores) * 100)
+            .toInt().coerceIn(0, 100)
 }

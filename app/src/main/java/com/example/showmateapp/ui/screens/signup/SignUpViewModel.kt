@@ -93,6 +93,7 @@ class SignUpViewModel @Inject constructor(
             
             authRepository.signUp(state.email, state.password)
                 .onSuccess {
+                    userRepository.initUserProfile(state.username)
                     _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 .onFailure { throwable ->

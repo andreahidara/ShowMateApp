@@ -14,6 +14,12 @@ interface MediaInteractionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: MediaInteractionEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(entities: List<MediaInteractionEntity>)
+
+    @Query("SELECT * FROM media_interactions WHERE mediaId IN (:ids)")
+    suspend fun getByIds(ids: List<Int>): List<MediaInteractionEntity>
+
     @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1")
     suspend fun getWatchedMediaIds(): List<Int>
 

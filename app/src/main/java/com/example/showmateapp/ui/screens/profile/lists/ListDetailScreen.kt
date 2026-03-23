@@ -166,7 +166,6 @@ private fun ListDetailShowCard(
             placeholder = painterResource(R.drawable.ic_logo_placeholder),
             error = painterResource(R.drawable.ic_logo_placeholder)
         )
-        // Botón eliminar en esquina
         IconButton(
             onClick = onLongClick,
             modifier = Modifier
@@ -181,7 +180,6 @@ private fun ListDetailShowCard(
                 modifier = Modifier.size(16.dp)
             )
         }
-        // Nombre en la parte inferior
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

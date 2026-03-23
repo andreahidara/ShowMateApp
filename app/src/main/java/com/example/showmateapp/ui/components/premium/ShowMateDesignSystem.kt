@@ -39,6 +39,12 @@ import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.TextGray
 
+// Gradiente estático extraído a nivel de archivo — evita crear un objeto Brush en cada recomposición de ShowCard
+private val showCardOverlayGradient = Brush.verticalGradient(
+    colors = listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent, Color.Black.copy(alpha = 0.15f)),
+    startY = 0f
+)
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ShowCard(
@@ -52,14 +58,18 @@ fun ShowCard(
     tag: String = "list"
 ) {
     val sharedElementKey = "image-${media.id}-$tag"
-    
+    val context   = LocalContext.current
+    val imageUrl  = media.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
+    // remember evita crear un objeto ImageRequest nuevo en cada recomposición — Coil puede reusar la petición en caché
+    val imageRequest = remember(imageUrl) {
+        ImageRequest.Builder(context).data(imageUrl).crossfade(true).build()
+    }
+
     Column(
         modifier = modifier
             .then(if (width != Dp.Unspecified) Modifier.width(width) else Modifier)
             .clickable { onClick(media, tag) }
     ) {
-        val imageUrl = media.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
-        
         Box(
             modifier = Modifier
                 .aspectRatio(2f / 3f)
@@ -69,10 +79,7 @@ fun ShowCard(
         ) {
             with(sharedTransitionScope) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageUrl)
-                        .crossfade(true)
-                        .build(),
+                    model = imageRequest,
                     contentDescription = media.name,
                     modifier = Modifier
                         .fillMaxSize()
@@ -90,12 +97,7 @@ fun ShowCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent, Color.Black.copy(alpha = 0.15f)),
-                            startY = 0f
-                        )
-                    )
+                    .background(showCardOverlayGradient)
             )
 
             if (media.affinityScore > 0f) {
@@ -148,8 +150,10 @@ fun MatchBadge(
     modifier: Modifier = Modifier
 ) {
     val percentage = (score * 10).toInt().coerceIn(0, 100)
-    val displayValue = if (isAffinity) "$percentage% Match" else "${"%.1f".format(score)} ★"
-    
+    // remember evita recalcular el string de formato y el color en cada recomposición
+    val displayValue = remember(score, isAffinity) {
+        if (isAffinity) "$percentage% Match" else "${"%.1f".format(score)} ★"
+    }
     val matchColor = when {
         isAffinity && percentage >= 80 -> Color(0xFF4CAF50) // High affinity
         isAffinity && percentage >= 50 -> Color(0xFFFFC107) // Medium affinity
@@ -182,29 +186,51 @@ fun ShowSection(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onItemClick: (MediaContent, String) -> Unit,
+    accentColor: Color = PrimaryPurple,
     modifier: Modifier = Modifier,
-    tag: String = "list"
+    tag: String = "list",
+    subtitle: String? = null,
+    onSeeAll: (() -> Unit)? = null
 ) {
     Column(modifier = modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (onSeeAll != null) Arrangement.SpaceBetween else Arrangement.Start
         ) {
-            Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .height(20.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(PrimaryPurple)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(3.dp)
+                        .height(20.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(accentColor)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            if (onSeeAll != null) {
+                Text(
+                    text = "Ver todos",
+                    color = TextGray,
+                    fontSize = 13.sp,
+                    modifier = Modifier.clickable { onSeeAll() }
+                )
+            }
+        }
+        if (subtitle != null) {
             Text(
-                text = title,
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                text = subtitle,
+                color = TextGray,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
             )
         }
         LazyRow(

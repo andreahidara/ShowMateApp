@@ -3,12 +3,14 @@ package com.example.showmateapp.ui.screens.stats
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.showmateapp.domain.usecase.GetViewerPersonalityUseCase
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.StarYellow
 import com.example.showmateapp.ui.theme.TextGray
@@ -133,6 +136,9 @@ fun StatsScreen(
                 if (uiState.topGenresByMonth.isNotEmpty()) {
                     TopGenresSection(topGenresByMonth = uiState.topGenresByMonth)
                 }
+
+                // Viewer personality profile
+                uiState.personalityProfile?.let { PersonalitySection(it) }
 
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -247,6 +253,98 @@ fun ActivityChart(activityByMonth: Map<String, Int>) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun PersonalitySection(profile: GetViewerPersonalityUseCase.PersonalityProfile) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(PrimaryPurple.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Psychology, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text("Perfil de espectador", color = TextGray, fontSize = 11.sp)
+                    Text(profile.label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+
+            if (profile.topGenres.isNotEmpty()) {
+                HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                Text("Géneros favoritos", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                profile.topGenres.forEach { (name, fraction) ->
+                    PersonalityBar(label = name, fraction = fraction, color = PrimaryPurple)
+                }
+            }
+
+            if (profile.topNarrativeStyles.isNotEmpty()) {
+                HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                Text("Estilos narrativos", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                profile.topNarrativeStyles.forEach { (name, fraction) ->
+                    PersonalityBar(label = name, fraction = fraction, color = Color(0xFF9C27B0))
+                }
+            }
+
+            if (profile.topKeywords.isNotEmpty()) {
+                HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                Text("Temas recurrentes", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    profile.topKeywords.forEach { keyword ->
+                        Surface(
+                            color = PrimaryPurple.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Text(
+                                text = keyword,
+                                color = PrimaryPurple,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PersonalityBar(label: String, fraction: Float, color: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = Color.White, fontSize = 13.sp, modifier = Modifier.width(130.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(Color.White.copy(alpha = 0.08f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(fraction)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Brush.horizontalGradient(listOf(color, color.copy(alpha = 0.6f))))
+            )
         }
     }
 }

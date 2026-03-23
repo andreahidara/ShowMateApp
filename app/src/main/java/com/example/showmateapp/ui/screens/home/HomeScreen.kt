@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Bolt
 import java.util.Calendar
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -67,14 +68,14 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val whatToWatch = uiState.whatToWatchToday
-
     HomeScreenContent(
         userName = uiState.userName,
         scrollToTopTrigger = scrollToTopTrigger,
         upNextShows = uiState.upNextShows,
         upNextProgress = uiState.upNextProgress,
         trendingShows = uiState.trendingShows,
+        top10Shows = uiState.top10Shows,
+        newReleasesShows = uiState.newReleasesShows,
         actionShows = uiState.actionShows,
         comedyShows = uiState.comedyShows,
         mysteryShows = uiState.mysteryShows,
@@ -90,17 +91,24 @@ fun HomeScreen(
         onMediaClick = { media, tag -> navigateToDetail(navController, media, tag) },
         onRetry = { viewModel.loadData() },
         onRefresh = { viewModel.refresh() },
-        onPickWhatToWatch = { viewModel.pickWhatToWatchToday() },
+        onPickWhatToWatch = { viewModel.requestWhatToWatch() },
         onPlatformSelected = { viewModel.selectPlatform(it) }
     )
 
-    if (whatToWatch != null) {
+    if (uiState.showContextSelector) {
+        ContextSelectorDialog(
+            onDismiss = { viewModel.dismissContextSelector() },
+            onConfirm = { mood, time -> viewModel.pickWhatToWatchToday(mood, time) }
+        )
+    }
+
+    uiState.whatToWatchToday?.let { media ->
         WhatToWatchDialog(
-            media = whatToWatch,
+            media = media,
             onDismiss = { viewModel.dismissWhatToWatch() },
             onViewDetails = {
                 viewModel.dismissWhatToWatch()
-                navigateToDetail(navController, whatToWatch, "wtw")
+                navigateToDetail(navController, media, "wtw")
             }
         )
     }
@@ -114,6 +122,8 @@ fun HomeScreenContent(
     upNextShows: List<MediaContent>,
     upNextProgress: Map<Int, Float> = emptyMap(),
     trendingShows: List<MediaContent>,
+    top10Shows: List<MediaContent> = emptyList(),
+    newReleasesShows: List<MediaContent> = emptyList(),
     actionShows: List<MediaContent>,
     comedyShows: List<MediaContent>,
     mysteryShows: List<MediaContent>,
@@ -206,21 +216,37 @@ fun HomeScreenContent(
                     item {
                         ShowSection(
                             title = stringResource(id = R.string.trending_now),
-                            items = trendingShows,
+                            // Skip first 5 already shown in the banner
+                            items = trendingShows.drop(5).ifEmpty { trendingShows },
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            tag = "trending"
+                            tag = "trending",
+                            subtitle = "Las más populares en este momento"
                         )
                     }
 
-                    if (trendingShows.size >= 5) {
+                    if (top10Shows.isNotEmpty()) {
                         item {
                             Top10Section(
-                                shows = trendingShows.take(10),
+                                shows = top10Shows,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                                 onItemClick = onMediaClick
+                            )
+                        }
+                    }
+
+                    if (newReleasesShows.isNotEmpty()) {
+                        item {
+                            ShowSection(
+                                title = "Recién estrenadas",
+                                items = newReleasesShows,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                onItemClick = onMediaClick,
+                                tag = "new_releases",
+                                subtitle = "Estrenos de los últimos 3 meses"
                             )
                         }
                     }
@@ -367,13 +393,39 @@ fun WhatToWatchDialog(
                         .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 )
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Para ti hoy",
-                        color = PrimaryPurple,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Para ti hoy",
+                            color = PrimaryPurple,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                        if (media.affinityScore > 0f) {
+                            val matchPct = (media.affinityScore * 10).toInt().coerceIn(0, 100)
+                            val matchColor = when {
+                                matchPct >= 80 -> Color(0xFF4CAF50)
+                                matchPct >= 50 -> Color(0xFFFFC107)
+                                else           -> Color.White.copy(alpha = 0.7f)
+                            }
+                            Surface(
+                                color = matchColor.copy(alpha = 0.15f),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+                            ) {
+                                Text(
+                                    text = "$matchPct% Match",
+                                    color = matchColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = media.name,
@@ -394,6 +446,109 @@ fun WhatToWatchDialog(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Ver detalles", color = Color.White, fontWeight = FontWeight.Bold)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContextSelectorDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (MoodOption?, TimeOption?) -> Unit
+) {
+    var selectedMood by remember { mutableStateOf<MoodOption?>(null) }
+    var selectedTime by remember { mutableStateOf<TimeOption?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.LiveTv,
+                        contentDescription = null,
+                        tint = PrimaryPurple,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "¿Qué veo hoy?",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+
+                // Mood selector
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("¿Cómo estás?", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        MoodOption.entries.forEach { mood ->
+                            val selected = selectedMood == mood
+                            Surface(
+                                onClick = { selectedMood = if (selected) null else mood },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (selected) PrimaryPurple else Color.White.copy(alpha = 0.08f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(mood.emoji, fontSize = 18.sp)
+                                    Text(
+                                        mood.label,
+                                        color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+                                        fontSize = 10.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Time selector
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("¿Cuánto tiempo tienes?", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        TimeOption.entries.forEach { time ->
+                            val selected = selectedTime == time
+                            Surface(
+                                onClick = { selectedTime = if (selected) null else time },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (selected) AccentBlue else Color.White.copy(alpha = 0.08f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = time.label,
+                                    color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = { onConfirm(selectedMood, selectedTime) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Sorpréndeme", fontWeight = FontWeight.Black, fontSize = 15.sp)
                 }
             }
         }

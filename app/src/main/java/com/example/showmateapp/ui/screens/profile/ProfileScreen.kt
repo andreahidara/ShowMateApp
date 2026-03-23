@@ -15,6 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Info
@@ -46,9 +48,12 @@ import coil.request.ImageRequest
 import com.example.showmateapp.R
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.navigation.Screen
+import com.example.showmateapp.domain.usecase.GetProfileStatsUseCase
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.StarYellow
+import com.example.showmateapp.ui.theme.SurfaceVariantDark
 import com.example.showmateapp.ui.theme.TextGray
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Star
 
 private val AVATAR_PALETTE = listOf(
@@ -68,7 +73,7 @@ fun ProfileScreen(
     scrollToTopTrigger: Int = 0,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val userEmail by viewModel.userEmail.collectAsState()
+    val userEmail by viewModel.displayName.collectAsState()
     val watchedShows by viewModel.watchedShows.collectAsState()
     val likedShows by viewModel.likedShows.collectAsState()
     val stats by viewModel.stats.collectAsState()
@@ -76,10 +81,7 @@ fun ProfileScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val customLists by viewModel.customLists.collectAsState()
     val watchedRatings by viewModel.watchedRatings.collectAsState()
-
-    LaunchedEffect(Unit) {
-        viewModel.loadProfileData()
-    }
+    val viewerPersonality by viewModel.viewerPersonality.collectAsState()
 
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE) }
@@ -149,7 +151,7 @@ fun ProfileScreen(
                             ) {
                                 if (avatarColorInt == colorInt) {
                                     Icon(
-                                        Icons.Default.Settings,
+                                        Icons.Default.Check,
                                         contentDescription = null,
                                         tint = Color.White,
                                         modifier = Modifier.size(20.dp)
@@ -178,7 +180,7 @@ fun ProfileScreen(
                             ) {
                                 if (avatarColorInt == colorInt) {
                                     Icon(
-                                        Icons.Default.Settings,
+                                        Icons.Default.Check,
                                         contentDescription = null,
                                         tint = Color.White,
                                         modifier = Modifier.size(20.dp)
@@ -249,9 +251,12 @@ fun ProfileScreen(
                 ProfileHeaderPremium(
                     userName = userEmail,
                     totalHours = stats.totalWatchedHours,
+                    personalityLabel = viewerPersonality?.label,
                     avatarColor = Color(avatarColorInt),
                     onAvatarClick = { showColorPicker = true }
                 )
+
+                StatsSection(stats = stats, personalityLabel = viewerPersonality?.label)
 
                 WatchedShowsSection(
                     items = watchedShows,
@@ -297,6 +302,7 @@ fun ProfileScreen(
 fun ProfileHeaderPremium(
     userName: String,
     totalHours: Int,
+    personalityLabel: String? = null,
     avatarColor: Color = PrimaryPurple,
     onAvatarClick: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -304,8 +310,8 @@ fun ProfileHeaderPremium(
     val level = remember(totalHours) {
         when {
             totalHours > 100 -> "Cinéfilo Experto"
-            totalHours > 50 -> "Fan Entusiasta"
-            else -> "Espectador Casual"
+            totalHours > 50  -> "Fan Entusiasta"
+            else             -> "Espectador Casual"
         }
     }
 
@@ -358,7 +364,7 @@ fun ProfileHeaderPremium(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.Settings,
+                        Icons.Default.Edit,
                         contentDescription = "Cambiar color",
                         tint = Color.White.copy(alpha = 0.8f),
                         modifier = Modifier.size(14.dp)
@@ -386,10 +392,15 @@ fun ProfileHeaderPremium(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
                 ) {
-                    Icon(Icons.Default.Stars, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(13.dp))
+                    Icon(
+                        if (personalityLabel != null) Icons.Default.Psychology else Icons.Default.Stars,
+                        contentDescription = null,
+                        tint = PrimaryPurple,
+                        modifier = Modifier.size(13.dp)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = level,
+                        text = personalityLabel ?: level,
                         color = PrimaryPurple,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -515,8 +526,8 @@ fun WatchedShowsSection(
                         name = item.show.name,
                         onClick = { onShowClick(item.show.id) }
                     ) {
-                        val badgeText = if (item.episodesWatched > 0) "${item.episodesWatched} ep" else "Vista"
-                        val badgeColor = if (item.episodesWatched > 0) Color(0xFF4CAF50).copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.6f)
+                        val badgeText = if (item.episodesWatched > 0) "${item.episodesWatched} ep" else "Vista ✓"
+                        val badgeColor = Color(0xFF4CAF50).copy(alpha = if (item.episodesWatched > 0) 0.9f else 0.6f)
                         Surface(
                             modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
                             color = badgeColor,
@@ -828,6 +839,255 @@ fun FavoritesInlineSection(
                     )
                 }
             }
+        }
+    }
+}
+@Composable
+fun StatsSection(
+    stats: GetProfileStatsUseCase.ProfileStats,
+    personalityLabel: String? = null,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 24.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(PrimaryPurple)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Mis estadísticas",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Personality label badge
+        if (personalityLabel != null) {
+            Surface(
+                color = PrimaryPurple.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Psychology,
+                        contentDescription = null,
+                        tint = PrimaryPurple,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Tu perfil de espectador",
+                            color = TextGray,
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = personalityLabel,
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        // 1. Summary stat cards row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            StatMiniCard(value = stats.watchedCount.toString(), label = "Series")
+            StatMiniCard(value = stats.totalEpisodes.toString(), label = "Episodios")
+            StatMiniCard(value = stats.totalWatchedHours.toString(), label = "Horas")
+            StatMiniCard(value = stats.ratingsCount.toString(), label = "Valoraciones")
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 2. Genre affinity bars
+        if (stats.topGenres.isNotEmpty()) {
+            Surface(
+                color = SurfaceVariantDark,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Géneros favoritos",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    stats.topGenres.forEach { (genreName, score) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = genreName,
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                modifier = Modifier.width(130.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            LinearProgressIndicator(
+                                progress = { score },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = PrimaryPurple,
+                                trackColor = Color.White.copy(alpha = 0.08f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "${(score * 100).toInt()}%",
+                                color = TextGray,
+                                fontSize = 12.sp,
+                                modifier = Modifier.width(36.dp),
+                                textAlign = TextAlign.End
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 3. Like/completion ratio + avg rating
+        Surface(
+            color = SurfaceVariantDark,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Completion rate row — only shown when user has liked or disliked at least one show
+                if (stats.likedCount > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Afinidad positiva",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "${(stats.likeRate * 100).toInt()}% de valoradas son Me Gusta",
+                                color = TextGray,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Box(contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                progress = { stats.likeRate },
+                                modifier = Modifier.size(48.dp),
+                                color = PrimaryPurple,
+                                trackColor = Color.White.copy(alpha = 0.08f),
+                                strokeWidth = 4.dp
+                            )
+                            Text(
+                                text = "${(stats.likeRate * 100).toInt()}%",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                }
+
+                // Avg rating row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = StarYellow,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Valoración media",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = if (stats.ratingsCount > 0) "${"%.1f".format(stats.avgRating)} / 10.0" else "Sin valoraciones",
+                        color = if (stats.ratingsCount > 0) StarYellow else TextGray,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+    }
+}
+
+@Composable
+private fun StatMiniCard(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.width(76.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceVariantDark),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(vertical = 12.dp, horizontal = 4.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = label,
+                color = TextGray,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

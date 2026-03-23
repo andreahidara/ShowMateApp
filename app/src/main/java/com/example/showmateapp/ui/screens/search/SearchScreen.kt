@@ -36,6 +36,7 @@ import com.example.showmateapp.ui.components.premium.ShowCard
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.SurfaceDark
+import com.example.showmateapp.ui.theme.SurfaceVariantDark
 import com.example.showmateapp.ui.theme.TextGray
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -64,6 +65,7 @@ fun SearchScreen(
     val selectedRating by viewModel.selectedRating.collectAsState()
 
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val searchMode by viewModel.searchMode.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -133,6 +135,29 @@ fun SearchScreen(
                     ),
                     singleLine = true
                 )
+
+                // Search Mode Chips
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    items(SearchMode.entries) { mode ->
+                        FilterChip(
+                            selected = searchMode == mode,
+                            onClick = { viewModel.setSearchMode(mode) },
+                            label = { Text(mode.label, fontSize = 13.sp) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = PrimaryPurple,
+                                selectedLabelColor = Color.White,
+                                labelColor = Color.White.copy(alpha = 0.7f),
+                                containerColor = SurfaceVariantDark
+                            ),
+                            border = null
+                        )
+                    }
+                }
 
                 // Quick Genre Filters
                 val genres = SearchViewModel.AVAILABLE_GENRES
@@ -308,7 +333,11 @@ fun SearchScreen(
                     }
                 }
             } else if (query.isNotBlank() || isFilterActive) {
-                 NoResultsState(query)
+                if (searchMode != SearchMode.TITLE && query.isNotBlank()) {
+                    SearchModeComingSoon(searchMode)
+                } else {
+                    NoResultsState(query)
+                }
             }
         }
     }
@@ -461,6 +490,45 @@ fun SectionTitle(title: String) {
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp
     )
+}
+
+@Composable
+fun SearchModeComingSoon(mode: SearchMode) {
+    val label = when (mode) {
+        SearchMode.ACTOR -> "actor"
+        SearchMode.CREATOR -> "creador"
+        else -> mode.label.lowercase()
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.Search,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = PrimaryPurple.copy(alpha = 0.3f)
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Búsqueda por $label",
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "Próximamente podrás buscar directamente por $label.",
+            color = TextGray,
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 22.sp
+        )
+    }
 }
 
 @Composable
