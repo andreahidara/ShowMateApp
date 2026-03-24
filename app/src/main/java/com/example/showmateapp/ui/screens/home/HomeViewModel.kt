@@ -20,12 +20,13 @@ import com.example.showmateapp.util.Resource
 import com.example.showmateapp.util.UiText
 import com.example.showmateapp.R
 import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 enum class MoodOption(val label: String, val emoji: String, val genreIds: List<Int>) {
-    RELAX("Relajarme", "😌", listOf(35, 10751)),
+    RELAX("Relajante", "😌", listOf(35, 10751)),
     ACTION("Adrenalina", "⚡", listOf(10759)),
-    EMOTIONAL("Emocionarme", "😢", listOf(18)),
-    THRILLER("Suspenso", "😰", listOf(9648, 80))
+    EMOTIONAL("Emoción", "😢", listOf(18)),
+    THRILLER("Suspense", "😰", listOf(9648, 80))
 }
 
 enum class TimeOption(val label: String, val maxRuntime: Int?) {
@@ -86,12 +87,10 @@ class HomeViewModel @Inject constructor(
 
     fun selectPlatform(name: String?) {
         val current = _uiState.value.selectedPlatform
-        // Toggle off if already selected
         val newSelection = if (current == name) null else name
         _uiState.update { it.copy(selectedPlatform = newSelection) }
         if (newSelection == null) return
 
-        // Return cached result if already loaded
         if (_uiState.value.platformShows.containsKey(newSelection)) return
 
         val providerId = PLATFORM_PROVIDER_IDS[newSelection] ?: return
@@ -127,7 +126,6 @@ class HomeViewModel @Inject constructor(
     fun pickWhatToWatchToday(mood: MoodOption? = null, time: TimeOption? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(showContextSelector = false) }
-            // Reuse already-scored shows from state to avoid a full algorithm re-run.
             val currentState = _uiState.value
             val cachedPool = (currentState.trendingShows + currentState.actionShows +
                               currentState.comedyShows + currentState.mysteryShows).distinctBy { it.id }
@@ -165,7 +163,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun fetchHomeData(isInitialLoad: Boolean) {
-        fetchJob?.cancel() // Cancel any in-flight fetch before starting a new one
+        fetchJob?.cancel()
         fetchJob = viewModelScope.launch {
             _uiState.update { 
                 if (isInitialLoad) it.copy(isLoading = true, errorMessage = null)
@@ -208,7 +206,6 @@ class HomeViewModel @Inject constructor(
                     else -> {}
                 }
 
-                // Top 10 esta semana: real TMDB weekly chart, only skip banner shows (top 5)
                 if (top10Res is Resource.Success) {
                     val bannerIds = trendingList.take(5).map { it.id }.toSet()
                     top10List = getRecommendationsUseCase.scoreShows(
@@ -216,7 +213,6 @@ class HomeViewModel @Inject constructor(
                     )
                 }
 
-                // New releases: recent shows not in trending or top10
                 if (newReleasesRes is Resource.Success) {
                     val existingIds = (trendingList + top10List).map { it.id }.toSet()
                     newReleasesList = getRecommendationsUseCase.scoreShows(
@@ -229,7 +225,6 @@ class HomeViewModel @Inject constructor(
                 if (mysteryRes is Resource.Success) mysteryList = getRecommendationsUseCase.scoreShows(mysteryRes.data)
                 if (thisWeekRes is Resource.Success) thisWeekList = getRecommendationsUseCase.scoreShows(thisWeekRes.data.take(15))
 
-                // Fetch Up Next shows in parallel
                 val profile = userRepository.getUserProfile()
                 val userName = profile?.username?.takeIf { it.isNotBlank() }
                     ?: userRepository.getCurrentUserEmail()?.substringBefore("@")
@@ -279,6 +274,7 @@ class HomeViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 Log.e("HomeViewModel", "Error fetching home data", e)
+                FirebaseCrashlytics.getInstance().recordException(e)
                 val errorRes = if (isInitialLoad) R.string.error_unexpected_data else R.string.error_refresh_data
                 _uiState.update { 
                     it.copy(

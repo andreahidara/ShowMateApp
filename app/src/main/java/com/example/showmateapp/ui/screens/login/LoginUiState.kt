@@ -8,5 +8,7 @@ data class LoginUiState(
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val error: UiText? = null,
-    val isSuccess: Boolean = false
+    val isSuccess: Boolean = false,
+    val resetEmailSent: Boolean = false,
+    val resetError: String? = null
 )

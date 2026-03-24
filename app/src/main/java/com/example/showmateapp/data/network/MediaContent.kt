@@ -104,3 +104,39 @@ data class Video(
     val site: String = "",
     val type: String = ""
 )
+
+data class PersonSearchResponse(
+    val results: List<PersonSearchResult> = emptyList()
+)
+
+data class PersonSearchResult(
+    val id: Int = 0,
+    val name: String = "",
+    @SerializedName("profile_path") val profilePath: String? = null,
+    @SerializedName("known_for_department") val knownForDepartment: String? = null
+)
+
+data class PersonTvCreditsResponse(
+    val cast: List<MediaContent> = emptyList(),
+    val crew: List<PersonTvCrewEntry> = emptyList()
+)
+
+data class PersonTvCrewEntry(
+    val id: Int = 0,
+    val name: String = "",
+    @SerializedName("poster_path") val posterPath: String? = null,
+    @SerializedName("vote_average") val voteAverage: Float = 0f,
+    @SerializedName("vote_count") val voteCount: Int = 0,
+    @SerializedName("first_air_date") val firstAirDate: String? = null,
+    val overview: String = "",
+    val popularity: Float = 0f,
+    val job: String = "",
+    @SerializedName("genre_ids") val genreIds: List<Int>? = emptyList()
+) {
+    fun toMediaContent() = MediaContent(
+        id = id, name = name, posterPath = posterPath,
+        voteAverage = voteAverage, voteCount = voteCount,
+        firstAirDate = firstAirDate, overview = overview,
+        popularity = popularity, genreIds = genreIds
+    )
+}

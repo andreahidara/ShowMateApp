@@ -1,5 +1,6 @@
 package com.example.showmateapp.ui.screens.profile
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -49,7 +51,10 @@ import com.example.showmateapp.R
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.domain.usecase.GetProfileStatsUseCase
+import com.example.showmateapp.ui.components.premium.shimmerBrush
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleDark
+import com.example.showmateapp.ui.theme.PrimaryPurpleLight
 import com.example.showmateapp.ui.theme.StarYellow
 import com.example.showmateapp.ui.theme.SurfaceVariantDark
 import com.example.showmateapp.ui.theme.TextGray
@@ -57,16 +62,17 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Star
 
 private val AVATAR_PALETTE = listOf(
-    0xFF7C4DFF.toInt(), // Purple
-    0xFFE91E63.toInt(), // Pink
-    0xFF00BCD4.toInt(), // Cyan
-    0xFF4CAF50.toInt(), // Green
-    0xFFFF5722.toInt(), // Deep Orange
-    0xFF2196F3.toInt(), // Blue
-    0xFFFFB300.toInt(), // Amber
-    0xFF795548.toInt()  // Brown
+    0xFF7C4DFF.toInt(),
+    0xFFE91E63.toInt(),
+    0xFF00BCD4.toInt(),
+    0xFF4CAF50.toInt(),
+    0xFFFF5722.toInt(),
+    0xFF2196F3.toInt(),
+    0xFFFFB300.toInt(),
+    0xFF795548.toInt()
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     globalNavController: NavController,
@@ -87,7 +93,6 @@ fun ProfileScreen(
     val prefs = remember { context.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE) }
     var avatarColorInt by remember { mutableIntStateOf(prefs.getInt("avatar_color", AVATAR_PALETTE[0])) }
     var showColorPicker by remember { mutableStateOf(false) }
-
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
 
@@ -99,7 +104,7 @@ fun ProfileScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF1A1A2E),
             title = { Text("Cerrar Sesión", color = Color.White, fontWeight = FontWeight.Bold) },
             text = { Text("¿Estás seguro de que quieres salir de ShowMate?", color = TextGray) },
             confirmButton = {
@@ -112,12 +117,12 @@ fun ProfileScreen(
                             }
                         })
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.8f))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
                 ) { Text("Salir", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) { 
-                    Text("Cancelar", color = Color.White) 
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar", color = Color.White)
                 }
             }
         )
@@ -126,7 +131,7 @@ fun ProfileScreen(
     if (showColorPicker) {
         AlertDialog(
             onDismissRequest = { showColorPicker = false },
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF1A1A2E),
             title = { Text("Color del avatar", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -139,7 +144,7 @@ fun ProfileScreen(
                             val color = Color(colorInt)
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(color)
                                     .clickable {
@@ -154,7 +159,7 @@ fun ProfileScreen(
                                         Icons.Default.Check,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
@@ -168,7 +173,7 @@ fun ProfileScreen(
                             val color = Color(colorInt)
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(color)
                                     .clickable {
@@ -183,7 +188,7 @@ fun ProfileScreen(
                                         Icons.Default.Check,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
@@ -203,7 +208,7 @@ fun ProfileScreen(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF1A1A2E),
             title = { Text("Reiniciar algoritmo", color = Color.White, fontWeight = FontWeight.Bold) },
             text = { Text("Tus recomendaciones volverán a cero. ¿Deseas continuar?", color = TextGray) },
             confirmButton = {
@@ -220,21 +225,16 @@ fun ProfileScreen(
                 ) { Text("Reiniciar", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { 
-                    Text("Cancelar", color = Color.White) 
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Cancelar", color = Color.White)
                 }
             }
         )
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PrimaryPurple)
-            }
+            ProfileSkeleton()
         } else {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -243,57 +243,57 @@ fun ProfileScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-            ) {
-                ProfileHeaderPremium(
-                    userName = userEmail,
-                    totalHours = stats.totalWatchedHours,
-                    personalityLabel = viewerPersonality?.label,
-                    avatarColor = Color(avatarColorInt),
-                    onAvatarClick = { showColorPicker = true }
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                ) {
+                    ProfileHeaderPremium(
+                        userName = userEmail,
+                        totalHours = stats.totalWatchedHours,
+                        personalityLabel = viewerPersonality?.label,
+                        avatarColor = Color(avatarColorInt),
+                        onAvatarClick = { showColorPicker = true }
+                    )
 
-                StatsSection(stats = stats, personalityLabel = viewerPersonality?.label)
+                    StatsSection(stats = stats, personalityLabel = viewerPersonality?.label)
 
-                WatchedShowsSection(
-                    items = watchedShows,
-                    ratings = watchedRatings,
-                    onShowClick = { id -> globalNavController.navigate(Screen.Detail(id)) },
-                    onViewAll = { globalNavController.navigate(Screen.AllShows("watched")) }
-                )
+                    WatchedShowsSection(
+                        items = watchedShows,
+                        ratings = watchedRatings,
+                        onShowClick = { id -> globalNavController.navigate(Screen.Detail(id)) },
+                        onViewAll = { globalNavController.navigate(Screen.AllShows("watched")) }
+                    )
 
-                FavoritesInlineSection(
-                    items = likedShows,
-                    onShowClick = { id -> globalNavController.navigate(Screen.Detail(id)) },
-                    onViewAll = { globalNavController.navigate(Screen.AllShows("favorites")) }
-                )
+                    FavoritesInlineSection(
+                        items = likedShows,
+                        onShowClick = { id -> globalNavController.navigate(Screen.Detail(id)) },
+                        onViewAll = { globalNavController.navigate(Screen.AllShows("favorites")) }
+                    )
 
-                val posterPaths = remember(watchedShows, likedShows) {
-                    buildMap {
-                        watchedShows.forEach { put(it.show.id, it.show.posterPath) }
-                        likedShows.forEach { put(it.id, it.posterPath) }
+                    val posterPaths = remember(watchedShows, likedShows) {
+                        buildMap {
+                            watchedShows.forEach { put(it.show.id, it.show.posterPath) }
+                            likedShows.forEach { put(it.id, it.posterPath) }
+                        }
                     }
-                }
-                CustomListsInlineSection(
-                    lists = customLists,
-                    posterPaths = posterPaths,
-                    onListClick = { name -> globalNavController.navigate(Screen.ListDetail(name)) },
-                    onViewAllClick = { globalNavController.navigate(Screen.CustomLists) }
-                )
+                    CustomListsInlineSection(
+                        lists = customLists,
+                        posterPaths = posterPaths,
+                        onListClick = { name -> globalNavController.navigate(Screen.ListDetail(name)) },
+                        onViewAllClick = { globalNavController.navigate(Screen.CustomLists) }
+                    )
 
-                SettingsSectionPremium(
-                    onSettingsClick = { globalNavController.navigate(Screen.Settings) },
-                    onResetClick = { showResetDialog = true },
-                    onLogoutClick = { showLogoutDialog = true },
-                    onAboutClick = { globalNavController.navigate(Screen.About) }
-                )
-                
-                Spacer(modifier = Modifier.height(100.dp))
+                    SettingsSectionPremium(
+                        onSettingsClick = { globalNavController.navigate(Screen.Settings) },
+                        onResetClick = { showResetDialog = true },
+                        onLogoutClick = { showLogoutDialog = true },
+                        onAboutClick = { globalNavController.navigate(Screen.About) }
+                    )
+
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
             }
-            } // closes PullToRefreshBox
         }
     }
 }
@@ -314,18 +314,51 @@ fun ProfileHeaderPremium(
             else             -> "Espectador Casual"
         }
     }
-
-    val avatarGradient = remember(avatarColor) {
-        Brush.linearGradient(colors = listOf(avatarColor, avatarColor.copy(alpha = 0.7f)))
+    val levelProgress = remember(totalHours) {
+        when {
+            totalHours >= 100 -> 1f
+            totalHours >= 50  -> (totalHours - 50) / 50f
+            else              -> totalHours / 50f
+        }
     }
+    val nextLevelLabel = remember(totalHours) {
+        when {
+            totalHours >= 100 -> null
+            totalHours >= 50  -> "Cinéfilo Experto"
+            else              -> "Fan Entusiasta"
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "headerGlow")
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.18f,
+        targetValue = 0.42f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ringAlpha"
+    )
 
     val bannerGradient = remember {
         Brush.verticalGradient(
-            colors = listOf(
-                PrimaryPurple.copy(alpha = 0.25f),
-                Color.Transparent
+            colorStops = arrayOf(
+                0f to PrimaryPurpleDark.copy(alpha = 0.60f),
+                0.55f to PrimaryPurple.copy(alpha = 0.20f),
+                1f to Color.Transparent
             )
         )
+    }
+    val avatarGradient = remember(avatarColor) {
+        Brush.linearGradient(
+            colors = listOf(
+                avatarColor.copy(alpha = 0.9f),
+                avatarColor.copy(alpha = 0.55f)
+            )
+        )
+    }
+    val levelBarGradient = remember {
+        Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryPurple))
     }
 
     Box(
@@ -337,110 +370,114 @@ fun ProfileHeaderPremium(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(top = 24.dp, bottom = 28.dp),
+                .padding(top = 28.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(avatarGradient)
-                    .clickable { onAvatarClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = userName.take(1).uppercase(),
-                    color = Color.White,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Black
-                )
-                // Edit icon overlay at bottom-right
+            Box(contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
-                        .size(26.dp)
-                        .align(Alignment.BottomEnd)
+                        .size(118.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF1A1A1A)),
+                        .background(avatarColor.copy(alpha = ringAlpha))
+                )
+                Box(
+                    modifier = Modifier
+                        .size(104.dp)
+                        .clip(CircleShape)
+                        .background(avatarGradient)
+                        .clickable { onAvatarClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Cambiar color",
-                        tint = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.size(14.dp)
+                    Text(
+                        text = userName.take(1).uppercase(),
+                        color = Color.White,
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.Black
                     )
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .align(Alignment.BottomEnd)
+                            .clip(CircleShape)
+                            .background(Color(0xFF151522)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Cambiar color",
+                            tint = Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = userName,
                 color = Color.White,
-                fontSize = 26.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = (-0.5).sp
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Surface(
-                color = PrimaryPurple.copy(alpha = 0.18f),
-                shape = RoundedCornerShape(20.dp)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(PrimaryPurple.copy(alpha = 0.30f), PrimaryPurpleDark.copy(alpha = 0.20f))
+                        )
+                    )
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         if (personalityLabel != null) Icons.Default.Psychology else Icons.Default.Stars,
                         contentDescription = null,
-                        tint = PrimaryPurple,
+                        tint = PrimaryPurpleLight,
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = personalityLabel ?: level,
-                        color = PrimaryPurple,
+                        color = PrimaryPurpleLight,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            val levelProgress = remember(totalHours) {
-                when {
-                    totalHours >= 100 -> 1f
-                    totalHours >= 50  -> (totalHours - 50) / 50f
-                    else              -> totalHours / 50f
-                }
-            }
-            val nextLevelLabel = remember(totalHours) {
-                when {
-                    totalHours >= 100 -> null
-                    totalHours >= 50  -> "Cinéfilo Experto"
-                    else              -> "Fan Entusiasta"
-                }
-            }
             Column(
                 modifier = Modifier
                     .padding(horizontal = 40.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                LinearProgressIndicator(
-                    progress = { levelProgress },
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(CircleShape),
-                    color = PrimaryPurple,
-                    trackColor = Color.White.copy(alpha = 0.15f)
-                )
+                        .height(5.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.12f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(levelProgress)
+                            .height(5.dp)
+                            .clip(CircleShape)
+                            .background(levelBarGradient)
+                    )
+                }
                 if (nextLevelLabel != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "${(levelProgress * 100).toInt()}% hacia $nextLevelLabel",
                         color = TextGray,
@@ -451,7 +488,6 @@ fun ProfileHeaderPremium(
         }
     }
 }
-
 
 
 @Composable
@@ -533,10 +569,14 @@ fun WatchedShowsSection(
                             color = badgeColor,
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text(badgeText, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            Text(
+                                badgeText,
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
-                        // Badge de valoración (estrella) en esquina superior derecha
                         val userRating = ratings[item.show.id]
                         if (userRating != null) {
                             Surface(
@@ -622,9 +662,13 @@ private fun EmptySectionPlaceholder(
         ) {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.06f)),
+                    .background(
+                        Brush.radialGradient(
+                            listOf(PrimaryPurple.copy(alpha = 0.18f), Color.Transparent)
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = TextGray, modifier = Modifier.size(26.dp))
@@ -725,22 +769,28 @@ fun CustomListsInlineSection(
             ) {
                 items(lists.entries.toList(), key = { it.key }) { (name, ids) ->
                     val previewPosters = ids.take(3).mapNotNull { posterPaths[it] }
-                    Surface(
+                    Box(
                         modifier = Modifier
-                            .width(150.dp)
-                            .height(110.dp)
-                            .clickable { onListClick(name) },
-                        color = Color.White.copy(alpha = 0.05f),
-                        shape = RoundedCornerShape(16.dp)
+                            .width(155.dp)
+                            .height(115.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        PrimaryPurple.copy(alpha = 0.12f),
+                                        Color.White.copy(alpha = 0.04f)
+                                    )
+                                )
+                            )
+                            .clickable { onListClick(name) }
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            // Posters apilados o icono si no hay
                             if (previewPosters.isEmpty()) {
                                 Box(
                                     modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(PrimaryPurple.copy(alpha = 0.2f)),
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(PrimaryPurple.copy(alpha = 0.22f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -751,7 +801,7 @@ fun CustomListsInlineSection(
                                     )
                                 }
                             } else {
-                                Box(modifier = Modifier.height(44.dp)) {
+                                Box(modifier = Modifier.height(48.dp)) {
                                     previewPosters.forEachIndexed { i, path ->
                                         AsyncImage(
                                             model = ImageRequest.Builder(LocalContext.current)
@@ -760,9 +810,9 @@ fun CustomListsInlineSection(
                                                 .build(),
                                             contentDescription = null,
                                             modifier = Modifier
-                                                .size(width = 30.dp, height = 44.dp)
-                                                .offset(x = (i * 20).dp)
-                                                .clip(RoundedCornerShape(6.dp)),
+                                                .size(width = 32.dp, height = 48.dp)
+                                                .offset(x = (i * 22).dp)
+                                                .clip(RoundedCornerShape(7.dp)),
                                             contentScale = ContentScale.Crop
                                         )
                                     }
@@ -786,22 +836,36 @@ fun CustomListsInlineSection(
                     }
                 }
                 item {
-                    Surface(
+                    Box(
                         modifier = Modifier
                             .width(90.dp)
-                            .height(110.dp)
+                            .height(115.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        PrimaryPurple.copy(alpha = 0.18f),
+                                        PrimaryPurpleDark.copy(alpha = 0.08f)
+                                    )
+                                )
+                            )
                             .clickable { onViewAllClick() },
-                        color = PrimaryPurple.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(16.dp)
+                        contentAlignment = Alignment.Center
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Nueva", color = PrimaryPurple, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(PrimaryPurple.copy(alpha = 0.25f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = PrimaryPurpleLight, modifier = Modifier.size(18.dp))
+                            }
+                            Text("Nueva", color = PrimaryPurpleLight, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -842,12 +906,17 @@ fun FavoritesInlineSection(
         }
     }
 }
+
 @Composable
 fun StatsSection(
     stats: GetProfileStatsUseCase.ProfileStats,
     personalityLabel: String? = null,
     modifier: Modifier = Modifier
 ) {
+    val genreBarGradient = remember {
+        Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryPurple))
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -873,14 +942,17 @@ fun StatsSection(
             )
         }
 
-        // Personality label badge
         if (personalityLabel != null) {
-            Surface(
-                color = PrimaryPurple.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(12.dp),
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(PrimaryPurple.copy(alpha = 0.20f), PrimaryPurpleDark.copy(alpha = 0.10f))
+                        )
+                    )
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -889,7 +961,7 @@ fun StatsSection(
                     Icon(
                         Icons.Default.Psychology,
                         contentDescription = null,
-                        tint = PrimaryPurple,
+                        tint = PrimaryPurpleLight,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
@@ -910,7 +982,6 @@ fun StatsSection(
             }
         }
 
-        // 1. Summary stat cards row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -923,12 +994,12 @@ fun StatsSection(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 2. Genre affinity bars
         if (stats.topGenres.isNotEmpty()) {
-            Surface(
-                color = SurfaceVariantDark,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(SurfaceVariantDark)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -936,41 +1007,50 @@ fun StatsSection(
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = 14.dp)
                     )
                     stats.topGenres.forEach { (genreName, score) ->
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(vertical = 5.dp)
                         ) {
-                            Text(
-                                text = genreName,
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                modifier = Modifier.width(130.dp),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            LinearProgressIndicator(
-                                progress = { score },
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = genreName,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = "${(score * 100).toInt()}%",
+                                    color = PrimaryPurpleLight,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(5.dp))
+                            Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = PrimaryPurple,
-                                trackColor = Color.White.copy(alpha = 0.08f)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${(score * 100).toInt()}%",
-                                color = TextGray,
-                                fontSize = 12.sp,
-                                modifier = Modifier.width(36.dp),
-                                textAlign = TextAlign.End
-                            )
+                                    .fillMaxWidth()
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(score)
+                                        .height(5.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(genreBarGradient)
+                                )
+                            }
                         }
                     }
                 }
@@ -979,14 +1059,16 @@ fun StatsSection(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // 3. Like/completion ratio + avg rating
-        Surface(
-            color = SurfaceVariantDark,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(SurfaceVariantDark)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Completion rate row — only shown when user has liked or disliked at least one show
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 if (stats.likedCount > 0) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1009,7 +1091,7 @@ fun StatsSection(
                         Box(contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(
                                 progress = { stats.likeRate },
-                                modifier = Modifier.size(48.dp),
+                                modifier = Modifier.size(52.dp),
                                 color = PrimaryPurple,
                                 trackColor = Color.White.copy(alpha = 0.08f),
                                 strokeWidth = 4.dp
@@ -1026,18 +1108,25 @@ fun StatsSection(
                     HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                 }
 
-                // Avg rating row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        tint = StarYellow,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(StarYellow.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            tint = StarYellow,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Valoración media",
                         color = Color.White,
@@ -1046,7 +1135,7 @@ fun StatsSection(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = if (stats.ratingsCount > 0) "${"%.1f".format(stats.avgRating)} / 10.0" else "Sin valoraciones",
+                        text = if (stats.ratingsCount > 0) "${"%.1f".format(stats.avgRating)} / 10" else "Sin valoraciones",
                         color = if (stats.ratingsCount > 0) StarYellow else TextGray,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
@@ -1054,7 +1143,6 @@ fun StatsSection(
                 }
             }
         }
-
     }
 }
 
@@ -1064,22 +1152,30 @@ private fun StatMiniCard(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.width(76.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceVariantDark),
-        shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = modifier
+            .width(78.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        PrimaryPurple.copy(alpha = 0.22f),
+                        SurfaceVariantDark
+                    )
+                )
+            )
     ) {
         Column(
             modifier = Modifier
-                .padding(vertical = 12.dp, horizontal = 4.dp)
+                .padding(vertical = 14.dp, horizontal = 4.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
                 color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center
             )
             Text(
@@ -1093,7 +1189,13 @@ private fun StatMiniCard(
 }
 
 @Composable
-fun SettingsSectionPremium(onSettingsClick: () -> Unit, onResetClick: () -> Unit, onLogoutClick: () -> Unit, onAboutClick: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsSectionPremium(
+    onSettingsClick: () -> Unit,
+    onResetClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    onAboutClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -1118,16 +1220,29 @@ fun SettingsSectionPremium(onSettingsClick: () -> Unit, onResetClick: () -> Unit
                 fontWeight = FontWeight.Bold
             )
         }
-        
-        Surface(
-            color = Color.White.copy(alpha = 0.05f),
-            shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.fillMaxWidth()
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color.White.copy(alpha = 0.05f))
         ) {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 SettingsItemPremium(Icons.Default.Settings, "Configuración", onSettingsClick)
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = Color.White.copy(alpha = 0.05f)
+                )
                 SettingsItemPremium(Icons.Default.Update, "Reiniciar mis gustos", onResetClick, isAction = true)
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = Color.White.copy(alpha = 0.05f)
+                )
                 SettingsItemPremium(Icons.Default.Info, "Sobre ShowMate", onAboutClick)
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = Color.White.copy(alpha = 0.05f)
+                )
                 SettingsItemPremium(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", onLogoutClick, isDestructive = true)
             }
         }
@@ -1143,8 +1258,15 @@ fun SettingsItemPremium(
     isDestructive: Boolean = false,
     isAction: Boolean = false
 ) {
-    val tint = remember(isDestructive, isAction) {
-        if (isDestructive) Color(0xFFFF5252) else if (isAction) PrimaryPurple else Color.White.copy(alpha = 0.7f)
+    val tint = when {
+        isDestructive -> Color(0xFFFF5252)
+        isAction      -> PrimaryPurpleLight
+        else          -> Color.White.copy(alpha = 0.75f)
+    }
+    val iconBg: Brush = when {
+        isDestructive -> Brush.linearGradient(listOf(Color(0xFFFF5252).copy(alpha = 0.22f), Color(0xFFFF5252).copy(alpha = 0.08f)))
+        isAction      -> Brush.linearGradient(listOf(PrimaryPurple.copy(alpha = 0.30f), PrimaryPurpleDark.copy(alpha = 0.15f)))
+        else          -> Brush.linearGradient(listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.04f)))
     }
 
     Row(
@@ -1156,9 +1278,9 @@ fun SettingsItemPremium(
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
                 .clip(CircleShape)
-                .background(tint.copy(alpha = 0.1f)),
+                .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
@@ -1174,7 +1296,123 @@ fun SettingsItemPremium(
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.2f)
+            tint = Color.White.copy(alpha = 0.22f)
         )
+    }
+}
+
+@Composable
+private fun ProfileSkeleton() {
+    val shimmer = shimmerBrush()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+    ) {
+        // Header skeleton
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(shimmer)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Stats row skeleton
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(80.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(shimmer)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Section title skeleton
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .width(160.dp)
+                .height(16.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(shimmer)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Shows row skeleton
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            repeat(4) {
+                Box(
+                    modifier = Modifier
+                        .width(90.dp)
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(shimmer)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Second section title
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .width(120.dp)
+                .height(16.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(shimmer)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Second shows row skeleton
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            repeat(4) {
+                Box(
+                    modifier = Modifier
+                        .width(90.dp)
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(shimmer)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Menu items skeleton
+        repeat(4) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(shimmer)
+            )
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.showmateapp.ui.screens.profile.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -28,6 +31,8 @@ import com.example.showmateapp.ui.components.premium.PrimaryButton
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleDark
+import com.example.showmateapp.ui.theme.SurfaceVariantDark
 import com.example.showmateapp.ui.theme.TextGray
 import kotlinx.coroutines.launch
 
@@ -164,7 +169,7 @@ fun SettingsScreenContent(
                 title = {
                     Text(
                         text = "Ajustes",
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = Color.White,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -175,7 +180,7 @@ fun SettingsScreenContent(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = Color.White
                         )
                     }
                 },
@@ -295,22 +300,35 @@ fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = modifier.padding(top = 24.dp)) {
-        Text(
-            text = title.uppercase(),
-            color = Color(0xFFB4B0FF),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .semantics { heading() }
-                .padding(start = 24.dp, bottom = 8.dp),
-            letterSpacing = 1.sp
-        )
-        Surface(
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 24.dp, bottom = 10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        Brush.verticalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                    )
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title.uppercase(),
+                color = Color(0xFFB4B0FF),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
+                letterSpacing = 1.sp
+            )
+        }
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(16.dp)
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceVariantDark)
         ) {
             Column(modifier = Modifier.semantics { contentDescription = "Sección $title" }) {
                 content()
@@ -324,7 +342,7 @@ fun SettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        color = Color.White.copy(alpha = 0.06f)
     )
 }
 
@@ -338,16 +356,16 @@ fun SettingsItem(
     onClick: (() -> Unit)? = null
 ) {
     ListItem(
-        headlineContent = { Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp) },
+        headlineContent = { Text(text = title, color = Color.White, fontSize = 15.sp) },
         supportingContent = if (subtitle != null) {
-            { Text(text = subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 12.sp) }
+            { Text(text = subtitle, color = TextGray, fontSize = 12.sp) }
         } else null,
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (value != null) {
                     Text(
                         text = value,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        color = TextGray,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
@@ -356,19 +374,27 @@ fun SettingsItem(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        tint = TextGray.copy(alpha = 0.5f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
             }
         },
         leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = PrimaryPurple,
-                modifier = Modifier.size(20.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PrimaryPurple.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = PrimaryPurple,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier
@@ -393,17 +419,25 @@ fun SettingsItemSwitch(
     subtitle: String? = null
 ) {
     ListItem(
-        headlineContent = { Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp) },
+        headlineContent = { Text(text = title, color = Color.White, fontSize = 15.sp) },
         supportingContent = if (subtitle != null) {
-            { Text(text = subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 12.sp) }
+            { Text(text = subtitle, color = TextGray, fontSize = 12.sp) }
         } else null,
         leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = PrimaryPurple,
-                modifier = Modifier.size(20.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PrimaryPurple.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = PrimaryPurple,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         trailingContent = {
             Switch(

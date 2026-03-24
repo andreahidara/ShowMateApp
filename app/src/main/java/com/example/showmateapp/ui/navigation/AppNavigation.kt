@@ -21,7 +21,6 @@ import com.example.showmateapp.ui.screens.profile.lists.ListDetailScreen
 import com.example.showmateapp.ui.screens.profile.settings.SettingsScreen
 import com.example.showmateapp.ui.screens.stats.StatsScreen
 import com.example.showmateapp.ui.screens.splash.SplashScreen
-import com.example.showmateapp.ui.screens.swipe.SwipeScreen
 import com.example.showmateapp.ui.screens.signup.SignUpScreen
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -68,14 +67,16 @@ fun AppNavigation() {
             }
             composable<Screen.Onboarding> {
                 OnboardingScreen(onFinish = {
-                    navController.navigate(Screen.Main) {
+                    navController.navigate(Screen.Swipe) {
                         popUpTo(Screen.Onboarding) { inclusive = true }
                     }
                 })
             }
 
             composable<Screen.Swipe> {
-                SwipeScreen(navController = navController)
+                com.example.showmateapp.ui.screens.swipe.SwipeScreen(
+                    navController = navController
+                )
             }
 
             composable<Screen.Main> { 

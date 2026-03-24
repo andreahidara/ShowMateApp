@@ -18,11 +18,18 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    // v6 → v7: añade columna cachedAt a media_content para invalidación de caché por TTL
     private val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(
                 "ALTER TABLE media_content ADD COLUMN cachedAt INTEGER NOT NULL DEFAULT 0"
+            )
+        }
+    }
+
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE media_interactions ADD COLUMN isInWatchlist INTEGER NOT NULL DEFAULT 0"
             )
         }
     }
@@ -35,7 +42,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "showmate_database"
         )
-            .addMigrations(MIGRATION_6_7)
+            .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
             .fallbackToDestructiveMigration()
             .build()
     }

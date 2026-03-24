@@ -2,14 +2,17 @@ package com.example.showmateapp.ui.screens.splash
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -19,6 +22,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.showmateapp.R
 import com.example.showmateapp.ui.components.premium.AuthBackground
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleDark
+import com.example.showmateapp.ui.theme.PrimaryPurpleLight
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -29,54 +34,77 @@ fun SplashScreen(
     viewModel: SplashViewModel = hiltViewModel()
 ) {
     val logoAlpha = remember { Animatable(0f) }
+    val logoScale = remember { Animatable(0.4f) }
+    val glowAlpha = remember { Animatable(0f) }
     val titleAlpha = remember { Animatable(0f) }
+    val titleOffsetY = remember { Animatable(24f) }
     val subtitleAlpha = remember { Animatable(0f) }
-    
-    val logoOffsetY = remember { Animatable(60f) }
-    val textOffsetY = remember { Animatable(40f) }
-    
-    val scale = remember { Animatable(0.8f) }
-    
-    val infiniteTransition = rememberInfiniteTransition(label = "breathing")
-    val breatheScale by infiniteTransition.animateFloat(
+    val bottomAlpha = remember { Animatable(0f) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "idle")
+
+    val glowPulse by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.05f,
+        targetValue = 1.18f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glowPulse"
+    )
+    val logoBreath by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.035f,
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "breatheScale"
+        label = "logoBreath"
+    )
+    val dot1Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+            initialStartOffset = StartOffset(0)
+        ), label = "d1"
+    )
+    val dot2Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+            initialStartOffset = StartOffset(183)
+        ), label = "d2"
+    )
+    val dot3Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+            initialStartOffset = StartOffset(366)
+        ), label = "d3"
     )
 
-    LaunchedEffect(key1 = true) {
-        launch { 
-            logoAlpha.animateTo(1f, animationSpec = tween(1000, easing = LinearOutSlowInEasing)) 
+    LaunchedEffect(Unit) {
+        launch { glowAlpha.animateTo(0.55f, tween(1400, easing = LinearOutSlowInEasing)) }
+        launch { logoAlpha.animateTo(1f, tween(900, easing = LinearOutSlowInEasing)) }
+        launch {
+            logoScale.animateTo(
+                1f,
+                spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow)
+            )
         }
-        launch { 
-            logoOffsetY.animateTo(0f, animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)) 
-        }
-        launch { 
-            scale.animateTo(1f, animationSpec = tween(1200, easing = FastOutSlowInEasing)) 
-        }
-        
-        delay(400)
-        
-        launch { 
-            titleAlpha.animateTo(1f, animationSpec = tween(800, easing = LinearOutSlowInEasing)) 
-        }
-        launch { 
-            subtitleAlpha.animateTo(0.6f, animationSpec = tween(800, easing = LinearOutSlowInEasing)) 
-        }
-        launch { 
-            textOffsetY.animateTo(0f, animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow)) 
-        }
-
-        // Espera mínima para que el usuario vea el logo (2.5 segundos total)
+        delay(520)
+        launch { titleAlpha.animateTo(1f, tween(700, easing = LinearOutSlowInEasing)) }
+        launch { titleOffsetY.animateTo(0f, spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessLow)) }
+        delay(220)
+        launch { subtitleAlpha.animateTo(0.75f, tween(600, easing = LinearOutSlowInEasing)) }
+        launch { bottomAlpha.animateTo(1f, tween(800, easing = LinearOutSlowInEasing)) }
         delay(2500)
-
-        if (viewModel.isLoggedIn()) {
-            onNavigateToMain()
-        } else {
+        try {
+            if (viewModel.isLoggedIn()) onNavigateToMain() else onNavigateToLogin()
+        } catch (e: Exception) {
             onNavigateToLogin()
         }
     }
@@ -86,73 +114,93 @@ fun SplashScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+            Box(
+                modifier = Modifier
+                    .offset(y = (-60).dp)
+                    .size(260.dp)
+                    .scale(glowPulse)
+                    .alpha(glowAlpha.value)
+                    .blur(50.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                PrimaryPurple.copy(alpha = 0.55f),
+                                PrimaryPurpleDark.copy(alpha = 0.25f),
+                                Color.Transparent
+                            )
+                        ),
+                        CircleShape
+                    )
+            )
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .scale(scale.value * breatheScale)
-                    .padding(bottom = 40.dp)
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.offset(y = (-20).dp)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.logo),
                     contentDescription = "Logo ShowMate",
                     modifier = Modifier
-                        .size(160.dp)
-                        .offset(y = logoOffsetY.value.dp)
+                        .size(164.dp)
+                        .scale(logoScale.value * logoBreath)
                         .alpha(logoAlpha.value)
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(Modifier.height(32.dp))
 
                 Text(
                     text = "ShowMate",
                     color = Color.White,
-                    fontSize = 48.sp,
+                    fontSize = 50.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = (-1).sp,
+                    letterSpacing = (-1.5).sp,
                     modifier = Modifier
-                        .offset(y = textOffsetY.value.dp)
+                        .offset(y = titleOffsetY.value.dp)
                         .alpha(titleAlpha.value)
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
 
                 Text(
                     text = "TU GUÍA PREMIUM DE SERIES",
-                    color = PrimaryPurple,
+                    color = PrimaryPurpleLight,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 5.sp,
+                    letterSpacing = 4.sp,
                     modifier = Modifier
-                        .offset(y = textOffsetY.value.dp)
+                        .offset(y = titleOffsetY.value.dp)
                         .alpha(subtitleAlpha.value)
                 )
             }
 
-            Box(
+            Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 80.dp)
-                    .width(150.dp)
-                    .alpha(subtitleAlpha.value)
+                    .alpha(bottomAlpha.value),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp),
-                    color = PrimaryPurple,
-                    trackColor = Color.White.copy(alpha = 0.1f)
-                )
+                listOf(dot1Alpha, dot2Alpha, dot3Alpha).forEach { alpha ->
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .alpha(alpha)
+                            .background(PrimaryPurple, CircleShape)
+                    )
+                }
             }
-            
+
             Text(
                 text = "Powered by TMDB",
-                color = Color.White.copy(alpha = 0.3f),
+                color = Color.White.copy(alpha = 0.22f),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 32.dp)
-                    .alpha(titleAlpha.value)
+                    .alpha(bottomAlpha.value)
             )
         }
     }

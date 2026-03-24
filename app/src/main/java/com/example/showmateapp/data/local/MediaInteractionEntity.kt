@@ -9,6 +9,6 @@ data class MediaInteractionEntity(
     val isLiked: Boolean = false,
     val isEssential: Boolean = false,
     val isWatched: Boolean = false,
-    // Se guarda cuando el usuario marca como visto — usado para detectar nuevas temporadas
+    val isInWatchlist: Boolean = false,
     val lastKnownSeasons: Int = 0
 )

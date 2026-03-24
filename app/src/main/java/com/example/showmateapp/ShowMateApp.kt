@@ -13,6 +13,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.example.showmateapp.data.service.FirestoreSyncWorker
 import com.example.showmateapp.data.service.SeasonCheckWorker
 import dagger.hilt.android.HiltAndroidApp
@@ -32,6 +33,7 @@ class ShowMateApp : Application(), Configuration.Provider, ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
         if (BuildConfig.DEBUG && BuildConfig.TMDB_API_TOKEN.isBlank()) {
             error(
                 "TMDB_API_TOKEN no está configurado.\n" +
@@ -47,14 +49,12 @@ class ShowMateApp : Application(), Configuration.Provider, ImageLoaderFactory {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        // One-time sync on each app open when network is available
         WorkManager.getInstance(this).enqueue(
             OneTimeWorkRequestBuilder<FirestoreSyncWorker>()
                 .setConstraints(networkConstraint)
                 .build()
         )
 
-        // Daily season check
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "season_check",
             ExistingPeriodicWorkPolicy.KEEP,
@@ -68,13 +68,13 @@ class ShowMateApp : Application(), Configuration.Provider, ImageLoaderFactory {
         ImageLoader.Builder(this)
             .memoryCache {
                 MemoryCache.Builder(this)
-                    .maxSizePercent(0.20) // 20% of available RAM
+                    .maxSizePercent(0.25)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(100L * 1024 * 1024) // 100 MB
+                    .maxSizeBytes(150L * 1024 * 1024)
                     .build()
             }
             .crossfade(true)

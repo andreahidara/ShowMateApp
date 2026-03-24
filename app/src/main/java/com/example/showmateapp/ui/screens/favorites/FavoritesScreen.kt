@@ -4,18 +4,25 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +34,8 @@ import com.example.showmateapp.ui.components.premium.*
 import com.example.showmateapp.ui.navigation.Screen
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleDark
+import com.example.showmateapp.ui.theme.TextGray
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -66,23 +75,28 @@ fun FavoritesScreen(
                 modifier = Modifier.weight(1f)
             )
             Box {
-                OutlinedButton(
-                    onClick = { showSortDropdown = true },
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable { showSortDropdown = true }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Sort,
-                        contentDescription = "Ordenar",
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = state.sortOption.label,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = "Ordenar",
+                            tint = PrimaryPurple,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = state.sortOption.label,
+                            color = PrimaryPurple,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
                 DropdownMenu(
                     expanded = showSortDropdown,
@@ -108,45 +122,42 @@ fun FavoritesScreen(
         }
 
         val tabIndex = FavoriteTab.entries.indexOf(state.selectedTab)
-        TabRow(
-            selectedTabIndex = tabIndex,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = Color.White,
-            indicator = { tabPositions ->
-                if (tabIndex < tabPositions.size) {
-                    val pos = tabPositions[tabIndex]
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentSize(Alignment.BottomStart)
-                            .offset(x = pos.left)
-                            .width(pos.width)
-                            .height(3.dp)
-                            .background(PrimaryPurple)
-                    )
-                }
-            }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FavoriteTab.entries.forEachIndexed { index, tab ->
+                val isSelected = index == tabIndex
                 val count = when (tab) {
                     FavoriteTab.LIKED -> state.favorites.size
                     FavoriteTab.ESSENTIAL -> state.essentials.size
                     FavoriteTab.WATCHED -> state.watched.size
+                    FavoriteTab.WATCHLIST -> state.watchlist.size
                 }
-                Tab(
-                    selected = index == tabIndex,
-                    onClick = { viewModel.selectTab(tab) },
-                    text = {
-                        Text(
-                            text = "${tab.label} ($count)",
-                            fontSize = 12.sp,
-                            fontWeight = if (index == tabIndex) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isSelected)
+                                Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                            else
+                                Brush.horizontalGradient(
+                                    listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.08f))
+                                )
                         )
-                    },
-                    selectedContentColor = PrimaryPurple,
-                    unselectedContentColor = Color.Gray
-                )
+                        .clickable { viewModel.selectTab(tab) }
+                        .padding(horizontal = 16.dp, vertical = 9.dp)
+                ) {
+                    Text(
+                        text = "${tab.label} ($count)",
+                        color = if (isSelected) Color.White else TextGray,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
             }
         }
 
@@ -154,6 +165,7 @@ fun FavoritesScreen(
             FavoriteTab.LIKED -> state.favorites
             FavoriteTab.ESSENTIAL -> state.essentials
             FavoriteTab.WATCHED -> state.watched
+            FavoriteTab.WATCHLIST -> state.watchlist
         }
 
         if (currentList.isEmpty()) {
@@ -169,6 +181,10 @@ fun FavoritesScreen(
                 FavoriteTab.WATCHED -> Pair(
                     "Sin series vistas",
                     "No has marcado ninguna serie como vista."
+                )
+                FavoriteTab.WATCHLIST -> Pair(
+                    "Lista vacía",
+                    "Añade series desde el detalle con el botón «Pendiente»."
                 )
             }
             EmptyTabState(
@@ -197,6 +213,7 @@ fun FavoritesScreen(
                             FavoriteTab.LIKED -> "favorite"
                             FavoriteTab.ESSENTIAL -> "essential"
                             FavoriteTab.WATCHED -> "watched"
+                            FavoriteTab.WATCHLIST -> "watchlist"
                         }
                     )
                 }
@@ -217,12 +234,27 @@ fun EmptyTabState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Default.Favorite,
-            contentDescription = null,
-            tint = HeartRed.copy(alpha = 0.3f),
-            modifier = Modifier.size(80.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            HeartRed.copy(alpha = 0.15f),
+                            Color.Transparent
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = null,
+                tint = HeartRed.copy(alpha = 0.5f),
+                modifier = Modifier.size(52.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = title,
@@ -233,27 +265,40 @@ fun EmptyTabState(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = subtitle,
-            color = Color.Gray,
+            color = TextGray,
             fontSize = 14.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 32.dp)
         )
         if (showExploreButton) {
             Spacer(modifier = Modifier.height(28.dp))
-            Button(
-                onClick = onExploreClick,
-                colors = ButtonDefaults.buttonColors(containerColor = HeartRed),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.horizontalGradient(listOf(HeartRed, HeartRed.copy(alpha = 0.7f)))
+                    )
+                    .clickable { onExploreClick() }
+                    .padding(horizontal = 24.dp, vertical = 14.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Explore,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Explorar series", color = Color.White, fontWeight = FontWeight.Bold)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Explore,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Explorar series",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
             }
         }
     }

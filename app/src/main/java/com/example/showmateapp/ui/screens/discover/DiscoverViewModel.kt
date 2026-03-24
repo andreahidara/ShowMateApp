@@ -1,7 +1,11 @@
 package com.example.showmateapp.ui.screens.discover
 
+import android.content.Context
 import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import androidx.lifecycle.ViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.example.showmateapp.R
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.data.repository.UserRepository
@@ -25,10 +29,9 @@ import java.time.LocalDate
 
 data class DiscoverUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
-    // Hero destacado
     val heroShow: MediaContent? = null,
-    // Secciones por género
     val topGenreShows: List<MediaContent> = emptyList(),
     val topGenreName: String = "",
     val secondGenreShows: List<MediaContent> = emptyList(),
@@ -45,7 +48,6 @@ data class DiscoverUiState(
     val topRatedShows: List<MediaContent> = emptyList(),
     val topKeywordShows: List<MediaContent> = emptyList(),
     val topKeywordLabel: String = "",
-    // Secciones generadas por el algoritmo
     val contextPicksShows: List<MediaContent> = emptyList(),
     val contextPicksTitle: String = "",
     val dayOfWeekShows: List<MediaContent> = emptyList(),
@@ -66,7 +68,8 @@ data class DiscoverUiState(
 class DiscoverViewModel @Inject constructor(
     private val repository: ShowRepository,
     private val userRepository: UserRepository,
-    private val getRecommendationsUseCase: GetRecommendationsUseCase
+    private val getRecommendationsUseCase: GetRecommendationsUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverUiState())
@@ -77,17 +80,23 @@ class DiscoverViewModel @Inject constructor(
     }
 
     fun retry() {
-        loadDiscoverContent()
+        loadDiscoverContent(isRefresh = false)
     }
 
-    private fun loadDiscoverContent() {
+    fun refresh() {
+        loadDiscoverContent(isRefresh = true)
+    }
+
+    private fun loadDiscoverContent(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update {
+                if (isRefresh) it.copy(isRefreshing = true, errorMessage = null)
+                else it.copy(isLoading = true, errorMessage = null)
+            }
             try {
                 val profile = userRepository.getUserProfile()
                 val sortedGenres = profile?.genreScores?.entries?.sortedByDescending { it.value } ?: emptyList()
 
-                // ── Extract all params synchronously from profile ─────────────────────
                 var topGenreId = "18"; var topName = "Drama"
                 var secondGenreId = "35"; var secondName = "Comedia"
                 var thirdGenreId: String? = null; var thirdName = ""
@@ -133,7 +142,6 @@ class DiscoverViewModel @Inject constructor(
                         ?.firstOrNull { it.key != sortedGenres.first().key }
                 } else null
 
-                // ── Launch ALL independent API calls in parallel ───────────────────────
                 val res1Def          = async { repository.getShowsByGenres(topGenreId) }
                 val res2Def          = async { repository.getShowsByGenres(secondGenreId) }
                 val timeTravelDef    = async { repository.discoverShows(keywords = "4363") }
@@ -153,7 +161,6 @@ class DiscoverViewModel @Inject constructor(
                 val creatorShowsDef  = creatorEntry?.key?.let { key -> async { repository.discoverShows(withCrew = key) } }
                 val explorationDef   = underexploredGenre?.key?.let { key -> async { repository.getShowsByGenres(key) } }
 
-                // ── Await all results ─────────────────────────────────────────────────
                 val res1            = res1Def.await()
                 val res2            = res2Def.await()
                 val timeTravelRes   = timeTravelDef.await()
@@ -173,7 +180,6 @@ class DiscoverViewModel @Inject constructor(
                 val creatorShowsRaw = creatorShowsDef?.await()
                 val explorationRaw  = explorationDef?.await()
 
-                // ── Derive all section data ───────────────────────────────────────────
                 val topGenreShows    = if (res1 is Resource.Success) getRecommendationsUseCase.scoreShows(res1.data.shuffled().take(10)) else emptyList()
                 val secondGenreShows = if (res2 is Resource.Success) getRecommendationsUseCase.scoreShows(res2.data.shuffled().take(10)) else emptyList()
                 val timeTravelShows  = if (timeTravelRes is Resource.Success) getRecommendationsUseCase.scoreShows(timeTravelRes.data.shuffled().take(10)) else emptyList()
@@ -190,43 +196,35 @@ class DiscoverViewModel @Inject constructor(
                 val similarToName   = if (targetDetails is Resource.Success) targetDetails.data.name else ""
                 val similarShows    = if (targetDetails is Resource.Success && !similarShowsRaw.isNullOrEmpty()) getRecommendationsUseCase.scoreShows(similarShowsRaw.shuffled().take(10)) else emptyList()
 
-                // Sección 1 — Joyas ocultas
                 val hiddenGems      = recommendations.filter { it.voteCount in 1..499 && it.affinityScore >= 5.5f }.take(10)
 
-                // Sección 2 — Picks contextuales
                 val temporalPattern = TemporalPatternAnalyzer.analyze(profile?.viewingHistory ?: emptyList())
                 val isBinger        = temporalPattern.avgEpisodesPerSession >= 3f
                 val contextPicks    = if (isBinger) recommendations.filter { (it.numberOfSeasons ?: 0) >= 3 }.take(10)
                                       else recommendations.filter { (it.numberOfSeasons ?: 1) <= 2 && it.status in listOf("Ended", "Canceled") }.take(10)
-                val contextTitle    = if (contextPicks.isNotEmpty()) (if (isBinger) "Perfectas para el finde" else "Para ver esta noche") else ""
+                val contextTitle    = if (contextPicks.isNotEmpty()) (if (isBinger) context.getString(R.string.discover_context_binger) else context.getString(R.string.discover_context_casual)) else ""
 
-                // Sección 3 — Por día de la semana
                 val (dayTitle, dayShows) = buildDayOfWeekSection(recommendations)
 
-                // Sección 4 — Estilo narrativo
                 val narrativeStyleLabel = if (topNarrativeStyle != null) "Porque te gusta: ${NarrativeStyleMapper.getStyleLabel(topNarrativeStyle.key)}" else ""
                 val narrativeStyleShows = if (nsShows is Resource.Success && nsShows.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(nsShows.data.shuffled().take(10)) else emptyList()
 
-                // Sección 5 — Estado de ánimo
                 val moodSectionShows = if (moodShows is Resource.Success && moodShows.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(moodShows.data.shuffled().take(10)) else emptyList()
 
-                // Sección 6 — Exploración
                 val explorationGenreName = underexploredGenre?.key?.let { GenreMapper.getGenreName(it) } ?: ""
                 val explorationShowsList = if (explorationRaw is Resource.Success && explorationRaw.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(explorationRaw.data.shuffled().take(10)) else emptyList()
 
-                // Sección 7 — Creador/showrunner
                 val creatorName      = if (creatorPerson is Resource.Success && creatorShowsRaw is Resource.Success && creatorShowsRaw.data.isNotEmpty()) creatorPerson.data.name else ""
                 val creatorShowsList = if (creatorPerson is Resource.Success && creatorShowsRaw is Resource.Success && creatorShowsRaw.data.isNotEmpty()) getRecommendationsUseCase.scoreShows(creatorShowsRaw.data.shuffled().take(10)) else emptyList()
 
-                // Sección 8 — Colaborativa
                 val heroId             = hero?.id
                 val collaborativeShows = recommendations.filter { it.id != heroId && it.voteCount in 100..4999 }.sortedByDescending { it.affinityScore }.take(12)
 
-                // ── Single state update ───────────────────────────────────────────────
                 _uiState.update { current ->
                     val hasContent = hero != null || topGenreShows.isNotEmpty()
                     current.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         heroShow = hero,
                         topGenreName = topName,
                         secondGenreName = secondName,
@@ -264,7 +262,8 @@ class DiscoverViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 Log.e("DiscoverViewModel", "Error loading discover content", e)
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al cargar el contenido: ${e.localizedMessage ?: "Comprueba tu conexión"}") }
+                FirebaseCrashlytics.getInstance().recordException(e)
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false, errorMessage = "Error al cargar el contenido: ${e.localizedMessage ?: "Comprueba tu conexión"}") }
             }
         }
     }
@@ -275,29 +274,29 @@ class DiscoverViewModel @Inject constructor(
                 val shows = recommendations.filter {
                     (it.episodeRunTime?.firstOrNull() ?: 45) <= 30
                 }.take(10)
-                "Para después del trabajo" to shows
+                context.getString(R.string.discover_day_after_work) to shows
             }
             DayOfWeek.THURSDAY -> {
                 val shows = recommendations.filter {
                     (it.episodeRunTime?.firstOrNull() ?: 45) <= 45
                 }.take(10)
-                "Ya es casi viernes, empieza algo nuevo" to shows
+                context.getString(R.string.discover_day_friday_eve) to shows
             }
             DayOfWeek.FRIDAY -> {
                 val shows = recommendations.filter {
                     it.safeGenreIds.any { id -> id in listOf(10759, 53, 9648) }
                 }.take(10)
-                "Arranca el finde con esto" to shows
+                context.getString(R.string.discover_day_friday) to shows
             }
             DayOfWeek.SATURDAY -> {
                 val shows = recommendations.filter { (it.numberOfSeasons ?: 0) >= 2 }.take(10)
-                "Maratón del sábado" to shows
+                context.getString(R.string.discover_day_saturday) to shows
             }
             DayOfWeek.SUNDAY -> {
                 val shows = recommendations.filter {
                     it.status in listOf("Ended", "Canceled") && (it.numberOfSeasons ?: 4) <= 3
                 }.take(10)
-                "Domingo tranquilo" to shows
+                context.getString(R.string.discover_day_sunday) to shows
             }
             else -> "" to emptyList()
         }

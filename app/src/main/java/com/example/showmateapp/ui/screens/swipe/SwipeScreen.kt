@@ -3,30 +3,27 @@ package com.example.showmateapp.ui.screens.swipe
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -98,7 +95,19 @@ fun SwipeScreenContent(
                 .background(BackgroundDark),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = PrimaryPurple, modifier = Modifier.size(64.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(
+                    color = PrimaryPurple,
+                    modifier = Modifier.size(52.dp),
+                    strokeWidth = 3.dp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Cargando series para ti…",
+                    color = TextGray,
+                    fontSize = 14.sp
+                )
+            }
         }
         return
     }
@@ -136,7 +145,7 @@ fun SwipeScreenContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Para ti",
                     color = Color.White,
@@ -147,39 +156,70 @@ fun SwipeScreenContent(
                 Text(
                     text = "Desliza para calibrar tus gustos",
                     color = TextGray,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
 
-            Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    progress = { (ratedCount.toFloat() / maxRatings.toFloat()).coerceIn(0f, 1f) },
-                    modifier = Modifier.size(60.dp),
-                    color = PrimaryPurple,
-                    strokeWidth = 5.dp,
-                    trackColor = Color.White.copy(alpha = 0.1f)
-                )
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(PrimaryPurple.copy(alpha = 0.22f), PrimaryPurpleDark.copy(alpha = 0.14f))
+                        )
+                    )
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "$ratedCount",
-                        color = Color.White,
-                        fontSize = 14.sp,
+                        color = PrimaryPurpleLight,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
-                        lineHeight = 14.sp
+                        lineHeight = 22.sp
                     )
                     Text(
-                        text = "/$maxRatings",
+                        text = "de $maxRatings",
                         color = TextGray,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        lineHeight = 10.sp
+                        fontSize = 11.sp,
+                        lineHeight = 11.sp
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            repeat(maxRatings) { index ->
+                Box(
+                    modifier = Modifier
+                        .height(4.dp)
+                        .weight(1f)
+                        .clip(CircleShape)
+                        .background(
+                            if (index < ratedCount)
+                                Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryPurple))
+                            else
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.12f),
+                                        Color.White.copy(alpha = 0.12f)
+                                    )
+                                )
+                        )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Box(
             modifier = Modifier
@@ -190,11 +230,34 @@ fun SwipeScreenContent(
             if (ratedCount >= maxRatings) {
                 SuccessState(onNavigateToHome)
             } else if (showsToRate.isEmpty()) {
-                Text("No hay más series por ahora", color = TextGray)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(PrimaryPurple.copy(alpha = 0.20f), Color.Transparent)
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = TextGray,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Text("No hay más series por ahora", color = TextGray, fontSize = 15.sp)
+                }
             } else {
                 val stackLimit = 3
                 val visibleShows = showsToRate.take(stackLimit).reversed()
-                
+
                 visibleShows.forEachIndexed { index, show ->
                     val stackIndex = visibleShows.size - 1 - index
                     key(show.id) {
@@ -202,7 +265,6 @@ fun SwipeScreenContent(
                             media = show,
                             stackIndex = stackIndex,
                             onSwiped = { isLiked ->
-                                // ratedCount is incremented inside likeTopShow/skipTopShow in ViewModel
                                 if (isLiked) onLikeShow() else onSkipShow()
                             }
                         )
@@ -211,71 +273,93 @@ fun SwipeScreenContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(40.dp))
-
         if (ratedCount < maxRatings && showsToRate.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(28.dp))
+
             Row(
                 modifier = Modifier
-                    .padding(bottom = 32.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+                    .fillMaxWidth()
+                    .padding(bottom = 36.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconButton(
-                        onClick = { onSkipShow() },
+                    Box(
                         modifier = Modifier
-                            .size(64.dp)
-                            .background(Color.White.copy(alpha = 0.05f), CircleShape)
-                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                            .size(68.dp)
+                            .shadow(16.dp, CircleShape, spotColor = HeartRed.copy(alpha = 0.35f))
+                            .clip(CircleShape)
+                            .background(HeartRed.copy(alpha = 0.12f))
+                            .border(1.5.dp, HeartRed.copy(alpha = 0.35f), CircleShape)
+                            .clickable { onSkipShow() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Paso", tint = HeartRed, modifier = Modifier.size(28.dp))
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Paso",
+                            tint = HeartRed,
+                            modifier = Modifier.size(30.dp)
+                        )
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("Paso", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Paso", color = HeartRed.copy(alpha = 0.75f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconButton(
-                        onClick = { onUndoAction() },
-                        enabled = lastRemovedShow != null,
+                    val undoActive = lastRemovedShow != null
+                    Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(50.dp)
+                            .clip(CircleShape)
                             .background(
-                                Color.White.copy(alpha = if (lastRemovedShow != null) 0.15f else 0.05f),
+                                if (undoActive) Color.White.copy(alpha = 0.10f)
+                                else Color.White.copy(alpha = 0.04f)
+                            )
+                            .border(
+                                1.dp,
+                                if (undoActive) Color.White.copy(alpha = 0.20f)
+                                else Color.White.copy(alpha = 0.07f),
                                 CircleShape
                             )
+                            .clickable(enabled = undoActive) { onUndoAction() },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Undo,
+                            Icons.AutoMirrored.Filled.Undo,
                             contentDescription = "Deshacer",
-                            tint = if (lastRemovedShow != null) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.25f),
+                            tint = if (undoActive) Color.White.copy(alpha = 0.80f) else Color.White.copy(alpha = 0.22f),
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "Deshacer",
-                        color = if (lastRemovedShow != null) TextGray else TextGray.copy(alpha = 0.4f),
+                        color = if (undoActive) TextGray else TextGray.copy(alpha = 0.35f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconButton(
-                        onClick = { onLikeShow() },
+                    Box(
                         modifier = Modifier
-                            .size(80.dp)
-                            .shadow(20.dp, CircleShape, spotColor = PrimaryPurple)
+                            .size(84.dp)
+                            .shadow(28.dp, CircleShape, spotColor = PrimaryPurple.copy(alpha = 0.55f))
+                            .clip(CircleShape)
                             .background(
-                                Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0))),
-                                CircleShape
+                                Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0)))
                             )
+                            .clickable { onLikeShow() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Me gusta", tint = Color.White, modifier = Modifier.size(36.dp))
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = "Me gusta",
+                            tint = Color.White,
+                            modifier = Modifier.size(38.dp)
+                        )
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text("Me gusta", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -285,55 +369,107 @@ fun SwipeScreenContent(
 
 @Composable
 fun SuccessState(onNavigateToHome: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "successGlow")
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.20f,
+        targetValue = 0.50f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ringAlpha"
+    )
+    val ringScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ringScale"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(24.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(PrimaryPurple.copy(alpha = 0.1f))
-                .border(2.dp, PrimaryPurple.copy(alpha = 0.3f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.Star,
-                contentDescription = null,
-                tint = PrimaryPurple,
-                modifier = Modifier.size(60.dp)
+        Box(contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .size(148.dp)
+                    .graphicsLayer { scaleX = ringScale; scaleY = ringScale }
+                    .alpha(ringAlpha)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(PrimaryPurple.copy(alpha = 0.45f), Color.Transparent)
+                        )
+                    )
             )
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(PrimaryPurple.copy(alpha = 0.25f), PrimaryPurpleDark.copy(alpha = 0.15f))
+                        )
+                    )
+                    .border(
+                        1.5.dp,
+                        Brush.linearGradient(listOf(PrimaryPurpleLight.copy(alpha = 0.6f), PrimaryPurple.copy(alpha = 0.3f))),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = null,
+                    tint = PrimaryPurpleLight,
+                    modifier = Modifier.size(56.dp)
+                )
+            }
         }
+
         Spacer(modifier = Modifier.height(32.dp))
+
         Text(
             text = "¡Todo listo!",
             color = Color.White,
-            fontSize = 32.sp,
+            fontSize = 34.sp,
             fontWeight = FontWeight.Black,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            letterSpacing = (-0.5).sp
         )
+
         Spacer(modifier = Modifier.height(12.dp))
+
         Text(
             text = "Hemos calibrado tus gustos. Ahora ShowMate es mucho más inteligente para ti.",
             color = TextGray,
-            fontSize = 17.sp,
+            fontSize = 16.sp,
             textAlign = TextAlign.Center,
             lineHeight = 24.sp
         )
+
         Spacer(modifier = Modifier.height(48.dp))
-        Button(
-            onClick = onNavigateToHome,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-            shape = RoundedCornerShape(16.dp),
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0)))
+                )
+                .clickable { onNavigateToHome() },
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "Empezar a explorar",
-                color = Color.Black,
+                color = Color.White,
                 fontWeight = FontWeight.Black,
-                fontSize = 18.sp
+                fontSize = 17.sp
             )
         }
     }
@@ -350,8 +486,19 @@ fun SwipeableCard(
     val isTopCard = stackIndex == 0
 
     val scale by animateFloatAsState(targetValue = 1f - (stackIndex * 0.05f), label = "scale")
-    val translateY by animateFloatAsState(targetValue = (stackIndex * -15f), label = "translateY")
-    val alpha by animateFloatAsState(targetValue = 1f - (stackIndex * 0.3f), label = "alpha")
+    val translateY by animateFloatAsState(targetValue = (stackIndex * -16f), label = "translateY")
+    val alpha by animateFloatAsState(targetValue = 1f - (stackIndex * 0.28f), label = "alpha")
+
+    val cardGradient = remember {
+        Brush.verticalGradient(
+            colorStops = arrayOf(
+                0f to Color.Transparent,
+                0.42f to Color.Transparent,
+                0.70f to Color.Black.copy(alpha = 0.75f),
+                1f to Color.Black.copy(alpha = 0.98f)
+            )
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -361,11 +508,10 @@ fun SwipeableCard(
                 translationY = translateY.dp.toPx()
                 scaleX = scale
                 scaleY = scale
-                rotationZ = offsetX.value / 25f
+                rotationZ = (offsetX.value / 28f).coerceIn(-18f, 18f)
                 this.alpha = alpha
             }
             .pointerInput(isTopCard) {
-                // Key = isTopCard so this block restarts when a card becomes/stops being top
                 if (isTopCard) {
                     detectDragGestures(
                         onDragEnd = {
@@ -379,7 +525,7 @@ fun SwipeableCard(
                                     onSwiped(isLiked)
                                 }
                             } else {
-                                scope.launch { offsetX.animateTo(0f, spring()) }
+                                scope.launch { offsetX.animateTo(0f, spring(dampingRatio = 0.6f)) }
                             }
                         },
                         onDrag = { change, dragAmount ->
@@ -390,8 +536,7 @@ fun SwipeableCard(
                 }
             }
             .clip(RoundedCornerShape(32.dp))
-            .background(SurfaceDark)
-            .shadow(if (isTopCard) 20.dp else 0.dp, RoundedCornerShape(32.dp))
+            .shadow(if (isTopCard) 24.dp else 0.dp, RoundedCornerShape(32.dp), spotColor = PrimaryPurple.copy(alpha = 0.25f))
     ) {
         AsyncImage(
             model = "https://image.tmdb.org/t/p/w780${media.posterPath}",
@@ -401,8 +546,14 @@ fun SwipeableCard(
             placeholder = painterResource(R.drawable.ic_logo_placeholder)
         )
 
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(cardGradient)
+        )
+
         if (isTopCard && offsetX.value != 0f) {
-            val swipeAlpha = (offsetX.value.absoluteValue / 300f).coerceIn(0f, 0.45f)
+            val swipeAlpha = (offsetX.value.absoluteValue / 280f).coerceIn(0f, 0.50f)
             val isLiking = offsetX.value > 0
             val overlayColor = if (isLiking) Color(0xFF4CAF50) else HeartRed
             Box(
@@ -410,21 +561,23 @@ fun SwipeableCard(
                     .fillMaxSize()
                     .background(overlayColor.copy(alpha = swipeAlpha))
             )
-            val labelAlpha = ((offsetX.value.absoluteValue - 80f) / 200f).coerceIn(0f, 1f)
+            val labelAlpha = ((offsetX.value.absoluteValue - 80f) / 180f).coerceIn(0f, 1f)
             if (labelAlpha > 0f) {
                 Box(
                     modifier = Modifier
                         .align(if (isLiking) Alignment.TopStart else Alignment.TopEnd)
                         .padding(28.dp)
                         .alpha(labelAlpha)
+                        .graphicsLayer { rotationZ = if (isLiking) -14f else 14f }
                         .clip(RoundedCornerShape(8.dp))
                         .border(3.dp, overlayColor, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .background(overlayColor.copy(alpha = 0.15f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
                     Text(
                         text = if (isLiking) "ME GUSTA" else "PASO",
                         color = overlayColor,
-                        fontSize = 22.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp
                     )
@@ -438,109 +591,107 @@ fun SwipeableCard(
                 isAffinity = true,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(24.dp)
+                    .padding(20.dp)
             )
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.2f),
-                            Color.Black.copy(alpha = 0.95f)
-                        ),
-                        startY = 400f
-                    )
-                )
-        )
-        
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(28.dp)
+                .padding(horizontal = 26.dp, vertical = 26.dp)
         ) {
             Text(
                 text = media.name,
                 color = Color.White,
-                fontSize = 36.sp,
+                fontSize = 34.sp,
                 fontWeight = FontWeight.Black,
-                lineHeight = 40.sp
+                lineHeight = 38.sp,
+                letterSpacing = (-0.5).sp
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             val year = media.firstAirDate?.take(4)?.takeIf { it.isNotBlank() }
-            val runtime = media.episodeRunTime?.firstOrNull()?.takeIf { it > 0 }?.let { "$it min" }
             val seasons = media.numberOfSeasons?.takeIf { it > 0 }?.let { "$it temp." }
-            val metaParts = listOfNotNull(year, runtime, seasons)
+            val metaParts = listOfNotNull(year, seasons)
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 metaParts.forEachIndexed { index, part ->
                     if (index > 0) {
-                        Text("·", color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp)
+                        Text("·", color = Color.White.copy(alpha = 0.40f), fontSize = 12.sp)
                     }
-                    Text(part, color = Color.White.copy(alpha = 0.65f), fontSize = 12.sp)
+                    Text(part, color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
                 if (media.voteAverage > 0f) {
                     if (metaParts.isNotEmpty()) {
-                        Text("·", color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp)
+                        Text("·", color = Color.White.copy(alpha = 0.40f), fontSize = 12.sp)
                     }
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        tint = StarYellow,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = "%.1f".format(media.voteAverage),
-                        color = StarYellow,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Genre chips
-            val genreNames = media.safeGenreIds.take(3).map { GenreMapper.getGenreName(it.toString()) }
-            if (genreNames.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    genreNames.forEach { genre ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.White.copy(alpha = 0.15f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(StarYellow.copy(alpha = 0.20f))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                tint = StarYellow,
+                                modifier = Modifier.size(12.dp)
+                            )
                             Text(
-                                text = genre,
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                text = "%.1f".format(media.voteAverage),
+                                color = StarYellow,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            val genreNames = media.safeGenreIds.take(3).map { GenreMapper.getGenreName(it.toString()) }
+            if (genreNames.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    genreNames.forEach { genre ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.Black.copy(alpha = 0.42f))
+                                .border(
+                                    0.5.dp,
+                                    Color.White.copy(alpha = 0.18f),
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = genre,
+                                color = Color.White.copy(alpha = 0.90f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
             }
 
             Text(
                 text = media.overview,
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 15.sp,
-                maxLines = 3,
+                color = Color.White.copy(alpha = 0.65f),
+                fontSize = 14.sp,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = 22.sp
+                lineHeight = 20.sp
             )
         }
     }

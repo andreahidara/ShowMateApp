@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics.plugin)
     alias(libs.plugins.hilt)
     kotlin("kapt")
     id("kotlin-parcelize")
@@ -86,6 +87,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics)
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)

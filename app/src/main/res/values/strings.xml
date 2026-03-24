@@ -52,6 +52,14 @@
     <string name="detail_watched">Vista</string>
     <string name="detail_top_cast">Reparto principal</string>
 
+    <string name="discover_context_binger">Perfectas para el finde</string>
+    <string name="discover_context_casual">Para ver esta noche</string>
+    <string name="discover_day_after_work">Para después del trabajo</string>
+    <string name="discover_day_friday_eve">Ya es casi viernes, empieza algo nuevo</string>
+    <string name="discover_day_friday">Arranca el finde con esto</string>
+    <string name="discover_day_saturday">Maratón del sábado</string>
+    <string name="discover_day_sunday">Domingo tranquilo</string>
+
     <string name="error_unexpected_data">Error inesperado al cargar los datos</string>
     <string name="error_refresh_data">Error al recargar los datos. Comprueba tu conexión.</string>
     <string name="error_empty_fields">Completa todos los campos</string>

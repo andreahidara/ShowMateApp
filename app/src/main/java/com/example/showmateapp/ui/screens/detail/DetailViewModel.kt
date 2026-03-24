@@ -1,6 +1,7 @@
 package com.example.showmateapp.ui.screens.detail
 
 import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.model.UserProfile
@@ -32,6 +33,7 @@ data class DetailUiState(
     val isLiked: Boolean = false,
     val isEssential: Boolean = false,
     val isWatched: Boolean = false,
+    val isInWatchlist: Boolean = false,
     val userRating: Int? = null,
     val userReview: String = "",
     val isSavingReview: Boolean = false,
@@ -39,7 +41,7 @@ data class DetailUiState(
     val similarShows: List<MediaContent> = emptyList(),
     val isSimilarLoading: Boolean = true,
     val actionError: String? = null,
-    val snackbarMessage: String? = null,  // mensajes informativos no-error (éxito, confirmación)
+    val snackbarMessage: String? = null,
     val watchedEpisodes: List<Int> = emptyList(),
     val selectedSeason: SeasonResponse? = null,
     val isSeasonLoading: Boolean = false,
@@ -68,7 +70,7 @@ class DetailViewModel @Inject constructor(
     fun showWhyDialog() { _showWhyDialog.value = true }
     fun dismissWhyDialog() { _showWhyDialog.value = false }
 
-    // Serializa pulsaciones rápidas de like/esencial/visto para que las escrituras en Firestore no compitan
+    // Serialises rapid like/essential/watched taps so concurrent Firestore writes don't race
     private val toggleMutex = Mutex()
 
     fun loadShowDetails(showId: Int) {
@@ -79,7 +81,6 @@ class DetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         val details = result.data
 
-                        // Carga el perfil una sola vez — se reutiliza para scoring, interacciones y WhyFactors
                         val profile = try { userRepository.getUserProfile() } catch (e: Exception) {
                             Log.w("DetailViewModel", "Could not load profile", e); null
                         }
@@ -97,7 +98,6 @@ class DetailViewModel @Inject constructor(
                             _whyFactors.value = buildWhyFactors(scoredDetails, profile)
                         }
 
-                        // Contenido secundario: fire-and-forget, actualiza la UI cuando esté listo
                         launch { loadSimilarShows(showId) }
                         launch { loadCustomLists() }
                         scoredDetails.seasons?.firstOrNull()?.let {
@@ -111,6 +111,7 @@ class DetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("DetailViewModel", "Error loading details", e)
+                FirebaseCrashlytics.getInstance().recordException(e)
                 _uiState.update { it.copy(errorMessage = "Error al cargar los detalles.") }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
@@ -128,6 +129,7 @@ class DetailViewModel @Inject constructor(
                     isLiked = localState.isLiked,
                     isEssential = localState.isEssential,
                     isWatched = localState.isWatched,
+                    isInWatchlist = localState.isInWatchlist,
                     watchedEpisodes = episodes
                 ) }
             } else {
@@ -137,13 +139,14 @@ class DetailViewModel @Inject constructor(
                 val isLiked = favorites.any { it.id == showId }
                 val isEssential = essentials.any { it.id == showId }
                 val isWatched = watched.any { it.id == showId }
+                val isInWatchlist = userRepository.isInWatchlist(showId)
                 _uiState.update { it.copy(
                     isLiked = isLiked,
                     isEssential = isEssential,
                     isWatched = isWatched,
+                    isInWatchlist = isInWatchlist,
                     watchedEpisodes = episodes
                 ) }
-                // Guarda en caché para que aperturas futuras no necesiten llamar a Firestore
                 userRepository.cacheInteractionState(showId, isLiked, isEssential, isWatched)
             }
         } catch (e: Exception) {
@@ -222,6 +225,23 @@ class DetailViewModel @Inject constructor(
                     if (newState) trackInteraction(currentShow, UserRepository.InteractionType.Watched)
                 } catch (e: Exception) {
                     _uiState.update { it.copy(isWatched = previousState, actionError = "Error al actualizar") }
+                }
+            }
+        }
+    }
+
+    fun toggleWatchlist() {
+        val currentShow = _uiState.value.media ?: return
+        val previousState = _uiState.value.isInWatchlist
+        val newState = !previousState
+        _uiState.update { it.copy(isInWatchlist = newState) }
+
+        viewModelScope.launch {
+            toggleMutex.withLock {
+                try {
+                    userRepository.toggleWatchlist(currentShow, newState)
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(isInWatchlist = previousState, actionError = "Error al actualizar") }
                 }
             }
         }
@@ -412,7 +432,6 @@ class DetailViewModel @Inject constructor(
     private fun buildWhyFactors(show: MediaContent, profile: UserProfile): List<WhyFactor> {
         val factors = mutableListOf<WhyFactor>()
 
-        // Genre factor
         val maxGenre = profile.genreScores.values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
         val genreMatch = show.safeGenreIds.mapNotNull { id ->
             profile.genreScores[id.toString()]
@@ -427,7 +446,6 @@ class DetailViewModel @Inject constructor(
             factors.add(WhyFactor("Género: $topGenreName", genreScore, "🎭"))
         }
 
-        // Narrative style factor
         val keywords = show.keywords?.results?.map { it.name } ?: emptyList()
         val runtime = show.episodeRunTime?.firstOrNull()
         val showStyles = NarrativeStyleMapper.extractStyles(keywords, runtime)
@@ -443,7 +461,6 @@ class DetailViewModel @Inject constructor(
             factors.add(WhyFactor("Narrativa: $topStyle", narrativeScore.coerceIn(0f, 1f), "📖"))
         }
 
-        // Actor factor
         val maxActor = profile.preferredActors.values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
         val actorScore = (show.credits?.cast?.mapNotNull { actor ->
             profile.preferredActors[actor.id.toString()]
@@ -455,7 +472,6 @@ class DetailViewModel @Inject constructor(
             factors.add(WhyFactor("Actor: $topActor", actorScore.coerceIn(0f, 1f), "🎬"))
         }
 
-        // Creator factor
         val maxCreator = profile.preferredCreators.values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
         val creatorScore = (show.credits?.crew
             ?.filter { it.job in listOf("Creator", "Executive Producer", "Showrunner", "Series Director") }
@@ -469,7 +485,6 @@ class DetailViewModel @Inject constructor(
             factors.add(WhyFactor("Creador: $topCreator", creatorScore.coerceIn(0f, 1f), "🎯"))
         }
 
-        // Global quality factor
         val bayesian = if ((show.voteCount + 150f) > 0)
             ((show.voteCount / (show.voteCount + 150f)) * show.voteAverage + (150f / (show.voteCount + 150f)) * 6.5f)
         else 6.5f

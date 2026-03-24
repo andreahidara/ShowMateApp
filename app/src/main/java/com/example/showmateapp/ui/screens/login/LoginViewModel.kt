@@ -34,6 +34,22 @@ class LoginViewModel @Inject constructor(
         _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
     }
 
+    fun sendPasswordReset(email: String) {
+        if (email.isBlank()) {
+            _uiState.update { it.copy(resetError = "Introduce tu email primero") }
+            return
+        }
+        viewModelScope.launch {
+            authRepository.sendPasswordResetEmail(email.trim())
+                .onSuccess { _uiState.update { it.copy(resetEmailSent = true, resetError = null) } }
+                .onFailure { e -> _uiState.update { it.copy(resetError = e.message ?: "No se pudo enviar el correo") } }
+        }
+    }
+
+    fun dismissResetDialog() {
+        _uiState.update { it.copy(resetEmailSent = false, resetError = null) }
+    }
+
     fun onLoginClick() {
         val state = _uiState.value
 

@@ -16,20 +16,21 @@ import javax.inject.Inject
 enum class SortOption(val label: String) {
     DATE_ADDED("Recientes"),
     RATING("Valoración"),
-    AFFINITY("Afinidad"),
     NAME("Nombre")
 }
 
 enum class FavoriteTab(val label: String) {
     LIKED("Me gusta"),
     ESSENTIAL("Imprescindibles"),
-    WATCHED("Vistas")
+    WATCHED("Vistas"),
+    WATCHLIST("Quiero ver")
 }
 
 data class FavoritesUiState(
     val favorites: List<MediaContent> = emptyList(),
     val essentials: List<MediaContent> = emptyList(),
     val watched: List<MediaContent> = emptyList(),
+    val watchlist: List<MediaContent> = emptyList(),
     val selectedTab: FavoriteTab = FavoriteTab.LIKED,
     val sortOption: SortOption = SortOption.DATE_ADDED,
     val isLoading: Boolean = false
@@ -43,30 +44,27 @@ class FavoritesViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(FavoritesUiState())
     val uiState: StateFlow<FavoritesUiState> = _uiState.asStateFlow()
 
-    // Keep unsorted originals so we can re-sort without losing order
     private var rawFavorites: List<MediaContent> = emptyList()
     private var rawEssentials: List<MediaContent> = emptyList()
     private var rawWatched: List<MediaContent> = emptyList()
 
     init {
-        // Observe liked shows from Room (reactive)
         viewModelScope.launch {
             userRepository.getLikedShowsFlow().collect { entities ->
                 rawFavorites = entities.map { it.toDomain() }
                 _uiState.update { it.copy(favorites = applySorting(rawFavorites, it.sortOption)) }
             }
         }
-        // Observe watched shows from Room (reactive)
         viewModelScope.launch {
             userRepository.getWatchedShowsFlow().collect { entities ->
                 rawWatched = entities.map { it.toDomain() }
                 _uiState.update { it.copy(watched = applySorting(rawWatched, it.sortOption)) }
             }
         }
-        // Sync Firestore → Room on startup, then reload essentials so both complete in order
         viewModelScope.launch {
             userRepository.syncFavoritesAndWatchedToRoom()
             loadEssentials()
+            loadWatchlist()
         }
     }
 
@@ -78,11 +76,19 @@ class FavoritesViewModel @Inject constructor(
         }
     }
 
+    private fun loadWatchlist() {
+        viewModelScope.launch {
+            val result = userRepository.getWatchlist()
+            _uiState.update { it.copy(watchlist = applySorting(result, it.sortOption)) }
+        }
+    }
+
     fun selectTab(tab: FavoriteTab) {
         _uiState.update { it.copy(selectedTab = tab) }
-        // Reload essentials when switching to that tab so data is fresh
-        if (tab == FavoriteTab.ESSENTIAL) {
-            loadEssentials()
+        when (tab) {
+            FavoriteTab.ESSENTIAL -> loadEssentials()
+            FavoriteTab.WATCHLIST -> loadWatchlist()
+            else -> {}
         }
     }
 
@@ -99,10 +105,8 @@ class FavoritesViewModel @Inject constructor(
 
     private fun applySorting(list: List<MediaContent>, sort: SortOption): List<MediaContent> {
         return when (sort) {
-            SortOption.DATE_ADDED -> list // preserve original order
+            SortOption.DATE_ADDED -> list
             SortOption.RATING     -> list.sortedByDescending { it.voteAverage }
-            // affinityScore no se persiste en Room (siempre 0 tras toDomain()) → orden de inserción
-            SortOption.AFFINITY   -> list
             SortOption.NAME       -> list.sortedBy { it.name }
         }
     }

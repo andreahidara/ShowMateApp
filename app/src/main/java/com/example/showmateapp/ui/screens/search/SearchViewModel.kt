@@ -1,6 +1,9 @@
 package com.example.showmateapp.ui.screens.search
 
-import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.showmateapp.data.network.MediaContent
@@ -8,12 +11,13 @@ import com.example.showmateapp.data.repository.ShowRepository
 import com.example.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.example.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,13 +31,12 @@ enum class SearchMode(val label: String) {
 class SearchViewModel @Inject constructor(
     private val showRepository: ShowRepository,
     private val getRecommendationsUseCase: GetRecommendationsUseCase,
-    @ApplicationContext private val context: Context
+    private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
     companion object {
         const val MIN_YEAR = 1990
-        private const val PREFS_NAME = "search_prefs"
-        private const val KEY_RECENT = "recent_searches"
+        private val KEY_RECENT = stringPreferencesKey("recent_searches")
         private const val MAX_RECENT = 6
         val CURRENT_YEAR: Int = java.time.Year.now().value
         val AVAILABLE_GENRES = listOf(
@@ -41,6 +44,13 @@ class SearchViewModel @Inject constructor(
             "80" to "Crimen", "99" to "Docu", "18" to "Drama",
             "10751" to "Familia", "10762" to "Kids", "9648" to "Misterio",
             "10765" to "Sci-Fi"
+        )
+        val AVAILABLE_PLATFORMS = listOf(
+            "8" to "Netflix",
+            "9" to "Prime",
+            "337" to "Disney+",
+            "384" to "Max",
+            "531" to "Paramount+"
         )
     }
 
@@ -68,6 +78,9 @@ class SearchViewModel @Inject constructor(
     private val _selectedRating = MutableStateFlow<Float?>(null)
     val selectedRating: StateFlow<Float?> = _selectedRating.asStateFlow()
 
+    private val _selectedPlatform = MutableStateFlow<String?>(null)
+    val selectedPlatform: StateFlow<String?> = _selectedPlatform.asStateFlow()
+
     private val _isFilterActive = MutableStateFlow(false)
     val isFilterActive: StateFlow<Boolean> = _isFilterActive.asStateFlow()
 
@@ -80,18 +93,14 @@ class SearchViewModel @Inject constructor(
     private val _searchMode = MutableStateFlow(SearchMode.TITLE)
     val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
 
-    private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-
     private var searchJob: Job? = null
 
     init {
         loadTrendingShows()
-        _recentSearches.value = loadRecentSearches()
-    }
-
-    private fun loadRecentSearches(): List<String> {
-        val raw = prefs.getString(KEY_RECENT, "") ?: ""
-        return if (raw.isBlank()) emptyList() else raw.split("|||").filter { it.isNotBlank() }
+        viewModelScope.launch {
+            val raw = dataStore.data.map { it[KEY_RECENT] ?: "" }.first()
+            _recentSearches.value = if (raw.isBlank()) emptyList() else raw.split("|||").filter { it.isNotBlank() }
+        }
     }
 
     private fun saveRecentQuery(query: String) {
@@ -99,18 +108,24 @@ class SearchViewModel @Inject constructor(
         if (trimmed.isBlank()) return
         val updated = (listOf(trimmed) + _recentSearches.value.filter { it != trimmed }).take(MAX_RECENT)
         _recentSearches.value = updated
-        prefs.edit().putString(KEY_RECENT, updated.joinToString("|||")).apply()
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_RECENT] = updated.joinToString("|||") }
+        }
     }
 
     fun removeRecentSearch(query: String) {
         val updated = _recentSearches.value.filter { it != query }
         _recentSearches.value = updated
-        prefs.edit().putString(KEY_RECENT, updated.joinToString("|||")).apply()
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_RECENT] = updated.joinToString("|||") }
+        }
     }
 
     fun clearRecentSearches() {
         _recentSearches.value = emptyList()
-        prefs.edit().remove(KEY_RECENT).apply()
+        viewModelScope.launch {
+            dataStore.edit { it.remove(KEY_RECENT) }
+        }
     }
 
     fun setSearchMode(mode: SearchMode) {
@@ -154,21 +169,28 @@ class SearchViewModel @Inject constructor(
         }
 
         searchJob = viewModelScope.launch {
-            // Debounce sólo para búsquedas por texto; los filtros sin texto no necesitan esperar
             if (query.isNotBlank()) delay(500)
 
             _isLoading.value = true
             _errorMessage.value = null
             try {
                 if (query.isNotBlank()) {
-                    val result = showRepository.searchShows(query)
+                    val result = when (_searchMode.value) {
+                        SearchMode.ACTOR   -> showRepository.searchByPerson(query, isCreator = false)
+                        SearchMode.CREATOR -> showRepository.searchByPerson(query, isCreator = true)
+                        else               -> showRepository.searchShows(query)
+                    }
                     when (result) {
                         is Resource.Success -> {
                             _suggestions.value = emptyList()
                             _searchResults.value = getRecommendationsUseCase.scoreShows(result.data)
                             saveRecentQuery(query)
                             if (_searchResults.value.isEmpty()) {
-                                _errorMessage.value = "No se encontraron resultados para '$query'"
+                                _errorMessage.value = when (_searchMode.value) {
+                                    SearchMode.ACTOR   -> "No se encontraron series para el actor '$query'"
+                                    SearchMode.CREATOR -> "No se encontraron series para el creador '$query'"
+                                    else               -> "No se encontraron resultados para '$query'"
+                                }
                             }
                         }
                         is Resource.Error -> {
@@ -207,8 +229,15 @@ class SearchViewModel @Inject constructor(
         searchMedia("")
     }
 
+    fun updatePlatform(platformId: String?) {
+        _selectedPlatform.value = platformId
+        checkFilterStatus()
+        searchMedia("")
+    }
+
     fun clearFilters() {
         _selectedGenre.value = null
+        _selectedPlatform.value = null
         _yearFrom.value = MIN_YEAR
         _yearTo.value = CURRENT_YEAR
         _selectedRating.value = null
@@ -218,6 +247,7 @@ class SearchViewModel @Inject constructor(
 
     private fun checkFilterStatus() {
         _isFilterActive.value = _selectedGenre.value != null ||
+                              _selectedPlatform.value != null ||
                               _yearFrom.value > MIN_YEAR ||
                               _yearTo.value < CURRENT_YEAR ||
                               _selectedRating.value != null
@@ -230,7 +260,9 @@ class SearchViewModel @Inject constructor(
             genreId = _selectedGenre.value,
             minRating = _selectedRating.value,
             firstAirDateGte = firstAirDateGte,
-            firstAirDateLte = firstAirDateLte
+            firstAirDateLte = firstAirDateLte,
+            providers = _selectedPlatform.value,
+            watchRegion = if (_selectedPlatform.value != null) "ES" else null
         )
         
         when (result) {

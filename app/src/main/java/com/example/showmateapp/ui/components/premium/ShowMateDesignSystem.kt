@@ -6,8 +6,10 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +41,7 @@ import com.example.showmateapp.ui.theme.PrimaryPurple
 import com.example.showmateapp.ui.theme.SurfaceDark
 import com.example.showmateapp.ui.theme.TextGray
 
-// Gradiente estático extraído a nivel de archivo — evita crear un objeto Brush en cada recomposición de ShowCard
+// Extracted to file level to avoid allocating a new Brush object on every ShowCard recomposition
 private val showCardOverlayGradient = Brush.verticalGradient(
     colors = listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent, Color.Black.copy(alpha = 0.15f)),
     startY = 0f
@@ -60,7 +62,6 @@ fun ShowCard(
     val sharedElementKey = "image-${media.id}-$tag"
     val context   = LocalContext.current
     val imageUrl  = media.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
-    // remember evita crear un objeto ImageRequest nuevo en cada recomposición — Coil puede reusar la petición en caché
     val imageRequest = remember(imageUrl) {
         ImageRequest.Builder(context).data(imageUrl).crossfade(true).build()
     }
@@ -93,7 +94,6 @@ fun ShowCard(
                 )
             }
 
-            // Bottom gradient so the badge reads well
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -150,14 +150,13 @@ fun MatchBadge(
     modifier: Modifier = Modifier
 ) {
     val percentage = (score * 10).toInt().coerceIn(0, 100)
-    // remember evita recalcular el string de formato y el color en cada recomposición
     val displayValue = remember(score, isAffinity) {
         if (isAffinity) "$percentage% Match" else "${"%.1f".format(score)} ★"
     }
     val matchColor = when {
-        isAffinity && percentage >= 80 -> Color(0xFF4CAF50) // High affinity
-        isAffinity && percentage >= 50 -> Color(0xFFFFC107) // Medium affinity
-        !isAffinity && score >= 7.5 -> Color(0xFFFFD700) // Quality star
+        isAffinity && percentage >= 80 -> Color(0xFF4CAF50)
+        isAffinity && percentage >= 50 -> Color(0xFFFFC107)
+        !isAffinity && score >= 7.5 -> Color(0xFFFFD700)
         else -> Color.White.copy(alpha = 0.7f)
     }
 
@@ -190,7 +189,8 @@ fun ShowSection(
     modifier: Modifier = Modifier,
     tag: String = "list",
     subtitle: String? = null,
-    onSeeAll: (() -> Unit)? = null
+    onSeeAll: (() -> Unit)? = null,
+    listState: LazyListState = rememberLazyListState()
 ) {
     Column(modifier = modifier) {
         Row(
@@ -234,6 +234,7 @@ fun ShowSection(
             )
         }
         LazyRow(
+            state = listState,
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()

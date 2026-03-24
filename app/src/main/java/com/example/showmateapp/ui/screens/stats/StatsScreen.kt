@@ -12,9 +12,12 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,8 +30,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.showmateapp.domain.usecase.GetViewerPersonalityUseCase
+import com.example.showmateapp.ui.theme.AccentBlue
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleDark
 import com.example.showmateapp.ui.theme.StarYellow
+import com.example.showmateapp.ui.theme.SurfaceVariantDark
 import com.example.showmateapp.ui.theme.TextGray
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +87,6 @@ fun StatsScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Streak cards row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -96,7 +101,7 @@ fun StatsScreen(
                     )
                     StatCard(
                         modifier = Modifier.weight(1f),
-                        icon = Icons.Default.TrendingUp,
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
                         iconTint = PrimaryPurple,
                         value = "${uiState.longestStreak}",
                         label = "Racha récord",
@@ -104,7 +109,6 @@ fun StatsScreen(
                     )
                 }
 
-                // Episodes cards row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -127,17 +131,14 @@ fun StatsScreen(
                     )
                 }
 
-                // Activity by month
                 if (uiState.activityByMonth.isNotEmpty()) {
                     ActivityChart(activityByMonth = uiState.activityByMonth)
                 }
 
-                // Top genres
                 if (uiState.topGenresByMonth.isNotEmpty()) {
                     TopGenresSection(topGenresByMonth = uiState.topGenresByMonth)
                 }
 
-                // Viewer personality profile
                 uiState.personalityProfile?.let { PersonalitySection(it) }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -155,33 +156,58 @@ fun StatCard(
     label: String,
     subtitle: String
 ) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+    val scale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.7f,
+        animationSpec = tween(durationMillis = 400),
+        label = "statCardScale"
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(SurfaceVariantDark)
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.horizontalGradient(listOf(iconTint, iconTint.copy(alpha = 0f)))
+                )
+        )
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(28.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = value,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.White,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Black,
-                lineHeight = 34.sp
+                lineHeight = 34.sp,
+                modifier = Modifier.scale(scale)
             )
             Text(
                 text = label,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -201,20 +227,32 @@ fun ActivityChart(activityByMonth: Map<String, Int>) {
     }
     val maxValue = remember(activityByMonth) { sortedEntries.maxOfOrNull { it.value } ?: 1 }
 
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(SurfaceVariantDark)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Actividad mensual",
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(18.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.verticalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                        )
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Actividad mensual",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -240,11 +278,11 @@ fun ActivityChart(activityByMonth: Map<String, Int>) {
                                 .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(PrimaryPurple, Color(0xFF9C27B0))
+                                        listOf(PrimaryPurple, AccentBlue)
                                     )
                                 )
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = month.takeLast(5),
                             color = TextGray,
@@ -259,27 +297,27 @@ fun ActivityChart(activityByMonth: Map<String, Int>) {
 
 @Composable
 fun PersonalitySection(profile: GetViewerPersonalityUseCase.PersonalityProfile) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(SurfaceVariantDark)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .background(PrimaryPurple.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Psychology, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Psychology, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(22.dp))
                 }
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text("Perfil de espectador", color = TextGray, fontSize = 11.sp)
-                    Text(profile.label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(profile.label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
 
@@ -304,9 +342,10 @@ fun PersonalitySection(profile: GetViewerPersonalityUseCase.PersonalityProfile) 
                 Text("Temas recurrentes", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     profile.topKeywords.forEach { keyword ->
-                        Surface(
-                            color = PrimaryPurple.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(20.dp)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(PrimaryPurple.copy(alpha = 0.12f))
                         ) {
                             Text(
                                 text = keyword,
@@ -351,19 +390,31 @@ private fun PersonalityBar(label: String, fraction: Float, color: Color) {
 
 @Composable
 fun TopGenresSection(topGenresByMonth: Map<String, List<Pair<String, Int>>>) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(SurfaceVariantDark)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Géneros favoritos",
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(18.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.verticalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                        )
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Géneros favoritos",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             val allGenres = topGenresByMonth.values.flatten()
@@ -379,12 +430,12 @@ fun TopGenresSection(topGenresByMonth: Map<String, List<Pair<String, Int>>>) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = genre,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = Color.White,
                         fontSize = 14.sp,
                         modifier = Modifier.width(120.dp)
                     )
@@ -394,7 +445,7 @@ fun TopGenresSection(topGenresByMonth: Map<String, List<Pair<String, Int>>>) {
                             .weight(1f)
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            .background(Color.White.copy(alpha = 0.08f))
                     ) {
                         Box(
                             modifier = Modifier
@@ -403,7 +454,7 @@ fun TopGenresSection(topGenresByMonth: Map<String, List<Pair<String, Int>>>) {
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(
                                     Brush.horizontalGradient(
-                                        listOf(PrimaryPurple, Color(0xFF9C27B0))
+                                        listOf(PrimaryPurple, AccentBlue)
                                     )
                                 )
                         )

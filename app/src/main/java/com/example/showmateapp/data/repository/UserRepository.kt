@@ -23,10 +23,9 @@ class UserRepository @Inject constructor(
 ) {
     private val usersCollection = db.collection("users")
 
-    // ── Caché en memoria del perfil (TTL 2 min) para evitar round-trips Firestore redundantes ──
     @Volatile private var _profileCache: UserProfile? = null
     @Volatile private var _profileCacheTime: Long = 0L
-    // Distingue "nunca cargado" de "cargado pero null" (documento Firestore ausente/inválido)
+    // Distinguishes "never fetched" from "fetched but null" (missing/invalid Firestore document)
     @Volatile private var _profileCacheFetched: Boolean = false
     private companion object { private const val PROFILE_CACHE_TTL = 120_000L }
 
@@ -75,7 +74,6 @@ class UserRepository @Inject constructor(
         val watchedRef = usersCollection.document(uid).collection("watched").document(media.id.toString())
 
         return try {
-            // Escribe en Room primero para que el estado persista aunque Firestore sea lento o no esté disponible
             val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
             interactionDao.upsert(current.copy(isWatched = setWatched))
             if (setWatched) {
@@ -87,7 +85,7 @@ class UserRepository @Inject constructor(
             }
             setWatched
         } catch (e: Exception) {
-            setWatched // Room ya actualizado; Firestore sincronizará cuando vuelva la conexión
+            setWatched // Room already updated; Firestore will sync when connection is restored
         }
     }
 
@@ -112,7 +110,6 @@ class UserRepository @Inject constructor(
         val favRef = usersCollection.document(uid).collection("favorites").document(media.id.toString())
 
         return try {
-            // Escribe en Room primero para que el estado persista aunque Firestore sea lento o no esté disponible
             val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
             interactionDao.upsert(current.copy(isLiked = setLiked))
             if (setLiked) {
@@ -124,7 +121,7 @@ class UserRepository @Inject constructor(
             }
             setLiked
         } catch (e: Exception) {
-            setLiked // Room ya actualizado; Firestore sincronizará cuando vuelva la conexión
+            setLiked // Room already updated; Firestore will sync when connection is restored
         }
     }
 
@@ -143,7 +140,6 @@ class UserRepository @Inject constructor(
         val essentialRef = usersCollection.document(uid).collection("essentials").document(media.id.toString())
 
         return try {
-            // Escribe en Room primero para que el estado persista aunque Firestore sea lento o no esté disponible
             val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
             interactionDao.upsert(current.copy(isEssential = setEssential))
             if (setEssential) {
@@ -153,7 +149,39 @@ class UserRepository @Inject constructor(
             }
             setEssential
         } catch (e: Exception) {
-            setEssential // Room ya actualizado; Firestore sincronizará cuando vuelva la conexión
+            setEssential // Room already updated; Firestore will sync when connection is restored
+        }
+    }
+
+    suspend fun getWatchlist(): List<MediaContent> {
+        val uid = auth.currentUser?.uid ?: return emptyList()
+        return try {
+            val snapshot = usersCollection.document(uid).collection("watchlist").get().await()
+            snapshot.toObjects(MediaContent::class.java)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun isInWatchlist(mediaId: Int): Boolean {
+        return interactionDao.getById(mediaId)?.isInWatchlist ?: false
+    }
+
+    suspend fun toggleWatchlist(media: MediaContent, add: Boolean): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        val watchlistRef = usersCollection.document(uid).collection("watchlist").document(media.id.toString())
+
+        return try {
+            val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
+            interactionDao.upsert(current.copy(isInWatchlist = add))
+            if (add) {
+                watchlistRef.set(media).await()
+            } else {
+                watchlistRef.delete().await()
+            }
+            add
+        } catch (e: Exception) {
+            add // Room already updated; Firestore will sync when connection is restored
         }
     }
 
@@ -196,7 +224,6 @@ class UserRepository @Inject constructor(
         }
     }
 
-    /** Crea o actualiza el documento de perfil con userId y email. Llamar tras el registro. */
     suspend fun initUserProfile(username: String) {
         val uid   = auth.currentUser?.uid ?: return
         val email = auth.currentUser?.email ?: ""
@@ -267,7 +294,7 @@ class UserRepository @Inject constructor(
                 is InteractionType.Rate -> {
                     val rating = interactionType.score
                     newRatings[mediaId.toString()] = rating.toFloat()
-                    // Normaliza respecto a la media propia del usuario para compensar sesgos de valoración
+                    // Normalises against the user's own average to compensate for personal rating bias
                     val userAvg = if (profile.ratings.isNotEmpty())
                         profile.ratings.values.average().toFloat() else 3f
                     weightModifier = ((rating - userAvg) * 1.5f).coerceIn(-4f, 4f)
@@ -304,7 +331,6 @@ class UserRepository @Inject constructor(
             val newNarrativeScores = profile.narrativeStyleScores.toMutableMap()
             val newNarrativeDates  = profile.narrativeStyleDates.toMutableMap()
             narrativeStyles.forEach { (style, relevance) ->
-                // Modificador de peso escalado según la intensidad del estilo en la serie
                 newNarrativeScores[style] = (newNarrativeScores[style] ?: 0f) + weightModifier * relevance
                 newNarrativeDates[style]  = now
             }
@@ -407,8 +433,6 @@ class UserRepository @Inject constructor(
         invalidateProfileCache()
     }
 
-    // ── Reviews ───────────────────────────────────────────────────────────────
-
     suspend fun saveReview(mediaId: Int, review: String) {
         val uid = auth.currentUser?.uid ?: return
         val userRef = usersCollection.document(uid)
@@ -427,8 +451,6 @@ class UserRepository @Inject constructor(
         val profile = getUserProfile() ?: return null
         return profile.mediaReviews[mediaId.toString()]
     }
-
-    // ── Custom Lists ──────────────────────────────────────────────────────────
 
     suspend fun getCustomLists(): Map<String, List<Int>> {
         return getUserProfile()?.customLists ?: emptyMap()
@@ -490,7 +512,6 @@ class UserRepository @Inject constructor(
         invalidateProfileCache()
     }
 
-    /** Devuelve hasta [limit] perfiles de usuario de Firestore para filtrado colaborativo. */
     suspend fun getSimilarUsers(limit: Long = 30): List<UserProfile> {
         val uid = auth.currentUser?.uid ?: return emptyList()
         return try {
@@ -505,9 +526,6 @@ class UserRepository @Inject constructor(
         }
     }
 
-    // ── Comparar con amigo ────────────────────────────────────────────────────
-
-    /** Devuelve true si existe un usuario con [email], sin cargar el perfil completo. */
     suspend fun userExists(email: String): Boolean {
         return try {
             val snapshot = usersCollection
@@ -521,7 +539,6 @@ class UserRepository @Inject constructor(
         }
     }
 
-    /** Devuelve el [UserProfile] del usuario con [friendEmail], o null si no se encuentra. */
     suspend fun getFriendProfile(friendEmail: String): UserProfile? {
         return try {
             val snapshot = usersCollection
@@ -535,7 +552,6 @@ class UserRepository @Inject constructor(
         }
     }
 
-    /** Devuelve los IDs de contenido que tanto el usuario actual como [friendEmail] han dado like. */
     suspend fun compareWithFriend(friendEmail: String): List<Int> {
         return try {
             val (myProfile, friendProfile) = coroutineScope {
@@ -552,9 +568,6 @@ class UserRepository @Inject constructor(
         }
     }
 
-    // ── Historial de visionado (para estadísticas avanzadas) ──────────────────
-
-    /** Registra una sesión en el formato "YYYY-MM-DD:showId:episodeCount". */
     suspend fun recordViewingSession(showId: Int, episodeCount: Int) {
         val uid = auth.currentUser?.uid ?: return
         val userRef = usersCollection.document(uid)
@@ -564,15 +577,12 @@ class UserRepository @Inject constructor(
             val profile = transaction.get(userRef).toObject(UserProfile::class.java)
                 ?: UserProfile(userId = uid)
             val history = profile.viewingHistory.toMutableList()
-            // Actualiza la entrada existente para hoy+serie, o añade una nueva
             val existingIdx = history.indexOfFirst { it.startsWith("$today:$showId:") }
             if (existingIdx >= 0) history[existingIdx] = entry else history.add(entry)
             transaction.set(userRef, profile.copy(viewingHistory = history))
         }.await()
         invalidateProfileCache()
     }
-
-    // ── Seguimiento de temporadas (para notificaciones de nueva temporada) ────
 
     suspend fun updateLastKnownSeasons(mediaId: Int, seasonCount: Int) {
         val current = interactionDao.getById(mediaId) ?: MediaInteractionEntity(mediaId = mediaId)
@@ -581,15 +591,9 @@ class UserRepository @Inject constructor(
 
     suspend fun getWatchedShowsWithSeasonCount() = interactionDao.getWatchedWithSeasonCount()
 
-    /**
-     * Sincroniza favoritos y series vistas desde Firestore a la caché local de Room.
-     * Se llama al inicio para que las pantallas de Favoritos y Perfil muestren datos
-     * incluso tras una instalación nueva o si la base de datos local fue borrada.
-     */
     suspend fun syncFavoritesAndWatchedToRoom() {
         val uid = auth.currentUser?.uid ?: return
         try {
-            // Lecturas Firestore en paralelo — son independientes entre sí
             val (favorites, watched) = coroutineScope {
                 val favJob     = async { usersCollection.document(uid).collection("favorites").get().await().toObjects(MediaContent::class.java) }
                 val watchedJob = async { usersCollection.document(uid).collection("watched").get().await().toObjects(MediaContent::class.java) }
@@ -599,7 +603,6 @@ class UserRepository @Inject constructor(
             showDao.replaceCategory(ShowRepository.CAT_LIKED,   favorites.map { it.toEntity(ShowRepository.CAT_LIKED) })
             showDao.replaceCategory(ShowRepository.CAT_WATCHED, watched.map  { it.toEntity(ShowRepository.CAT_WATCHED) })
 
-            // Batch read + batch write para interacciones: 2 operaciones Room en lugar de N+1
             val favoriteIds = favorites.map { it.id }.toSet()
             val watchedIds  = watched.map  { it.id }.toSet()
             val allIds      = (favoriteIds + watchedIds).toList()
@@ -619,13 +622,11 @@ class UserRepository @Inject constructor(
         }
     }
 
-    /** Borra liked/watched de Room al cerrar sesión para que el siguiente usuario no vea datos del anterior. */
     suspend fun clearUserCache() {
         showDao.clearUserData()
         invalidateProfileCache()
     }
 
-    /** Guarda el estado de interacción en Room para que las siguientes aperturas de detalle sean instantáneas. */
     suspend fun cacheInteractionState(mediaId: Int, isLiked: Boolean, isEssential: Boolean, isWatched: Boolean) {
         val current = interactionDao.getById(mediaId) ?: MediaInteractionEntity(mediaId = mediaId)
         interactionDao.upsert(current.copy(isLiked = isLiked, isEssential = isEssential, isWatched = isWatched))

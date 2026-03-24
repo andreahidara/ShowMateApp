@@ -3,48 +3,55 @@ package com.example.showmateapp.ui.screens.discover
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.showmateapp.R
 import com.example.showmateapp.data.network.MediaContent
+import com.example.showmateapp.ui.components.premium.*
 import com.example.showmateapp.ui.navigation.Screen
-import com.example.showmateapp.ui.components.premium.ErrorView
-import com.example.showmateapp.ui.components.premium.MatchBadge
-import com.example.showmateapp.ui.components.premium.PulseLoader
-import com.example.showmateapp.ui.components.premium.ShowSection
-import com.example.showmateapp.ui.theme.AccentBlue
-import com.example.showmateapp.ui.theme.PrimaryPurple
-import com.example.showmateapp.ui.theme.PrimaryPurpleLight
-import com.example.showmateapp.ui.theme.StarYellow
+import com.example.showmateapp.ui.theme.*
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+private val discoverGenreNames = mapOf(
+    10759 to "Acción", 16 to "Animación", 35 to "Comedia", 80 to "Crimen",
+    99 to "Documental", 18 to "Drama", 10751 to "Familiar", 9648 to "Misterio",
+    10765 to "Sci-Fi", 10768 to "Política", 37 to "Western", 53 to "Thriller",
+    10762 to "Infantil", 10764 to "Reality"
+)
+
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreen(
     globalNavController: NavController,
@@ -58,11 +65,12 @@ fun DiscoverScreen(
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         onMediaClick = { media, tag -> navigateToDetail(globalNavController, media, tag) },
-        onRetry = { viewModel.retry() }
+        onRetry = { viewModel.retry() },
+        onRefresh = { viewModel.refresh() }
     )
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreenContent(
     state: DiscoverUiState,
@@ -70,24 +78,26 @@ fun DiscoverScreenContent(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onMediaClick: (MediaContent, String) -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Box(
+    val sectionStates = remember { List(17) { LazyListState() } }
+
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
         if (state.isLoading) {
-            PulseLoader()
+            DiscoverSkeleton()
         } else if (state.errorMessage != null) {
             ErrorView(message = state.errorMessage, onRetry = onRetry)
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-            ) {
-                // 1. Hero
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                item { DiscoverHeader() }
+
                 item {
                     state.heroShow?.let {
                         DiscoverHeroSection(
@@ -99,7 +109,12 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                // 2. Context picks (new)
+                if (state.contextPicksShows.isNotEmpty() && state.contextPicksTitle.isNotEmpty() ||
+                    state.dayOfWeekShows.isNotEmpty() && state.dayOfWeekTitle.isNotEmpty()
+                ) {
+                    item { DiscoverCategoryDivider("Para ti ahora") }
+                }
+
                 if (state.contextPicksShows.isNotEmpty() && state.contextPicksTitle.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -110,12 +125,12 @@ fun DiscoverScreenContent(
                             onItemClick = onMediaClick,
                             accentColor = AccentBlue,
                             tag = "discover_context",
-                            subtitle = "Adaptado a cómo consumes series"
+                            subtitle = "Adaptado a cómo consumes series",
+                            listState = sectionStates[0]
                         )
                     }
                 }
 
-                // 3. Day-of-week (new)
                 if (state.dayOfWeekShows.isNotEmpty() && state.dayOfWeekTitle.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -126,12 +141,14 @@ fun DiscoverScreenContent(
                             onItemClick = onMediaClick,
                             accentColor = PrimaryPurpleLight,
                             tag = "discover_dayofweek",
-                            subtitle = "Basado en tu patrón de visualización"
+                            subtitle = "Basado en tu patrón de visualización",
+                            listState = sectionStates[1]
                         )
                     }
                 }
 
-                // 4. Top genre
+                item { DiscoverCategoryDivider("Tus géneros favoritos") }
+
                 item {
                     ShowSection(
                         title = "Porque te gusta: ${state.topGenreName}",
@@ -139,11 +156,11 @@ fun DiscoverScreenContent(
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         onItemClick = onMediaClick,
-                        tag = "discover_genre1"
+                        tag = "discover_genre1",
+                        listState = sectionStates[2]
                     )
                 }
 
-                // 5. Narrative style (new)
                 if (state.narrativeStyleShows.isNotEmpty() && state.narrativeStyleLabel.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -153,12 +170,12 @@ fun DiscoverScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_narrative",
-                            subtitle = "Tu estilo narrativo preferido según el algoritmo"
+                            subtitle = "Tu estilo narrativo preferido según el algoritmo",
+                            listState = sectionStates[3]
                         )
                     }
                 }
 
-                // 6. Second genre
                 item {
                     ShowSection(
                         title = "Más de: ${state.secondGenreName}",
@@ -166,11 +183,32 @@ fun DiscoverScreenContent(
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         onItemClick = onMediaClick,
-                        tag = "discover_genre2"
+                        tag = "discover_genre2",
+                        listState = sectionStates[4]
                     )
                 }
 
-                // 7. Hidden gems (new)
+                if (state.thirdGenreShows.isNotEmpty() && state.thirdGenreName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "También te puede gustar: ${state.thirdGenreName}",
+                            items = state.thirdGenreShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_genre3",
+                            listState = sectionStates[6]
+                        )
+                    }
+                }
+
+                if (state.hiddenGemShows.isNotEmpty() ||
+                    state.explorationShows.isNotEmpty() ||
+                    state.moodSectionShows.isNotEmpty()
+                ) {
+                    item { DiscoverCategoryDivider("Explora algo nuevo") }
+                }
+
                 if (state.hiddenGemShows.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -181,41 +219,12 @@ fun DiscoverScreenContent(
                             onItemClick = onMediaClick,
                             accentColor = AccentBlue,
                             tag = "discover_hidden",
-                            subtitle = "Alta afinidad, pocas valoraciones globales"
+                            subtitle = "Alta afinidad, pocas valoraciones globales",
+                            listState = sectionStates[5]
                         )
                     }
                 }
 
-                // 8. Third genre
-                if (state.thirdGenreShows.isNotEmpty() && state.thirdGenreName.isNotEmpty()) {
-                    item {
-                        ShowSection(
-                            title = "También te puede gustar: ${state.thirdGenreName}",
-                            items = state.thirdGenreShows,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            onItemClick = onMediaClick,
-                            tag = "discover_genre3"
-                        )
-                    }
-                }
-
-                // 9. Mood section (new)
-                if (state.moodSectionShows.isNotEmpty() && state.moodSectionTitle.isNotEmpty()) {
-                    item {
-                        ShowSection(
-                            title = state.moodSectionTitle,
-                            items = state.moodSectionShows,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            onItemClick = onMediaClick,
-                            tag = "discover_mood",
-                            subtitle = "Seleccionado por tu tono favorito"
-                        )
-                    }
-                }
-
-                // 10. Exploration (new)
                 if (state.explorationShows.isNotEmpty() && state.explorationGenreName.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -226,54 +235,35 @@ fun DiscoverScreenContent(
                             onItemClick = onMediaClick,
                             accentColor = Color(0xFFFF9800),
                             tag = "discover_exploration",
-                            subtitle = "Tu género menos explorado con buenos scores"
+                            subtitle = "Tu género menos explorado con buenos scores",
+                            listState = sectionStates[8]
                         )
                     }
                 }
 
-                // 11. Time travel
-                if (state.timeTravelShows.isNotEmpty()) {
+                if (state.moodSectionShows.isNotEmpty() && state.moodSectionTitle.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gustan los viajes en el tiempo",
-                            items = state.timeTravelShows,
+                            title = state.moodSectionTitle,
+                            items = state.moodSectionShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            tag = "discover_timetravel"
+                            tag = "discover_mood",
+                            subtitle = "Seleccionado por tu tono favorito",
+                            listState = sectionStates[7]
                         )
                     }
                 }
 
-                // 12. Top keyword
-                if (state.topKeywordShows.isNotEmpty() && state.topKeywordLabel.isNotEmpty()) {
-                    item {
-                        ShowSection(
-                            title = state.topKeywordLabel,
-                            items = state.topKeywordShows,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            onItemClick = onMediaClick,
-                            tag = "discover_keyword"
-                        )
-                    }
+                if (state.similarShows.isNotEmpty() ||
+                    state.actorShows.isNotEmpty() ||
+                    state.creatorShows.isNotEmpty() ||
+                    state.timeTravelShows.isNotEmpty()
+                ) {
+                    item { DiscoverCategoryDivider("Porque viste y te gustó") }
                 }
 
-                // 13. Top rated
-                if (state.topRatedShows.isNotEmpty() && state.topGenreName.isNotEmpty()) {
-                    item {
-                        ShowSection(
-                            title = "Los mejor valorados en ${state.topGenreName}",
-                            items = state.topRatedShows,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            onItemClick = onMediaClick,
-                            tag = "discover_toprated"
-                        )
-                    }
-                }
-
-                // 14. Similar shows
                 if (state.similarShows.isNotEmpty() && state.similarToName.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -282,12 +272,40 @@ fun DiscoverScreenContent(
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            tag = "discover_similar"
+                            tag = "discover_similar",
+                            listState = sectionStates[12]
                         )
                     }
                 }
 
-                // 15. Creator (new)
+                if (state.actorShows.isNotEmpty() && state.actorName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Porque te gusta ${state.actorName}",
+                            items = state.actorShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_actor",
+                            listState = sectionStates[14]
+                        )
+                    }
+                }
+
+                if (state.secondActorShows.isNotEmpty() && state.secondActorName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Porque te gusta ${state.secondActorName}",
+                            items = state.secondActorShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_actor2",
+                            listState = sectionStates[15]
+                        )
+                    }
+                }
+
                 if (state.creatorShows.isNotEmpty() && state.creatorName.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -297,40 +315,61 @@ fun DiscoverScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_creator",
-                            subtitle = "Series del showrunner que más te gusta"
+                            subtitle = "Series del showrunner que más te gusta",
+                            listState = sectionStates[13]
                         )
                     }
                 }
 
-                // 16. Actor 1
-                if (state.actorShows.isNotEmpty() && state.actorName.isNotEmpty()) {
+                if (state.timeTravelShows.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gusta ${state.actorName}",
-                            items = state.actorShows,
+                            title = "Porque te gustan los viajes en el tiempo",
+                            items = state.timeTravelShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            tag = "discover_actor"
+                            tag = "discover_timetravel",
+                            listState = sectionStates[9]
                         )
                     }
                 }
 
-                // 17. Actor 2
-                if (state.secondActorShows.isNotEmpty() && state.secondActorName.isNotEmpty()) {
+                if (state.topKeywordShows.isNotEmpty() && state.topKeywordLabel.isNotEmpty() ||
+                    state.topRatedShows.isNotEmpty() ||
+                    state.collaborativeShows.isNotEmpty()
+                ) {
+                    item { DiscoverCategoryDivider("Valorados y populares") }
+                }
+
+                if (state.topKeywordShows.isNotEmpty() && state.topKeywordLabel.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gusta ${state.secondActorName}",
-                            items = state.secondActorShows,
+                            title = state.topKeywordLabel,
+                            items = state.topKeywordShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            tag = "discover_actor2"
+                            tag = "discover_keyword",
+                            listState = sectionStates[10]
                         )
                     }
                 }
 
-                // 18. Collaborative (new)
+                if (state.topRatedShows.isNotEmpty() && state.topGenreName.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = "Los mejor valorados en ${state.topGenreName}",
+                            items = state.topRatedShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "discover_toprated",
+                            listState = sectionStates[11]
+                        )
+                    }
+                }
+
                 if (state.collaborativeShows.isNotEmpty()) {
                     item {
                         ShowSection(
@@ -341,15 +380,83 @@ fun DiscoverScreenContent(
                             onItemClick = onMediaClick,
                             accentColor = Color(0xFF4CAF50),
                             tag = "discover_collab",
-                            subtitle = "Popular entre usuarios con gustos similares"
+                            subtitle = "Popular entre usuarios con gustos similares",
+                            listState = sectionStates[16]
                         )
                     }
                 }
 
-                // 19. Spacer
                 item { Spacer(modifier = Modifier.height(100.dp)) }
             }
         }
+    }
+}
+
+@Composable
+private fun DiscoverHeader() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Column {
+            Text(
+                text = "Descubrir",
+                style = TextStyle(
+                    brush = Brush.linearGradient(listOf(PrimaryPurple, Color(0xFFE040FB)))
+                ),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1.5).sp
+            )
+            Text(
+                text = "Recomendaciones personalizadas para ti",
+                color = Color.White.copy(alpha = 0.45f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal
+            )
+        }
+    }
+}
+
+@Composable
+private fun DiscoverCategoryDivider(label: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .height(1.dp)
+                .weight(1f)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color.White.copy(alpha = 0.08f), Color.Transparent)
+                    )
+                )
+        )
+        Text(
+            text = label.uppercase(),
+            color = Color.White.copy(alpha = 0.3f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.5.sp
+        )
+        Box(
+            modifier = Modifier
+                .height(1.dp)
+                .weight(1f)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.08f))
+                    )
+                )
+        )
     }
 }
 
@@ -362,15 +469,30 @@ fun DiscoverHeroSection(
     onClick: (MediaContent) -> Unit
 ) {
     val tag = "discover_hero"
+    val genreNames = remember(media.id) {
+        (media.genres?.map { it.name }?.takeIf { it.isNotEmpty() }
+            ?: media.safeGenreIds.mapNotNull { discoverGenreNames[it] }).take(3)
+    }
+
+    val glowTransition = rememberInfiniteTransition(label = "heroGlow")
+    val badgeGlow by glowTransition.animateFloat(
+        initialValue = 0.4f, targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse
+        ), label = "badge"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(520.dp)
-            .padding(16.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .height(540.dp)
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(28.dp))
             .clickable { onClick(media) }
     ) {
-        val imageUrl = (media.backdropPath ?: media.posterPath)?.let { "https://image.tmdb.org/t/p/w1280$it" }
+        val imageUrl = (media.backdropPath ?: media.posterPath)
+            ?.let { "https://image.tmdb.org/t/p/w1280$it" }
+
         with(sharedTransitionScope) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -395,91 +517,97 @@ fun DiscoverHeroSection(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.1f),
-                            Color.Black.copy(alpha = 0.85f),
-                            Color.Black.copy(alpha = 0.97f)
-                        ),
-                        startY = 200f
+                        colorStops = arrayOf(
+                            0f to Color.Black.copy(alpha = 0.15f),
+                            0.35f to Color.Transparent,
+                            0.65f to Color.Black.copy(alpha = 0.5f),
+                            1f to Color.Black.copy(alpha = 0.97f)
+                        )
                     )
                 )
         )
 
-        if (media.affinityScore > 0f) {
-            MatchBadge(
-                score = media.affinityScore,
-                isAffinity = true,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(14.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            PrimaryPurple.copy(alpha = badgeGlow),
+                            Color(0xFFE040FB).copy(alpha = badgeGlow * 0.8f)
+                        )
+                    )
+                )
+                .border(
+                    1.dp,
+                    Color.White.copy(alpha = 0.25f),
+                    RoundedCornerShape(20.dp)
+                )
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Icon(
+                Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(12.dp)
             )
-        } else if (media.voteAverage > 0f) {
-            MatchBadge(
-                score = media.voteAverage,
-                isAffinity = false,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
+            Text(
+                text = "IA PICK",
+                color = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 11.sp,
+                letterSpacing = 1.sp
             )
         }
 
-        // "Top Match" pill badge at top-start
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.Black.copy(alpha = 0.6f))
-                .padding(horizontal = 10.dp, vertical = 5.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                tint = StarYellow,
-                modifier = Modifier.size(13.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "Top Match",
-                color = StarYellow,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 11.sp,
-                letterSpacing = 0.5.sp
+        if (media.affinityScore > 0f || media.voteAverage > 0f) {
+            MatchBadge(
+                score = if (media.affinityScore > 0f) media.affinityScore else media.voteAverage,
+                isAffinity = media.affinityScore > 0f,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(14.dp)
             )
         }
 
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(20.dp)
+                .padding(18.dp)
         ) {
-            // Metadata row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (media.voteAverage > 0f) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = StarYellow,
+                        modifier = Modifier.size(13.dp)
+                    )
                     Text(
-                        text = "${"%.1f".format(media.voteAverage)} ★",
-                        color = Color(0xFFFFC107),
+                        text = "%.1f".format(media.voteAverage),
+                        color = StarYellow,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                val year = media.firstAirDate?.take(4)
-                if (year != null) {
-                    Text("·", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-                    Text(year, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                media.firstAirDate?.take(4)?.let { year ->
+                    Text("·", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                    Text(year, color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp)
                 }
                 media.numberOfSeasons?.let { seasons ->
-                    Text("·", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-                    Text("$seasons temp.", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                    Text("·", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                    Text("$seasons temp.", color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
             Text(
                 text = media.name,
@@ -491,7 +619,44 @@ fun DiscoverHeroSection(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (media.overview.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = media.overview,
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (genreNames.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    userScrollEnabled = false
+                ) {
+                    items(genreNames.size) { i ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(alpha = 0.12f))
+                                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = genreNames[i],
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
 
             Button(
                 onClick = { onClick(media) },
@@ -500,15 +665,58 @@ fun DiscoverHeroSection(
                 contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
+                    Icons.Default.PlayArrow,
                     contentDescription = null,
                     tint = Color.Black,
                     modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(Modifier.width(6.dp))
                 Text("Ver detalles", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
         }
+    }
+}
+
+@Composable
+private fun DiscoverSkeleton() {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Box(
+                    modifier = Modifier
+                        .width(160.dp)
+                        .height(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(shimmerBrush())
+                )
+                Spacer(Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .width(240.dp)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(shimmerBrush())
+                )
+            }
+        }
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(540.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(shimmerBrush())
+            )
+        }
+        item { ShowSectionSkeleton("Para ti ahora") }
+        item { ShowSectionSkeleton("Tus géneros favoritos") }
+        item { ShowSectionSkeleton("Explora algo nuevo") }
+        item { Spacer(Modifier.height(100.dp)) }
     }
 }
 

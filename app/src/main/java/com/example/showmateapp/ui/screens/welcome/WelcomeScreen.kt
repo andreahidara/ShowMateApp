@@ -1,9 +1,15 @@
 package com.example.showmateapp.ui.screens.welcome
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -19,6 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -31,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.example.showmateapp.R
 import com.example.showmateapp.ui.components.premium.AuthBackground
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleDark
 import com.example.showmateapp.ui.theme.TextGray
 import kotlinx.coroutines.launch
 
@@ -67,7 +76,37 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
     val pagerState = rememberPagerState { pages.size }
     val scope = rememberCoroutineScope()
 
+    val infiniteTransition = rememberInfiniteTransition(label = "welcomeOrbs")
+    val orb1Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f, targetValue = 0.50f,
+        animationSpec = infiniteRepeatable(tween(3400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "orb1"
+    )
+    val orb2Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.18f, targetValue = 0.38f,
+        animationSpec = infiniteRepeatable(tween(2800, easing = FastOutSlowInEasing, delayMillis = 1000), RepeatMode.Reverse),
+        label = "orb2"
+    )
+
     AuthBackground {
+        Box(
+            modifier = Modifier
+                .size(300.dp)
+                .offset(x = (-80).dp, y = (-60).dp)
+                .alpha(orb1Alpha)
+                .blur(90.dp)
+                .background(PrimaryPurple.copy(alpha = 0.5f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .size(240.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 60.dp, y = 80.dp)
+                .alpha(orb2Alpha)
+                .blur(90.dp)
+                .background(PrimaryPurpleDark.copy(alpha = 0.6f), CircleShape)
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,7 +114,6 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo header
             Spacer(modifier = Modifier.height(32.dp))
             Image(
                 painter = painterResource(id = R.drawable.logosm),
@@ -95,7 +133,6 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Pager
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f)
@@ -121,12 +158,18 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                             .height(8.dp)
                             .width(width)
                             .clip(CircleShape)
-                            .background(if (isSelected) PrimaryPurple else Color.White.copy(alpha = 0.2f))
+                            .background(
+                                if (isSelected)
+                                    Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                                else
+                                    Brush.horizontalGradient(
+                                        listOf(Color.White.copy(alpha = 0.2f), Color.White.copy(alpha = 0.2f))
+                                    )
+                            )
                     )
                 }
             }
 
-            // CTA buttons
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -134,13 +177,20 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (pagerState.currentPage < pages.size - 1) {
-                    Button(
-                        onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                            )
+                            .clickable {
+                                scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Siguiente", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Siguiente", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                     TextButton(
                         onClick = onGetStarted,
@@ -149,13 +199,14 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                         Text("Omitir", color = TextGray, fontSize = 14.sp)
                     }
                 } else {
-                    Button(
-                        onClick = onGetStarted,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.White)
+                            .clickable { onGetStarted() },
+                        contentAlignment = Alignment.Center
                     ) {
                         Text("Empezar", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 16.sp)
                     }
@@ -178,13 +229,13 @@ private fun WelcomePageContent(page: WelcomePage) {
     ) {
         Box(
             modifier = Modifier
-                .size(120.dp)
+                .size(130.dp)
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
                         listOf(
-                            page.accentColor.copy(alpha = 0.3f),
-                            page.accentColor.copy(alpha = 0.05f)
+                            page.accentColor.copy(alpha = 0.25f),
+                            page.accentColor.copy(alpha = 0.04f)
                         )
                     )
                 ),
@@ -194,7 +245,7 @@ private fun WelcomePageContent(page: WelcomePage) {
                 imageVector = page.icon,
                 contentDescription = null,
                 tint = page.accentColor,
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(56.dp)
             )
         }
 

@@ -19,8 +19,9 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.WatchLater
+import androidx.compose.material.icons.outlined.WatchLater
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,9 +45,13 @@ import com.example.showmateapp.data.network.MediaContent
 import com.example.showmateapp.data.network.Provider
 import com.example.showmateapp.ui.components.premium.*
 import com.example.showmateapp.ui.navigation.Screen
+import com.example.showmateapp.ui.theme.AccentBlue
 import com.example.showmateapp.ui.theme.HeartRed
 import com.example.showmateapp.ui.theme.PrimaryPurple
+import com.example.showmateapp.ui.theme.PrimaryPurpleDark
+import com.example.showmateapp.ui.theme.PrimaryPurpleLight
 import com.example.showmateapp.ui.theme.StarYellow
+import com.example.showmateapp.ui.theme.SurfaceVariantDark
 import com.example.showmateapp.ui.theme.TextGray
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -94,6 +99,7 @@ fun DetailScreen(
         onLikeClick = { viewModel.requestToggleLiked() },
         onEssentialClick = { viewModel.toggleEssential() },
         onWatchedClick = { viewModel.requestToggleWatched() },
+        onWatchlistClick = { viewModel.toggleWatchlist() },
         onRateClick = { viewModel.rateShow(it) },
         onClearRateClick = { viewModel.clearRating() },
         onRetry = { viewModel.loadShowDetails(showId) },
@@ -158,6 +164,46 @@ fun DetailScreen(
     }
 }
 
+@Composable
+private fun DetailSectionHeader(
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(18.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(PrimaryPurple)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun MetaChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.10f))
+    ) {
+        Text(
+            text = text,
+            color = TextGray,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun DetailScreenContent(
@@ -166,6 +212,7 @@ fun DetailScreenContent(
     onLikeClick: () -> Unit,
     onEssentialClick: () -> Unit,
     onWatchedClick: () -> Unit,
+    onWatchlistClick: () -> Unit = {},
     onRateClick: (Int) -> Unit,
     onClearRateClick: () -> Unit,
     onRetry: () -> Unit,
@@ -194,13 +241,27 @@ fun DetailScreenContent(
         AlertDialog(
             onDismissRequest = onHideAddToListDialog,
             containerColor = Color(0xFF1A1A2E),
-            title = {
-                Text("Añadir a lista", color = Color.White, fontWeight = FontWeight.Bold)
-            },
+            title = { Text("Añadir a lista", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 if (uiState.customLists.isEmpty()) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, tint = PrimaryPurple.copy(alpha = 0.5f), modifier = Modifier.size(40.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryPurple.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.List,
+                                contentDescription = null,
+                                tint = PrimaryPurple,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             "Aún no tienes listas. Crea una desde tu perfil.",
@@ -227,15 +288,30 @@ fun DetailScreenContent(
                                         .background(PrimaryPurple.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.List,
+                                        contentDescription = null,
+                                        tint = PrimaryPurple,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(name, color = if (alreadyAdded) TextGray else Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        name,
+                                        color = if (alreadyAdded) TextGray else Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                     Text("${ids.size} series", color = TextGray, fontSize = 12.sp)
                                 }
                                 if (alreadyAdded) {
-                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFF4CAF50),
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
                             HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -273,24 +349,34 @@ fun DetailScreenContent(
 
     val show = uiState.media ?: return
 
+    val heroGradient = remember {
+        Brush.verticalGradient(
+            colorStops = arrayOf(
+                0f to Color.Black.copy(alpha = 0.28f),
+                0.38f to Color.Transparent,
+                0.68f to Color.Black.copy(alpha = 0.70f),
+                1f to Color.Black.copy(alpha = 0.96f)
+            )
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
-        
-        Box(modifier = Modifier.fillMaxWidth().height(450.dp)) {
+
+        Box(modifier = Modifier.fillMaxWidth().height(460.dp)) {
             val imageUrl = remember(show.backdropPath, show.posterPath) {
                 (show.backdropPath ?: show.posterPath)?.let { "https://image.tmdb.org/t/p/w1280$it" }
             }
-            
+
             with(sharedTransitionScope) {
                 val sharedElementKey = if (sharedElementTag != null) {
                     "image-${show.id}-$sharedElementTag"
                 } else {
                     "image-${show.id}"
                 }
-
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(imageUrl)
@@ -308,34 +394,56 @@ fun DetailScreenContent(
                     contentScale = ContentScale.Crop
                 )
             }
-            
-            val backgroundGradient = remember {
-                Brush.verticalGradient(
-                    colors = listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent, Color.Black.copy(alpha = 0.8f)),
-                    startY = 0f,
-                    endY = Float.POSITIVE_INFINITY
-                )
+
+            Box(modifier = Modifier.fillMaxSize().background(heroGradient))
+
+            if (show.voteAverage > 0.0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 20.dp, bottom = 72.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.Black.copy(alpha = 0.65f))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            tint = StarYellow,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "%.1f".format(show.voteAverage),
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
             }
-            Box(
-                modifier = Modifier.fillMaxSize().background(backgroundGradient)
-            )
         }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 32.dp)
+            contentPadding = PaddingValues(bottom = 40.dp)
         ) {
-            item {
-                Spacer(modifier = Modifier.height(320.dp))
-            }
-            
+            item { Spacer(modifier = Modifier.height(330.dp)) }
+
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 28.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -343,12 +451,18 @@ fun DetailScreenContent(
                         ) {
                             Text(
                                 text = show.name,
-                                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black, fontSize = 34.sp),
                                 color = Color.White,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp,
+                                lineHeight = 38.sp,
                                 modifier = Modifier.weight(1f)
                             )
                             if (show.affinityScore > 0f && whyFactors.isNotEmpty()) {
-                                Column(horizontalAlignment = Alignment.End) {
+                                Column(
+                                    horizontalAlignment = Alignment.End,
+                                    modifier = Modifier.padding(start = 12.dp, top = 4.dp)
+                                ) {
                                     MatchBadge(
                                         score = show.affinityScore,
                                         isAffinity = true,
@@ -366,34 +480,36 @@ fun DetailScreenContent(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        val year = remember(show.firstAirDate) { show.firstAirDate?.take(4) ?: "N/A" }
-                        val seasons = remember(show.numberOfSeasons) { show.numberOfSeasons?.let { "$it ${if (it == 1) "Temporada" else "Temporadas"}" } ?: "N/A" }
-                        
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = year, style = MaterialTheme.typography.titleSmall, color = TextGray)
-                            Text(text = " • ", style = MaterialTheme.typography.titleSmall, color = TextGray)
-                            Text(text = seasons, style = MaterialTheme.typography.titleSmall, color = TextGray)
-                            Text(text = " • ", style = MaterialTheme.typography.titleSmall, color = PrimaryPurple, fontWeight = FontWeight.Bold)
+                        val year = remember(show.firstAirDate) { show.firstAirDate?.take(4) ?: "" }
+                        val seasons = remember(show.numberOfSeasons) {
+                            show.numberOfSeasons?.let { "$it ${if (it == 1) "Temporada" else "Temporadas"}" } ?: ""
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (year.isNotEmpty()) MetaChip(year)
+                            if (seasons.isNotEmpty()) MetaChip(seasons)
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             val watchedColor by animateColorAsState(
-                                targetValue = if (uiState.isWatched) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.1f),
+                                targetValue = if (uiState.isWatched) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.08f),
                                 label = "watchedColor"
                             )
                             ActionIconButton(
                                 icon = Icons.Default.Check,
-                                text = if (uiState.isWatched) "Vista" else "Marcar vista",
+                                text = if (uiState.isWatched) "Vista" else "Marcar",
                                 containerColor = watchedColor,
                                 contentColor = if (uiState.isWatched) Color.White else TextGray,
-                                modifier = Modifier.weight(1.2f),
+                                modifier = Modifier.weight(1f),
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onWatchedClick()
@@ -401,7 +517,7 @@ fun DetailScreenContent(
                             )
 
                             val likeColor by animateColorAsState(
-                                targetValue = if (uiState.isLiked) HeartRed else Color.White.copy(alpha = 0.1f),
+                                targetValue = if (uiState.isLiked) HeartRed else Color.White.copy(alpha = 0.08f),
                                 label = "likeColor"
                             )
                             ActionIconButton(
@@ -417,7 +533,7 @@ fun DetailScreenContent(
                             )
 
                             val essentialColor by animateColorAsState(
-                                targetValue = if (uiState.isEssential) StarYellow else Color.White.copy(alpha = 0.1f),
+                                targetValue = if (uiState.isEssential) StarYellow else Color.White.copy(alpha = 0.08f),
                                 label = "essentialColor"
                             )
                             ActionIconButton(
@@ -431,32 +547,73 @@ fun DetailScreenContent(
                                     onEssentialClick()
                                 }
                             )
+
+                            val watchlistColor by animateColorAsState(
+                                targetValue = if (uiState.isInWatchlist) AccentBlue else Color.White.copy(alpha = 0.08f),
+                                label = "watchlistColor"
+                            )
+                            ActionIconButton(
+                                icon = if (uiState.isInWatchlist) Icons.Default.WatchLater else Icons.Outlined.WatchLater,
+                                text = "Pendiente",
+                                containerColor = watchlistColor,
+                                contentColor = Color.White,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onWatchlistClick()
+                                }
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        OutlinedButton(
-                            onClick = onShowAddToListDialog,
-                            modifier = Modifier.fillMaxWidth().height(46.dp),
-                            border = BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            PrimaryPurple.copy(alpha = 0.18f),
+                                            PrimaryPurpleDark.copy(alpha = 0.10f)
+                                        )
+                                    )
+                                )
+                                .clickable { onShowAddToListDialog() },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Añadir a lista", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.List,
+                                    contentDescription = null,
+                                    tint = PrimaryPurpleLight,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Añadir a lista",
+                                    color = PrimaryPurpleLight,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
 
-                        val trailerKey = show.videos?.results?.firstOrNull { it.site == "YouTube" && it.type == "Trailer" }?.key
+                        val trailerKey = show.videos?.results?.firstOrNull {
+                            it.site == "YouTube" && it.type == "Trailer"
+                        }?.key
                         if (trailerKey != null) {
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
                             val uriHandler = LocalUriHandler.current
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(180.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { uriHandler.openUri("https://www.youtube.com/watch?v=$trailerKey") }
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable {
+                                        uriHandler.openUri("https://www.youtube.com/watch?v=$trailerKey")
+                                    }
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
@@ -471,89 +628,103 @@ fun DetailScreenContent(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color.Black.copy(alpha = 0.35f))
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color.Transparent,
+                                                    Color.Black.copy(alpha = 0.55f)
+                                                )
+                                            )
+                                        )
                                 )
                                 Box(
                                     modifier = Modifier
-                                        .size(60.dp)
+                                        .size(64.dp)
                                         .align(Alignment.Center)
                                         .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.92f)),
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(PrimaryPurple, PrimaryPurpleDark)
+                                            )
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         Icons.Default.PlayArrow,
                                         contentDescription = null,
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(34.dp)
+                                        tint = Color.White,
+                                        modifier = Modifier.size(36.dp)
                                     )
                                 }
-                                Surface(
+                                Box(
                                     modifier = Modifier
-                                        .align(Alignment.BottomStart)
-                                        .padding(12.dp),
-                                    color = Color.Black.copy(alpha = 0.6f),
-                                    shape = RoundedCornerShape(8.dp)
+                                        .align(Alignment.TopStart)
+                                        .padding(14.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.Black.copy(alpha = 0.55f))
                                 ) {
                                     Text(
-                                        "Tráiler Oficial",
+                                        "TRÁILER OFICIAL",
                                         color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 10.sp,
+                                        letterSpacing = 1.sp,
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(28.dp))
 
-                        // Tabs: Información / Mi reseña
                         var selectedDetailTab by remember { mutableIntStateOf(0) }
                         val detailTabs = listOf("Información", "Mi reseña")
-
                         val hasReviewContent = uiState.userRating != null || uiState.isReviewSaved
 
-                        TabRow(
-                            selectedTabIndex = selectedDetailTab,
-                            containerColor = Color.Transparent,
-                            contentColor = Color.White,
-                            indicator = { tabPositions ->
-                                if (selectedDetailTab < tabPositions.size) {
-                                    TabRowDefaults.SecondaryIndicator(
-                                        Modifier.tabIndicatorOffset(tabPositions[selectedDetailTab]),
-                                        color = PrimaryPurple
-                                    )
-                                }
-                            },
-                            divider = { HorizontalDivider(color = Color.White.copy(alpha = 0.1f)) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             detailTabs.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = selectedDetailTab == index,
-                                    onClick = { selectedDetailTab = index },
-                                    text = {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            Text(
-                                                text = title,
-                                                fontWeight = if (selectedDetailTab == index) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (selectedDetailTab == index) PrimaryPurple else TextGray
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(
+                                            if (selectedDetailTab == index)
+                                                Brush.linearGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                                            else
+                                                Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                        )
+                                        .clickable { selectedDetailTab = index }
+                                        .padding(vertical = 11.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = title,
+                                            color = if (selectedDetailTab == index) Color.White else TextGray,
+                                            fontWeight = if (selectedDetailTab == index) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 14.sp
+                                        )
+                                        if (index == 1 && hasReviewContent) {
+                                            Spacer(modifier = Modifier.width(5.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (selectedDetailTab == index) Color.White
+                                                        else PrimaryPurple
+                                                    )
                                             )
-                                            if (index == 1 && hasReviewContent) {
-                                                Spacer(modifier = Modifier.width(5.dp))
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(6.dp)
-                                                        .clip(CircleShape)
-                                                        .background(PrimaryPurple)
-                                                )
-                                            }
                                         }
                                     }
-                                )
+                                }
                             }
                         }
 
@@ -568,128 +739,120 @@ fun DetailScreenContent(
                             },
                             label = "detail_tab_anim"
                         ) { tab ->
-                        if (tab == 0) {
-                            // Tab Información
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                            val esProviders = show.watchProviders?.results?.get("ES")
-                            if (esProviders != null &&
-                                (!esProviders.flatrate.isNullOrEmpty() ||
-                                 !esProviders.rent.isNullOrEmpty() ||
-                                 !esProviders.buy.isNullOrEmpty())
-                            ) {
-                                WatchProvidersSection(providers = esProviders, showName = show.name)
-                                Spacer(modifier = Modifier.height(32.dp))
-                            }
-
-                            var isSynopsisExpanded by remember { mutableStateOf(false) }
-                            Text(
-                                text = stringResource(R.string.detail_synopsis),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = show.overview.ifEmpty { stringResource(R.string.detail_no_synopsis) },
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = TextGray,
-                                lineHeight = 24.sp,
-                                maxLines = if (isSynopsisExpanded) Int.MAX_VALUE else 3,
-                                modifier = Modifier
-                                    .animateContentSize()
-                                    .clickable { isSynopsisExpanded = !isSynopsisExpanded }
-                            )
-
-                            if (!show.seasons.isNullOrEmpty()) {
-                                Spacer(modifier = Modifier.height(32.dp))
-                                EpisodesSection(
-                                    seasons = show.seasons,
-                                    selectedSeason = uiState.selectedSeason,
-                                    isSeasonLoading = uiState.isSeasonLoading,
-                                    watchedEpisodes = uiState.watchedEpisodes,
-                                    onEpisodeToggle = onEpisodeToggle,
-                                    onSeasonChange = { seasonNum ->
-                                        onSeasonChange(show.id, seasonNum)
-                                    },
-                                    onMarkNextEpisode = onMarkNextEpisode
-                                )
-                            }
-
-                            val cast = show.credits?.cast ?: emptyList()
-                            if (cast.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(32.dp))
-                                Text(
-                                    text = stringResource(R.string.detail_top_cast),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                    items(cast.take(10), key = { it.id }) { member ->
-                                        CastMemberItem(member)
+                            if (tab == 0) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    val esProviders = show.watchProviders?.results?.get("ES")
+                                    if (esProviders != null &&
+                                        (!esProviders.flatrate.isNullOrEmpty() ||
+                                         !esProviders.rent.isNullOrEmpty() ||
+                                         !esProviders.buy.isNullOrEmpty())
+                                    ) {
+                                        WatchProvidersSection(providers = esProviders, showName = show.name)
+                                        Spacer(modifier = Modifier.height(32.dp))
                                     }
-                                }
-                            }
 
-                            if (uiState.isSimilarLoading || uiState.similarShows.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(32.dp))
-                                Text(
-                                    text = "Te puede gustar",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                if (uiState.isSimilarLoading) {
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        items(5) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(120.dp)
-                                                    .height(170.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(Color.White.copy(alpha = 0.08f))
-                                            )
+                                    var isSynopsisExpanded by remember { mutableStateOf(false) }
+                                    DetailSectionHeader(title = stringResource(R.string.detail_synopsis))
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = show.overview.ifEmpty { stringResource(R.string.detail_no_synopsis) },
+                                        color = TextGray,
+                                        fontSize = 15.sp,
+                                        lineHeight = 24.sp,
+                                        maxLines = if (isSynopsisExpanded) Int.MAX_VALUE else 4,
+                                        modifier = Modifier
+                                            .animateContentSize()
+                                            .clickable { isSynopsisExpanded = !isSynopsisExpanded }
+                                    )
+                                    if (!isSynopsisExpanded && show.overview.length > 180) {
+                                        Text(
+                                            text = "Leer más",
+                                            color = PrimaryPurpleLight,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier
+                                                .padding(top = 4.dp)
+                                                .clickable { isSynopsisExpanded = true }
+                                        )
+                                    }
+
+                                    if (!show.seasons.isNullOrEmpty()) {
+                                        Spacer(modifier = Modifier.height(32.dp))
+                                        EpisodesSection(
+                                            seasons = show.seasons,
+                                            selectedSeason = uiState.selectedSeason,
+                                            isSeasonLoading = uiState.isSeasonLoading,
+                                            watchedEpisodes = uiState.watchedEpisodes,
+                                            onEpisodeToggle = onEpisodeToggle,
+                                            onSeasonChange = { seasonNum ->
+                                                onSeasonChange(show.id, seasonNum)
+                                            },
+                                            onMarkNextEpisode = onMarkNextEpisode
+                                        )
+                                    }
+
+                                    val cast = show.credits?.cast ?: emptyList()
+                                    if (cast.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(32.dp))
+                                        DetailSectionHeader(title = stringResource(R.string.detail_top_cast))
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                            items(cast.take(10), key = { it.id }) { member ->
+                                                CastMemberItem(member)
+                                            }
                                         }
                                     }
-                                } else {
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        items(uiState.similarShows, key = { it.id }) { similarShow ->
-                                            ShowCard(
-                                                media = similarShow,
-                                                sharedTransitionScope = sharedTransitionScope,
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                onClick = { s, t -> onSimilarShowClick(s, t) },
-                                                tag = "similar"
-                                            )
+
+                                    if (uiState.isSimilarLoading || uiState.similarShows.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(32.dp))
+                                        DetailSectionHeader(title = "Te puede gustar")
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        if (uiState.isSimilarLoading) {
+                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                items(5) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(120.dp)
+                                                            .height(170.dp)
+                                                            .clip(RoundedCornerShape(14.dp))
+                                                            .background(Color.White.copy(alpha = 0.08f))
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                items(uiState.similarShows, key = { it.id }) { similarShow ->
+                                                    ShowCard(
+                                                        media = similarShow,
+                                                        sharedTransitionScope = sharedTransitionScope,
+                                                        animatedVisibilityScope = animatedVisibilityScope,
+                                                        onClick = { s, t -> onSimilarShowClick(s, t) },
+                                                        tag = "similar"
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
+                            } else {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    StarRatingSection(
+                                        userRating = uiState.userRating,
+                                        onRateClick = onRateClick,
+                                        onClearRateClick = onClearRateClick
+                                    )
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                    ReviewSection(
+                                        reviewText = uiState.userReview,
+                                        isSaving = uiState.isSavingReview,
+                                        isReviewSaved = uiState.isReviewSaved,
+                                        onTextChange = onReviewTextChange,
+                                        onSave = onSaveReview,
+                                        onDelete = onDeleteReview
+                                    )
+                                }
                             }
-                            } // cierra Column tab 0
-                        } else {
-                            // Tab Mi reseña
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                StarRatingSection(
-                                    userRating = uiState.userRating,
-                                    onRateClick = onRateClick,
-                                    onClearRateClick = onClearRateClick
-                                )
-
-                                Spacer(modifier = Modifier.height(24.dp))
-
-                                ReviewSection(
-                                    reviewText = uiState.userReview,
-                                    isSaving = uiState.isSavingReview,
-                                    isReviewSaved = uiState.isReviewSaved,
-                                    onTextChange = onReviewTextChange,
-                                    onSave = onSaveReview,
-                                    onDelete = onDeleteReview
-                                )
-                            } // cierra Column tab 1
                         }
-                        } // cierra AnimatedContent lambda
                     }
                 }
             }
@@ -698,11 +861,18 @@ fun DetailScreenContent(
         Surface(
             onClick = onBackClick,
             shape = CircleShape,
-            color = Color.Black.copy(alpha = 0.4f),
-            modifier = Modifier.statusBarsPadding().padding(16.dp).size(44.dp)
+            color = Color.Black.copy(alpha = 0.45f),
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(16.dp)
+                .size(44.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
             }
         }
     }
@@ -735,7 +905,12 @@ fun WhyRecommendedDialog(
                     )
                 } else {
                     factors.forEach { factor ->
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val barColor = when {
+                            factor.score > 0.7f -> Color(0xFF4CAF50)
+                            factor.score > 0.4f -> Color(0xFFFFC107)
+                            else -> PrimaryPurple
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -750,28 +925,30 @@ fun WhyRecommendedDialog(
                                 )
                                 Text(
                                     text = "${(factor.score * 100).toInt()}%",
-                                    color = when {
-                                        factor.score > 0.7f -> Color(0xFF4CAF50)
-                                        factor.score > 0.4f -> Color(0xFFFFC107)
-                                        else -> PrimaryPurple
-                                    },
+                                    color = barColor,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                            LinearProgressIndicator(
-                                progress = { factor.score },
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(6.dp)
-                                    .clip(RoundedCornerShape(50)),
-                                color = when {
-                                    factor.score > 0.7f -> Color(0xFF4CAF50)
-                                    factor.score > 0.4f -> Color(0xFFFFC107)
-                                    else -> PrimaryPurple
-                                },
-                                trackColor = Color.White.copy(alpha = 0.1f)
-                            )
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(factor.score)
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(barColor.copy(alpha = 0.7f), barColor)
+                                            )
+                                        )
+                                )
+                            }
                         }
                     }
                 }
@@ -797,20 +974,32 @@ fun ActionIconButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = containerColor
+    Box(
+        modifier = modifier
+            .height(58.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(containerColor)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = text, color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = text,
+                color = contentColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
         }
     }
 }
@@ -818,7 +1007,7 @@ fun ActionIconButton(
 private fun providerSearchUrl(providerId: Int, showName: String): String? {
     val encoded = java.net.URLEncoder.encode(showName, "UTF-8")
     return when (providerId) {
-        8, 213 -> "https://www.netflix.com/search?q=$encoded"
+        8, 213  -> "https://www.netflix.com/search?q=$encoded"
         9, 119  -> "https://www.primevideo.com/search?k=$encoded"
         337     -> "https://www.disneyplus.com/es-es/search/$encoded"
         384, 29 -> "https://play.max.com/search?q=$encoded"
@@ -840,12 +1029,7 @@ fun WatchProvidersSection(providers: CountryProviders, showName: String) {
     val jwLink = providers.link
 
     Column {
-        Text(
-            text = "¿Dónde verlo?",
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
+        DetailSectionHeader(title = "¿Dónde verlo?")
         Spacer(modifier = Modifier.height(16.dp))
 
         if (!providers.flatrate.isNullOrEmpty()) {
@@ -875,11 +1059,11 @@ fun WatchProvidersSection(providers: CountryProviders, showName: String) {
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = "Datos de disponibilidad: JustWatch",
-            style = MaterialTheme.typography.labelSmall,
-            color = TextGray,
+            fontSize = 11.sp,
+            color = TextGray.copy(alpha = 0.6f),
         )
     }
 }
@@ -894,11 +1078,12 @@ fun ProviderTypeRow(
     val uriHandler = LocalUriHandler.current
     Text(
         text = label,
-        style = MaterialTheme.typography.labelLarge,
         color = TextGray,
-        fontWeight = FontWeight.SemiBold
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.5.sp
     )
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(10.dp))
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(providers, key = { it.providerId }) { provider ->
             val url = providerSearchUrl(provider.providerId, showName) ?: fallbackUrl
@@ -916,25 +1101,52 @@ fun ProviderLogo(provider: Provider, modifier: Modifier = Modifier, onClick: () 
         model = "https://image.tmdb.org/t/p/original${provider.logoPath}",
         contentDescription = provider.providerName,
         modifier = modifier
-            .size(52.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .size(54.dp)
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick),
         contentScale = ContentScale.Crop
     )
 }
 
 @Composable
-fun CastMemberItem(member: com.example.showmateapp.data.network.CastMember, modifier: Modifier = Modifier) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.width(80.dp)) {
-        AsyncImage(
-            model = "https://image.tmdb.org/t/p/w185${member.profilePath}",
-            contentDescription = member.name,
-            modifier = Modifier.size(80.dp).clip(CircleShape),
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(R.drawable.ic_logo_placeholder)
-        )
+fun CastMemberItem(
+    member: com.example.showmateapp.data.network.CastMember,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier.width(80.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(PrimaryPurple.copy(alpha = 0.25f), PrimaryPurpleDark.copy(alpha = 0.15f))
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = "https://image.tmdb.org/t/p/w185${member.profilePath}",
+                contentDescription = member.name,
+                modifier = Modifier
+                    .size(78.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(R.drawable.ic_logo_placeholder)
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = member.name, style = MaterialTheme.typography.bodySmall, color = Color.White, textAlign = TextAlign.Center, maxLines = 2)
+        Text(
+            text = member.name,
+            color = Color.White,
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            lineHeight = 16.sp
+        )
     }
 }
 
@@ -949,12 +1161,20 @@ fun StarRatingSection(
     val haptic = LocalHapticFeedback.current
     val visualRating = userRating?.let { ((it + 1) / 2).coerceIn(1, 5) } ?: 0
 
-    Surface(
-        color = Color.White.copy(alpha = 0.05f),
-        shape = RoundedCornerShape(20.dp),
-        modifier = modifier.fillMaxWidth()
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        PrimaryPurple.copy(alpha = 0.14f),
+                        SurfaceVariantDark
+                    )
+                )
+            )
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -968,13 +1188,20 @@ fun StarRatingSection(
                 )
                 if (userRating != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "$userRating/10",
-                            color = StarYellow,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StarYellow.copy(alpha = 0.15f))
+                        ) {
+                            Text(
+                                text = "$userRating/10",
+                                color = StarYellow,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
                         IconButton(
                             onClick = onClearRateClick,
                             modifier = Modifier.size(24.dp)
@@ -989,10 +1216,10 @@ fun StarRatingSection(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 repeat(starCount) { index ->
                     val filled = index < visualRating
@@ -1001,21 +1228,21 @@ fun StarRatingSection(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onRateClick((index + 1) * 2)
                         },
-                        modifier = Modifier.size(44.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = if (filled) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = "Estrella ${index + 1}",
-                            tint = if (filled) StarYellow else Color.White.copy(alpha = 0.25f),
-                            modifier = Modifier.size(32.dp)
+                            tint = if (filled) StarYellow else Color.White.copy(alpha = 0.22f),
+                            modifier = Modifier.size(34.dp)
                         )
                     }
                 }
                 if (userRating == null) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Toca para valorar",
-                        color = Color.White.copy(alpha = 0.3f),
+                        color = Color.White.copy(alpha = 0.28f),
                         fontSize = 12.sp
                     )
                 }
@@ -1041,21 +1268,16 @@ fun ReviewSection(
     }
 
     Column(modifier = modifier) {
-        Text(
-            text = "Mi reseña",
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
+        DetailSectionHeader(title = "Mi reseña")
         Spacer(modifier = Modifier.height(16.dp))
 
-        Surface(
-            color = Color.White.copy(alpha = 0.05f),
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.05f))
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-
                 if (!isEditing && reviewText.isNotBlank()) {
                     Column {
                         Row(
@@ -1064,13 +1286,21 @@ fun ReviewSection(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF4CAF50).copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFF4CAF50),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Reseña guardada",
                                     color = Color(0xFF4CAF50),
@@ -1083,21 +1313,22 @@ fun ReviewSection(
                                     onClick = { isEditing = true },
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text("Editar", color = PrimaryPurple, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    Text("Editar", color = PrimaryPurpleLight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 }
                                 TextButton(
                                     onClick = onDelete,
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text("Borrar", color = Color.Red.copy(alpha = 0.7f), fontSize = 13.sp)
+                                    Text("Borrar", color = Color(0xFFFF5252).copy(alpha = 0.8f), fontSize = 13.sp)
                                 }
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
-                        Surface(
-                            color = PrimaryPurple.copy(alpha = 0.08f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PrimaryPurple.copy(alpha = 0.08f))
                         ) {
                             Row(
                                 modifier = Modifier
@@ -1128,7 +1359,7 @@ fun ReviewSection(
                         placeholder = {
                             Text(
                                 text = "Escribe tu opinión sobre esta serie...",
-                                color = Color.White.copy(alpha = 0.3f),
+                                color = Color.White.copy(alpha = 0.28f),
                                 fontSize = 14.sp
                             )
                         },
@@ -1146,7 +1377,6 @@ fun ReviewSection(
                         shape = RoundedCornerShape(12.dp),
                         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, lineHeight = 21.sp)
                     )
-
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1155,7 +1385,7 @@ fun ReviewSection(
                         Text(
                             text = "${reviewText.length}/$REVIEW_MAX_CHARS",
                             color = if (reviewText.length > REVIEW_MAX_CHARS * 0.9) StarYellow
-                                    else Color.White.copy(alpha = 0.3f),
+                                    else Color.White.copy(alpha = 0.28f),
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f)
                         )
@@ -1197,17 +1427,21 @@ fun EpisodesSection(
     onSeasonChange: (Int) -> Unit,
     onMarkNextEpisode: () -> Unit = {}
 ) {
+    val episodeProgressGradient = remember {
+        Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryPurple))
+    }
+    val completedGradient = remember {
+        Brush.linearGradient(listOf(Color(0xFF66BB6A), Color(0xFF4CAF50)))
+    }
+
     Column(modifier = modifier) {
-        Text(
-            text = "Episodios",
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
+        DetailSectionHeader(title = "Episodios")
         Spacer(modifier = Modifier.height(16.dp))
 
-        var selectedTabIndex by remember(selectedSeason) { 
-            mutableIntStateOf(seasons.indexOfFirst { it.seasonNumber == selectedSeason?.seasonNumber }.coerceAtLeast(0)) 
+        var selectedTabIndex by remember(selectedSeason) {
+            mutableIntStateOf(
+                seasons.indexOfFirst { it.seasonNumber == selectedSeason?.seasonNumber }.coerceAtLeast(0)
+            )
         }
 
         val filteredSeasons = remember(seasons) { seasons.filter { it.seasonNumber > 0 } }
@@ -1218,154 +1452,276 @@ fun EpisodesSection(
             items(filteredSeasons, key = { it.seasonNumber }) { season ->
                 val index = filteredSeasons.indexOf(season)
                 val isSelected = selectedTabIndex == index
-                Surface(
-                    onClick = {
-                        selectedTabIndex = index
-                        onSeasonChange(season.seasonNumber)
-                    },
-                    shape = RoundedCornerShape(50),
-                    color = if (isSelected) PrimaryPurple else Color.Transparent,
-                    border = if (isSelected) null else BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f)),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            text = "T${season.seasonNumber}",
-                            color = if (isSelected) Color.White else TextGray,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 14.sp
+                Box(
+                    modifier = Modifier
+                        .height(36.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSelected)
+                                Brush.linearGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
+                            else
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.07f),
+                                        Color.White.copy(alpha = 0.07f)
+                                    )
+                                )
                         )
-                    }
+                        .clickable {
+                            selectedTabIndex = index
+                            onSeasonChange(season.seasonNumber)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "T${season.seasonNumber}",
+                        color = if (isSelected) Color.White else TextGray,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 18.dp)
+                    )
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (selectedSeason != null && selectedSeason.episodes.isNotEmpty()) {
             val totalEps = selectedSeason.episodes.size
             val watchedInSeason = selectedSeason.episodes.count { watchedEpisodes.contains(it.id) }
             val progress = watchedInSeason.toFloat() / totalEps.toFloat()
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Progreso de temporada",
-                        color = TextGray,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "$watchedInSeason / $totalEps ep",
-                        color = if (watchedInSeason == totalEps) Color(0xFF4CAF50) else PrimaryPurple,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+            val isCompleted = watchedInSeason == totalEps
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.04f))
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Progreso",
+                            color = TextGray,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "$watchedInSeason / $totalEps ep",
+                            color = if (isCompleted) Color(0xFF4CAF50) else PrimaryPurpleLight,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.08f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .height(5.dp)
+                                .clip(CircleShape)
+                                .background(if (isCompleted) completedGradient else episodeProgressGradient)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(6.dp))
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                    color = if (watchedInSeason == totalEps) Color(0xFF4CAF50) else PrimaryPurple,
-                    trackColor = Color.White.copy(alpha = 0.1f)
-                )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         if (selectedSeason != null) {
             val nextEpisode = selectedSeason.episodes.firstOrNull { it.id !in watchedEpisodes }
             if (nextEpisode != null) {
-                OutlinedButton(
-                    onClick = onMarkNextEpisode,
-                    modifier = Modifier.fillMaxWidth(),
-                    border = BorderStroke(1.dp, PrimaryPurple),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(PrimaryPurple.copy(alpha = 0.20f), PrimaryPurpleDark.copy(alpha = 0.10f))
+                            )
+                        )
+                        .clickable { onMarkNextEpisode() }
                 ) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Siguiente: ${nextEpisode.episodeNumber}. ${nextEpisode.name}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryPurple.copy(alpha = 0.25f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = PrimaryPurpleLight,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Siguiente: ${nextEpisode.episodeNumber}. ${nextEpisode.name}",
+                            color = PrimaryPurpleLight,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
             }
         }
 
         if (isSeasonLoading) {
             repeat(4) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(width = 100.dp, height = 60.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(Color.White.copy(alpha = 0.08f))
                     )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Box(modifier = Modifier.fillMaxWidth(0.7f).height(14.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = 0.08f)))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.7f)
+                                .height(14.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Box(modifier = Modifier.fillMaxWidth(0.3f).height(12.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = 0.05f)))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.3f)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                        )
                     }
                 }
             }
         } else if (selectedSeason != null) {
             selectedSeason.episodes.forEach { episode ->
                 val isWatched = watchedEpisodes.contains(episode.id)
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .clickable { onEpisodeToggle(episode.id) },
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isWatched) Color(0xFF4CAF50).copy(alpha = 0.07f)
+                            else Color.Transparent
+                        )
+                        .clickable { onEpisodeToggle(episode.id) }
                 ) {
-                    val imageModel = if (episode.stillPath != null)
-                        "https://image.tmdb.org/t/p/w300${episode.stillPath}"
-                    else null
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = null,
-                        modifier = Modifier.size(width = 100.dp, height = 60.dp).clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop,
-                        error = painterResource(R.drawable.ic_logo_placeholder),
-                        placeholder = painterResource(R.drawable.ic_logo_placeholder)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "${episode.episodeNumber}. ${episode.name}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        val runtimeText = episode.runtime?.takeIf { it > 0 }?.let { "$it min" } ?: "N/A"
-                        Text(text = runtimeText, color = TextGray, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val imageModel = if (episode.stillPath != null)
+                            "https://image.tmdb.org/t/p/w300${episode.stillPath}"
+                        else null
+                        Box(
+                            modifier = Modifier
+                                .size(width = 100.dp, height = 60.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                        ) {
+                            AsyncImage(
+                                model = imageModel,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(R.drawable.ic_logo_placeholder),
+                                placeholder = painterResource(R.drawable.ic_logo_placeholder)
+                            )
+                            if (isWatched) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.40f))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .align(Alignment.Center)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF4CAF50).copy(alpha = 0.9f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${episode.episodeNumber}. ${episode.name}",
+                                color = if (isWatched) Color.White.copy(alpha = 0.6f) else Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                            val runtimeText = episode.runtime?.takeIf { it > 0 }?.let { "$it min" } ?: ""
+                            if (runtimeText.isNotEmpty()) {
+                                Text(text = runtimeText, color = TextGray, fontSize = 12.sp)
+                            }
+                        }
+                        Checkbox(
+                            checked = isWatched,
+                            onCheckedChange = { onEpisodeToggle(episode.id) },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Color(0xFF4CAF50),
+                                uncheckedColor = Color.White.copy(alpha = 0.25f)
+                            )
+                        )
                     }
-                    Checkbox(
-                        checked = isWatched,
-                        onCheckedChange = { onEpisodeToggle(episode.id) },
-                        colors = CheckboxDefaults.colors(checkedColor = PrimaryPurple)
-                    )
                 }
             }
         } else {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = PrimaryPurple)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.06f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.4f)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(episodeProgressGradient)
+                )
+            }
         }
     }
 }
-
 
 @Composable
 private fun DetailScreenSkeleton() {
@@ -1375,29 +1731,26 @@ private fun DetailScreenSkeleton() {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Hero image area
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(450.dp)
+                .height(460.dp)
                 .background(shimmer)
         )
-        // Content overlay
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomStart)
-                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 270.dp)
+                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 280.dp)
         ) {
-            // Title shimmer
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.75f)
-                    .height(28.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .height(30.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(shimmer)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.45f)
@@ -1405,20 +1758,19 @@ private fun DetailScreenSkeleton() {
                     .clip(RoundedCornerShape(6.dp))
                     .background(shimmer)
             )
-            Spacer(modifier = Modifier.height(20.dp))
-            // Action buttons row
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(3) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(4) {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
+                            .weight(1f)
+                            .height(58.dp)
+                            .clip(RoundedCornerShape(18.dp))
                             .background(shimmer)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            // Synopsis lines
+            Spacer(modifier = Modifier.height(20.dp))
             repeat(3) { i ->
                 Box(
                     modifier = Modifier

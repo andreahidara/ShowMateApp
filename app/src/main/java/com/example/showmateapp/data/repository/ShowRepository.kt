@@ -100,7 +100,7 @@ class ShowRepository @Inject constructor(
     }
 
     private suspend fun saveAndReturn(category: String, shows: List<MediaContent>): List<MediaContent> {
-        if (shows.isEmpty()) return shows  // No borrar caché si la API devuelve vacío
+        if (shows.isEmpty()) return shows
         showDao.replaceCategory(category, shows.map { it.toEntity(category) })
         return shows
     }
@@ -208,10 +208,6 @@ class ShowRepository @Inject constructor(
         }
     }
 
-    /**
-     * Devuelve series que se emiten en los próximos 7 días en los proveedores indicados (separados por |, ej. "8|9|337").
-     * Usa discover/tv para que with_watch_providers sea soportado correctamente.
-     */
     suspend fun getShowsOnTheAir(
         providers: String = "8|9|337|384|531"
     ): Resource<List<MediaContent>> {
@@ -235,6 +231,30 @@ class ShowRepository @Inject constructor(
         return safeApiCall {
             val response = apiService.searchMedia(query)
             response.results
+        }
+    }
+
+    suspend fun searchByPerson(query: String, isCreator: Boolean): Resource<List<MediaContent>> {
+        return safeApiCall {
+            val people = apiService.searchPerson(query).results
+            if (people.isEmpty()) return@safeApiCall emptyList()
+
+            val creatorJobs = setOf("Creator", "Executive Producer", "Showrunner", "Series Director")
+
+            people.take(3)
+                .flatMap { person ->
+                    val credits = apiService.getPersonTvCredits(person.id)
+                    if (isCreator) {
+                        credits.crew
+                            .filter { it.job in creatorJobs }
+                            .map { it.toMediaContent() }
+                    } else {
+                        credits.cast
+                    }
+                }
+                .distinctBy { it.id }
+                .filter { it.posterPath != null }
+                .sortedByDescending { it.popularity }
         }
     }
 

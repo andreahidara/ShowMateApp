@@ -25,4 +25,7 @@ interface MediaInteractionDao {
 
     @Query("SELECT * FROM media_interactions WHERE isWatched = 1 AND lastKnownSeasons > 0")
     suspend fun getWatchedWithSeasonCount(): List<MediaInteractionEntity>
+
+    @Query("SELECT mediaId FROM media_interactions WHERE isInWatchlist = 1")
+    suspend fun getWatchlistMediaIds(): List<Int>
 }

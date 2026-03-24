@@ -73,6 +73,18 @@ interface TmdbApiService {
         @Query("language") language: String = "es-ES"
     ): MediaResponse
 
+    @GET("search/person")
+    suspend fun searchPerson(
+        @Query("query") query: String,
+        @Query("language") language: String = "es-ES"
+    ): PersonSearchResponse
+
+    @GET("person/{person_id}/tv_credits")
+    suspend fun getPersonTvCredits(
+        @Path("person_id") personId: Int,
+        @Query("language") language: String = "es-ES"
+    ): PersonTvCreditsResponse
+
     @GET("tv/{tv_id}/season/{season_number}")
     suspend fun getSeasonDetails(
         @Path("tv_id") tvId: Int,
