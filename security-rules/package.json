@@ -1,0 +1,20 @@
+{
+  "name": "showmate-security-rules-tests",
+  "private": true,
+  "description": "Tests de seguridad para las Firestore Security Rules de ShowMate",
+  "scripts": {
+    "test": "jest --forceExit",
+    "test:watch": "jest --watch --forceExit",
+    "emulator:start": "firebase emulators:start --only firestore --project showmate-test"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^10.14.0",
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 15000,
+    "verbose": true
+  }
+}

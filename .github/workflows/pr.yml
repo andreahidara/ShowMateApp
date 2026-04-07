@@ -1,0 +1,170 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened ]
+
+# Cancel any in-flight run for the same PR when a new push arrives
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  # ── 1. Lint & code style ────────────────────────────────────────────────────
+  lint:
+    name: Lint & Code Style
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Write secret.properties
+        run: echo "TMDB_API_TOKEN=${{ secrets.TMDB_API_TOKEN }}" > secret.properties
+
+      - name: Decode google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+      - name: Run ktlint
+        run: ./gradlew ktlintCheck --continue
+
+      - name: Run Android Lint
+        run: ./gradlew lintDebug
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports-pr-${{ github.event.pull_request.number }}
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/ktlint/
+          retention-days: 7
+
+  # ── 2. Unit tests ───────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Write secret.properties
+        run: echo "TMDB_API_TOKEN=${{ secrets.TMDB_API_TOKEN }}" > secret.properties
+
+      - name: Decode google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results-pr-${{ github.event.pull_request.number }}
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+          retention-days: 7
+
+      - name: Upload Paparazzi snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paparazzi-snapshots-pr-${{ github.event.pull_request.number }}
+          path: app/src/test/snapshots/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # Publish test summary directly in the PR timeline
+      - name: Publish test summary
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: 'app/build/test-results/testDebugUnitTest/*.xml'
+          fail_on_failure: true
+          check_name: 'Unit Test Results'
+
+  # ── 3. Static analysis (detekt) ─────────────────────────────────────────────
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Write secret.properties
+        run: echo "TMDB_API_TOKEN=${{ secrets.TMDB_API_TOKEN }}" > secret.properties
+
+      - name: Decode google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+      # On the first run, generate a baseline so existing violations don't block PRs.
+      # After that, only NEW violations introduced by the PR will fail the check.
+      - name: Check for detekt baseline
+        id: baseline-check
+        run: |
+          if [ -f "config/detekt/baseline.xml" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate detekt baseline (first run only)
+        if: steps.baseline-check.outputs.exists == 'false'
+        run: ./gradlew detektBaseline
+
+      - name: Commit baseline if generated
+        if: steps.baseline-check.outputs.exists == 'false'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'ci: generate detekt baseline'
+          file_pattern: 'config/detekt/baseline.xml'
+
+      - name: Run detekt
+        run: ./gradlew detektDebug --continue
+
+      - name: Upload detekt report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detekt-report-pr-${{ github.event.pull_request.number }}
+          path: app/build/reports/detekt/
+          retention-days: 7

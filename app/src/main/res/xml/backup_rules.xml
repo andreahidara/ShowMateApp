@@ -5,5 +5,5 @@
     <exclude domain="database" path="showmate_database-shm"/>
     <exclude domain="database" path="showmate_database-wal"/>
     <!-- Exclude DataStore preferences (contains sensitive settings) -->
-    <exclude domain="sharedpref" path="com.example.showmateapp_preferences.xml"/>
+    <exclude domain="sharedpref" path="com.andrea.showmateapp_preferences.xml"/>
 </full-backup-content>

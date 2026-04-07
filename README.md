@@ -2,6 +2,10 @@
 
 > Aplicación Android nativa que aprende de tus gustos para recomendarte exactamente lo que te va a gustar ver.
 
+[![CI — Main](https://github.com/andreahidara/ShowMateApp/actions/workflows/main.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/main.yml)
+[![PR Checks](https://github.com/andreahidara/ShowMateApp/actions/workflows/pr.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/pr.yml)
+[![Release](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml)
+
 ![Android](https://img.shields.io/badge/Android-API%2026%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)

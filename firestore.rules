@@ -1,0 +1,401 @@
+rules_version = '2';
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ShowMate — Firestore Security Rules
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// Filosofía de diseño:
+//   1. Deny-by-default: todo denegado a menos que haya una regla explícita.
+//   2. Principio de mínimo privilegio: cada usuario solo puede leer/escribir
+//      lo que el flujo de la app requiere, nada más.
+//   3. Validación en la fuente: se validan tipos, rangos y campos obligatorios
+//      en el momento de escritura, no solo en el cliente Android.
+//
+// Limitaciones conocidas (documentadas):
+//   · Los perfiles de usuario son legibles por cualquier usuario autenticado.
+//     Esto es necesario para las features sociales (búsqueda por email,
+//     leaderboard). En producción se debería separar en subcol. /public /private.
+//   · El rate limiting real requiere Cloud Functions. Las reglas solo validan
+//     que los timestamps sean recientes (±2 min), que previene backdating.
+//   · Las Map<String, Float> del algoritmo (genreScores, ratings, etc.) no se
+//     pueden iterar en reglas → solo se verifica que sean tipo Map.
+//
+// Para desplegar:
+//   firebase deploy --only firestore:rules
+//
+// Para testear localmente:
+//   cd security-rules && npm test
+// ══════════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Funciones helper globales ─────────────────────────────────────────────
+
+    /// Usuario autenticado (cualquier método de auth)
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    /// El usuario autenticado ES el uid del path
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    /// Datos del documento resultante tras la operación (post-write)
+    function incoming() {
+      return request.resource.data;
+    }
+
+    /// Datos actuales del documento (pre-write)
+    function existing() {
+      return resource.data;
+    }
+
+    /// Campos que cambian entre el documento actual y el entrante
+    function changedFields() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ── Helpers de validación de tipos ───────────────────────────────────────
+
+    /// String con longitud máxima controlada
+    function isStr(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    /// Entero en rango [min, max]
+    function isIntInRange(val, min, max) {
+      return val is int && val >= min && val <= max;
+    }
+
+    /// Timestamp en milisegundos próximo al tiempo real del servidor.
+    /// Permite ±2 minutos de desfase (reloj del cliente vs servidor) y
+    /// hasta 5 segundos en el futuro (evita timestamps adelantados).
+    /// Previene backdating pero NO es rate limiting real.
+    function isRecentMs(ts) {
+      return ts is int
+          && ts >= request.time.toMillis() - 120000  // max 2 min en el pasado
+          && ts <= request.time.toMillis() + 5000;   // max 5 seg en el futuro
+    }
+
+    /// Email con el token de Firebase Auth del usuario actual
+    /// (válido para auth email/password que ShowMate usa)
+    function myEmail() {
+      return request.auth.token.email;
+    }
+
+    function hasEmail() {
+      return isAuth() && request.auth.token.email != null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COLECCIÓN: users/{uid}
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Decisión de diseño: read permitido a cualquier usuario autenticado.
+    // Necesario para: búsqueda de amigos por email, leaderboard de logros,
+    // comparativa de perfiles, solicitudes de amistad.
+    // Riesgo: un usuario malicioso puede leer genreScores de otros.
+    // Mitigación futura: separar /users/{uid}/public y /users/{uid}/private.
+    //
+    match /users/{uid} {
+
+      allow read: if isAuth();
+
+      allow create: if isOwner(uid) && isValidNewProfile(uid);
+
+      // UPDATE: el owner puede actualizar su propio perfil.
+      // Se bloquean campos inmutables (userId, email) y se validan
+      // longitudes de strings y rangos numéricos.
+      allow update: if isOwner(uid) && isValidProfileUpdate(uid);
+
+      allow delete: if isOwner(uid);
+
+      function isValidNewProfile(uid) {
+        let d = incoming();
+        return d.userId == uid
+            && isStr(d.username, 50)
+            && isStr(d.email, 200)
+            && d.xp == 0                    // XP inicial = 0
+            && d.completedGroupMatches == 0 // contador inicial
+            && d.keys().hasAll(['userId', 'username', 'email', 'xp']);
+      }
+
+      function isValidProfileUpdate(uid) {
+        let d = incoming();
+        // userId y email son INMUTABLES tras la creación
+        return d.userId == uid
+            && d.email == existing().email
+            // Si se envía username, validar longitud
+            && (!d.keys().hasAny(['username'])   || isStr(d.username, 50))
+            && (!d.keys().hasAny(['fcmToken'])   || isStr(d.fcmToken, 500))
+            // XP solo sube (previene trampas) y tiene un máximo razonable
+            && (!d.keys().hasAny(['xp'])
+                || (d.xp is int && d.xp >= existing().xp && d.xp <= 10000000))
+            // completedGroupMatches solo sube
+            && (!d.keys().hasAny(['completedGroupMatches'])
+                || (d.completedGroupMatches is int
+                    && d.completedGroupMatches >= existing().completedGroupMatches
+                    && d.completedGroupMatches <= 100000))
+            // preferencias de onboarding: null o bool
+            && (!d.keys().hasAny(['preferShortEpisodes'])
+                || d.preferShortEpisodes == null || d.preferShortEpisodes is bool)
+            && (!d.keys().hasAny(['preferFinishedShows'])
+                || d.preferFinishedShows == null || d.preferFinishedShows is bool)
+            && (!d.keys().hasAny(['preferDubbed'])
+                || d.preferDubbed == null || d.preferDubbed is bool);
+      }
+
+      // ── users/{uid}/activity/{eventId} ────────────────────────────────────
+      //
+      // Feed de actividad social. Legible por cualquier usuario autenticado
+      // (para construir el feed de amigos). Solo el dueño escribe la suya.
+      //
+      match /activity/{eventId} {
+        allow read: if isAuth();
+
+        allow create: if isOwner(uid) && isValidActivity(uid);
+
+        // Actualización y borrado: solo el dueño
+        allow update, delete: if isOwner(uid);
+
+        function isValidActivity(uid) {
+          let d = incoming();
+          let validTypes = ['liked', 'essential', 'rated', 'watched', 'watchlisted'];
+          return d.userId == uid
+              && isStr(d.username, 50)
+              && d.type in validTypes
+              && d.mediaId is int && d.mediaId > 0
+              && isStr(d.mediaTitle, 300)
+              && isStr(d.mediaPoster, 500)
+              && (d.score is int || d.score is float)
+              && isRecentMs(d.timestamp);
+        }
+      }
+
+      // ── users/{uid}/notifications/{notifId} ───────────────────────────────
+      //
+      // Notificaciones in-app. ESCRITURA abierta a cualquier usuario autenticado
+      // porque el sistema de amigos requiere que un usuario escriba notificaciones
+      // en el documento de otro (ej: "te han enviado solicitud de amistad").
+      // LECTURA solo del propietario.
+      //
+      match /notifications/{notifId} {
+        // Solo el dueño lee y gestiona sus notificaciones
+        allow read, update, delete: if isOwner(uid);
+
+        // Cualquier usuario autenticado puede CREAR (enviar) una notificación
+        allow create: if isAuth() && isValidNotification();
+
+        function isValidNotification() {
+          let d = incoming();
+          let validTypes = ['friend_request', 'request_accepted'];
+          return d.type in validTypes
+              && isStr(d.fromUsername, 50)
+              && isStr(d.message, 300)
+              && d.read == false       // nueva notificación siempre no leída
+              && isRecentMs(d.createdAt);
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COLECCIÓN: friendRequests/{docId}
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Modelo: { fromUid, toUid, status: "pending"|"accepted", createdAt }
+    //
+    // Reglas:
+    //   · Solo los dos implicados pueden leer el documento
+    //   · Solo el emisor puede CREAR (fromUid == auth.uid)
+    //   · Solo el receptor puede ACEPTAR (status: pending → accepted)
+    //   · Ambos pueden BORRAR (cancelar solicitud o eliminar amistad)
+    //   · No se puede crear solicitud a uno mismo
+    //
+    match /friendRequests/{docId} {
+
+      allow read: if isAuth()
+          && (request.auth.uid == resource.data.fromUid
+              || request.auth.uid == resource.data.toUid);
+
+      allow create: if isAuth() && isValidNewRequest();
+
+      // Solo el receptor puede cambiar status (pending → accepted)
+      allow update: if isAuth() && canAcceptRequest();
+
+      allow delete: if isAuth()
+          && (request.auth.uid == resource.data.fromUid
+              || request.auth.uid == resource.data.toUid);
+
+      function isValidNewRequest() {
+        let d = incoming();
+        return request.auth.uid == d.fromUid         // solo puedes enviar tú mismo
+            && d.toUid != request.auth.uid           // no puedes ser tu propio amigo
+            && d.status == 'pending'                 // siempre empieza como pending
+            && isStr(d.fromUsername, 50)
+            && isStr(d.toUsername, 50)
+            && isRecentMs(d.createdAt)
+            && d.keys().hasAll(['fromUid', 'toUid', 'fromUsername', 'toUsername',
+                                'status', 'createdAt']);
+      }
+
+      function canAcceptRequest() {
+        let changed = changedFields();
+        // Solo el receptor puede cambiar el status
+        return request.auth.uid == existing().toUid
+            && existing().status == 'pending'
+            && incoming().status == 'accepted'
+            // Solo el campo status puede cambiar (el resto es inmutable)
+            && changed.hasOnly(['status']);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COLECCIÓN: reviews/{reviewId}
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Reseñas públicas. Tres tipos de UPDATE permitidos:
+    //   1. Autor edita texto/rating/hasSpoiler
+    //   2. Cualquier usuario da like (likedByIds + likeCount)
+    //   3. Cualquier usuario reporta (reportCount +1)
+    //
+    match /reviews/{reviewId} {
+
+      // Legibles por cualquier usuario autenticado (reseñas son contenido público)
+      allow read: if isAuth();
+
+      allow create: if isAuth() && isValidNewReview();
+      allow update: if isAuth() && canUpdateReview();
+      allow delete: if isAuth() && request.auth.uid == resource.data.userId;
+
+      function isValidNewReview() {
+        let d = incoming();
+        return d.userId == request.auth.uid   // solo puedes crear con tu propio uid
+            && isStr(d.userEmail, 200)
+            && isStr(d.username, 50)
+            && d.mediaId is int && d.mediaId > 0
+            && d.seasonNumber is int && d.seasonNumber >= 0
+            && isIntInRange(d.rating, 0, 5)   // 0 = sin puntuación, 1-5 estrellas
+            && isStr(d.text, 2000)            // máximo 2000 caracteres
+            && d.hasSpoiler is bool
+            && d.likeCount == 0              // nueva reseña arranca sin likes
+            && d.reportCount == 0            // ni reportes
+            && d.likedByIds.size() == 0
+            && isRecentMs(d.createdAt)
+            && d.updatedAt == d.createdAt
+            && d.keys().hasAll(['userId', 'userEmail', 'username', 'mediaId',
+                               'seasonNumber', 'rating', 'text', 'hasSpoiler',
+                               'likedByIds', 'likeCount', 'reportCount',
+                               'createdAt', 'updatedAt']);
+      }
+
+      function canUpdateReview() {
+        let d = incoming();
+        let changed = changedFields();
+
+        // ── Caso 1: El autor edita su propia reseña ──────────────────────────
+        // Solo puede cambiar texto, rating, spoiler, temporada y updatedAt.
+        // Campos de identidad (userId, mediaId, likeCount...) son inmutables.
+        let isAuthorEdit = request.auth.uid == existing().userId
+            && changed.hasOnly(['rating', 'text', 'hasSpoiler',
+                               'seasonNumber', 'updatedAt'])
+            && isIntInRange(d.rating, 0, 5)
+            && isStr(d.text, 2000)
+            && d.hasSpoiler is bool
+            && d.seasonNumber is int && d.seasonNumber >= 0
+            && isRecentMs(d.updatedAt);
+
+        // ── Caso 2: Dar/quitar like ──────────────────────────────────────────
+        // Solo cambian likedByIds y likeCount.
+        // likeCount DEBE ser igual a likedByIds.size() (invariante de integridad).
+        // Cota de seguridad: máximo 100k likes (anti-spam).
+        let isLikeToggle = changed.hasOnly(['likedByIds', 'likeCount'])
+            && d.likeCount == d.likedByIds.size()
+            && isIntInRange(d.likeCount, 0, 100000);
+
+        // ── Caso 3: Reportar reseña ──────────────────────────────────────────
+        // Cualquier usuario puede incrementar reportCount exactamente en 1.
+        // Sin FieldValue.increment en reglas: verificamos post-valor == prev+1.
+        let isReport = changed.hasOnly(['reportCount'])
+            && d.reportCount == existing().reportCount + 1
+            && d.reportCount <= 10000;  // cota anti-spam
+
+        return isAuthorEdit || isLikeToggle || isReport;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COLECCIÓN: groupSessions/{sessionId}
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Sesiones de GroupMatch. La membresía se basa en emails (memberEmails[]).
+    // Usamos request.auth.token.email que Firebase Auth garantiza en auth
+    // email/password. Si se añaden otros métodos de auth, revisar esta regla.
+    //
+    match /groupSessions/{sessionId} {
+
+      function isMember() {
+        return hasEmail()
+            && resource.data.memberEmails.hasAny([myEmail()]);
+      }
+
+      function isHost() {
+        return hasEmail()
+            && resource.data.hostEmail == myEmail();
+      }
+
+      function isValidNewSession() {
+        let d = incoming();
+        return hasEmail()
+            && myEmail() == d.hostEmail
+            && d.memberEmails.hasAny([myEmail()])  // el host está en la lista
+            && d.memberEmails.size() >= 2           // mínimo 2 miembros
+            && d.memberEmails.size() <= 10          // máximo 10 (anti-abuso)
+            && d.status == 'lobby'
+            && d.candidateIds.size() == 0
+            && d.matchedMediaId == 0
+            && isRecentMs(d.createdAt)
+            && d.keys().hasAll(['hostEmail', 'memberEmails', 'candidateIds',
+                               'status', 'matchedMediaId', 'createdAt']);
+      }
+
+      // Solo miembros pueden leer la sesión
+      allow read: if isAuth() && isMember();
+
+      // Solo el host puede crear la sesión con su email como hostEmail
+      allow create: if isAuth() && isValidNewSession();
+
+      // Cualquier miembro puede actualizar (votar, cambiar status, añadir candidatos)
+      allow update: if isAuth() && isMember();
+
+      // Solo el host puede borrar la sesión
+      allow delete: if isAuth() && isHost();
+
+      // ── groupSessions/{sessionId}/votes/{voterEmail} ─────────────────────
+      //
+      // Documentos de voto indexados por email del votante.
+      // Cada miembro solo puede escribir su propio documento de votos.
+      // Todos los miembros pueden leer todos los votos (para la lógica de match).
+      //
+      match /votes/{voterEmail} {
+
+        // Verificación de membresía consultando el documento padre.
+        // Cuenta como 1 lectura adicional facturada en producción.
+        function isSessionMember() {
+          return hasEmail()
+              && get(/databases/$(database)/documents/groupSessions/$(sessionId))
+                     .data.memberEmails.hasAny([myEmail()]);
+        }
+
+        // Miembros pueden leer todos los votos (para detectar consenso)
+        allow read: if isAuth() && isSessionMember();
+
+        // Cada usuario solo puede escribir su propio documento de votos
+        // (el document ID == su email)
+        allow write: if hasEmail() && myEmail() == voterEmail;
+      }
+    }
+
+  } // /databases/{database}/documents
+} // service cloud.firestore

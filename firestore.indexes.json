@@ -1,0 +1,58 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mediaId",      "order": "ASCENDING"  },
+        { "fieldPath": "seasonNumber", "order": "ASCENDING"  },
+        { "fieldPath": "likeCount",    "order": "DESCENDING" },
+        { "fieldPath": "createdAt",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",       "order": "ASCENDING" },
+        { "fieldPath": "mediaId",      "order": "ASCENDING" },
+        { "fieldPath": "seasonNumber", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mediaId",      "order": "ASCENDING" },
+        { "fieldPath": "seasonNumber", "order": "ASCENDING" },
+        { "fieldPath": "userEmail",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "friendRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fromUid", "order": "ASCENDING" },
+        { "fieldPath": "status",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "friendRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "toUid",  "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "groupSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "memberEmails", "arrayConfig": "CONTAINS"  },
+        { "fieldPath": "status",       "order": "ASCENDING"       },
+        { "fieldPath": "finishedAt",   "order": "DESCENDING"      }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

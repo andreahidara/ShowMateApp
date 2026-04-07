@@ -1,55 +1,12 @@
 <resources>
     <string name="app_name">ShowMateApp</string>
     <string name="showmate">ShowMate</string>
-    <string name="tagline">Your next obsession awaits.</string>
-    <string name="welcome_back">Welcome Back!</string>
-    <string name="please_sign_in">Please sign in to your account.</string>
-    <string name="email_address">Email Address</string>
-    <string name="email_placeholder">name@example.com</string>
-    <string name="password">Password</string>
-    <string name="password_placeholder">Enter your password</string>
-    <string name="forgot_password">Forgot Password?</string>
-    <string name="sign_in">Sign In</string>
-    <string name="or_continue_with">Or continue with</string>
-    <string name="google">Google</string>
-    <string name="github">GitHub</string>
-    <string name="dont_have_account">Don’t have an account?</string>
-    <string name="create_account">Create Account</string>
-    <string name="trending_now">Trending Now</string>
-    <string name="popular">Popular</string>
-    <string name="see_all">See All</string>
-    <string name="play">Play</string>
-    <string name="my_list">My List</string>
+    <string name="sign_in">Iniciar Sesión</string>
+    <string name="create_account">Crear Cuenta</string>
+    <string name="trending_now">Tendencias de Ahora</string>
 
-    <string name="profile_favorites">Favoritos</string>
-    <string name="profile_time">Tiempo</string>
-    <string name="profile_reviews">Reseñas</string>
-    <string name="profile_general">General</string>
-    <string name="profile_watchlist">Mi Lista de Seguimiento</string>
-    <string name="profile_account_settings">Ajustes de la Cuenta</string>
-    <string name="profile_help_support">Ayuda y Soporte</string>
-    <string name="profile_sign_out">Cerrar Sesión</string>
-    <string name="profile_expert">Cinéfilo Experto</string>
-    <string name="profile_beginner">Cinéfilo Principiante</string>
-
-    <string name="profile_favorites_title">Favorites</string>
-    <string name="profile_recently_watched">Recently Watched</string>
-    <string name="profile_see_all">See all</string>
-
-    <string name="detail_watch_now">Ver Ahora</string>
-    <string name="detail_trailer">Ver Trailer</string>
     <string name="detail_synopsis">Sinopsis</string>
     <string name="detail_no_synopsis">Sin sinopsis disponible.</string>
-    <string name="detail_back">Atrás</string>
-    <string name="detail_favorite">Favorito</string>
-    <string name="detail_available_on">Disponible en</string>
-    <string name="detail_like">Me gusta</string>
-    <string name="detail_rate">Tu Valoración</string>
-    <string name="detail_mark_watched">Marcar vista</string>
-    <string name="detail_add_favorites">A favoritos</string>
-    <string name="detail_edit">Editar</string>
-    <string name="detail_remove_favorites">Quitar de favoritos</string>
-    <string name="detail_watched">Vista</string>
     <string name="detail_top_cast">Reparto principal</string>
 
     <string name="discover_context_binger">Perfectas para el finde</string>
@@ -63,4 +20,172 @@
     <string name="error_unexpected_data">Error inesperado al cargar los datos</string>
     <string name="error_refresh_data">Error al recargar los datos. Comprueba tu conexión.</string>
     <string name="error_empty_fields">Completa todos los campos</string>
+    <string name="error_unknown">Ha ocurrido un error inesperado</string>
+    <string name="error_no_connection">Sin conexión a internet</string>
+    <string name="error_save_review_failed">Error al guardar la reseña</string>
+    <string name="error_delete_review_failed">Error al eliminar la reseña</string>
+    <string name="error_update_failed">Error al actualizar</string>
+    <string name="error_rate_failed">Error al guardar la valoración</string>
+    <string name="error_add_to_list_failed">Error al añadir a la lista</string>
+    <string name="detail_added_to_list">Añadido a «%1$s»</string>
+
+    <!-- Swipe -->
+    <string name="swipe_for_you">Para ti</string>
+    <string name="swipe_calibrate_subtitle">Desliza para calibrar tus gustos</string>
+    <string name="swipe_of_max_ratings">de %1$d</string>
+    <string name="swipe_all_ready">¡Todo listo!</string>
+    <string name="swipe_all_ready_desc">Hemos calibrado tus gustos. Ahora ShowMate es mucho más inteligente para ti.</string>
+    <string name="swipe_start_exploring">Empezar a explorar</string>
+
+    <!-- Stats / Profile -->
+    <string name="stats_monthly_activity">Actividad mensual</string>
+    <string name="stats_favorite_genres">Géneros favoritos</string>
+    <string name="profile_progress_towards">%1$d%% hacia %2$s</string>
+    <string name="profile_see_all_count">Ver todas (%1$d)</string>
+    <string name="profile_series_count">%1$d series</string>
+    <string name="profile_my_lists">Mis listas</string>
+
+    <!-- UI Core / Auth -->
+    <string name="splash_premium_guide">TU GUÍA PREMIUM DE SERIES</string>
+    <string name="splash_powered_by">Powered by TMDB</string>
+    <string name="signup_create_account">Crea tu cuenta</string>
+    <string name="signup_join_free">Únete a ShowMate gratis</string>
+    <string name="signup_already_have_account">¿Ya tienes cuenta? </string>
+
+    <!-- Search -->
+    <string name="search_clear_all">Borrar todo</string>
+    <string name="search_recent">RECIENTES</string>
+    <string name="search_all">Todos</string>
+    <string name="search_by_label">Búsqueda por %1$s</string>
+    <string name="search_coming_soon">Próximamente podrás buscar directamente por %1$s.</string>
+    <string name="search_try_other_terms">Prueba con otros términos o ajusta los filtros.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Personaliza tu experiencia</string>
+    <string name="onboarding_subtitle">Selecciona al menos 3 géneros que te apasionen para calibrar tu algoritmo.</string>
+    <string name="continue_button">Continuar</string>
+    <string name="onboarding_selected_perfect">seleccionados · ¡Perfecto!</string>
+    <string name="onboarding_selected_minimum">seleccionados (mínimo 3)</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_why_recommended">¿Por qué te lo recomendamos?</string>
+    <string name="detail_why_recommended_empty">Interactúa con más series para obtener recomendaciones personalizadas.</string>
+    <string name="detail_your_rating">Tu puntuación</string>
+    <string name="detail_remove_rating">Quitar valoración</string>
+    <string name="detail_tap_to_rate">Toca para valorar</string>
+    <string name="detail_my_review">Mi reseña</string>
+    <string name="detail_review_saved">Reseña guardada</string>
+    <string name="detail_review_placeholder">Escribe tu opinión sobre esta serie...</string>
+    <string name="detail_episodes">Episodios</string>
+    <string name="detail_progress">Progreso</string>
+    <string name="detail_next_episode_format">Siguiente: %1$d. %2$s</string>
+    <string name="detail_where_to_watch">¿Dónde verlo?</string>
+    <string name="detail_provider_flatrate">En suscripción</string>
+    <string name="detail_provider_rent">De alquiler</string>
+    <string name="detail_provider_buy">De compra</string>
+    <string name="detail_justwatch_attribution">Datos de disponibilidad: JustWatch</string>
+    <string name="detail_confirm_unfavorite">¿Seguro que quieres quitar esta serie de tus favoritos?</string>
+    <string name="detail_confirm_unwatch">¿Seguro que quieres marcar esta serie como no vista?</string>
+    <string name="detail_add_to_list">Añadir a lista</string>
+    <string name="detail_no_lists">Aún no tienes listas. Crea una desde tu perfil.</string>
+    <string name="detail_similar_shows">Series similares</string>
+    <string name="detail_tab_info">Información</string>
+    <string name="detail_tab_review">Mi reseña</string>
+    <string name="detail_watched">Visto</string>
+    <string name="detail_favorite">Favorito</string>
+    <string name="detail_top">Top</string>
+    <string name="detail_watchlist">Lista</string>
+    <string name="detail_season_short">T%1$d</string>
+    <string name="detail_review_saved_label">Reseña guardada</string>
+    <string name="detail_official_trailer">TRÁILER OFICIAL</string>
+    
+    <!-- Core UI Actions -->
+    <string name="ok">Entendido</string>
+    <string name="understood">Entendido</string>
+    <string name="edit">Editar</string>
+    <string name="delete">Borrar</string>
+    <string name="save">Guardar</string>
+    <string name="remove">Quitar</string>
+    <string name="confirm">Confirmar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="close">Cerrar</string>
+
+    <!-- Home Screen -->
+    <string name="home_greeting_morning">Buenos días</string>
+    <string name="home_greeting_afternoon">Buenas tardes</string>
+    <string name="home_greeting_night">Buenas noches</string>
+    <string name="home_what_to_watch">¿Qué veo hoy?</string>
+    <string name="home_what_to_watch_short">¿Qué veo?</string>
+    <string name="home_how_are_you">¿Cómo estás?</string>
+    <string name="home_how_much_time">¿Cuánto tiempo tienes?</string>
+    <string name="home_surprise_me">Sorpréndeme</string>
+    <string name="home_for_you_today">PARA TI HOY</string>
+    <string name="home_view_details">Ver detalles</string>
+    <string name="home_popular_spain">Populares en España</string>
+    <string name="home_action_adventure">Acción y Aventura</string>
+    <string name="home_trending">Tendencias</string>
+    <string name="home_new_releases">Recién estrenadas</string>
+    <string name="home_new_releases_desc">Estrenos de los últimos 3 meses</string>
+    <string name="home_trending_desc">Las más populares en este momento</string>
+    <string name="home_comedies">Comedias</string>
+    <string name="home_mystery_suspense">Misterio y Suspense</string>
+    <string name="home_official_trailer">TRÁILER OFICIAL</string>
+    <string name="home_read_more">Leer más</string>
+
+    <string name="home_drama">Drama</string>
+    <string name="home_drama_desc">Las series más emotivas e intensas</string>
+    <string name="home_scifi">Ciencia Ficción</string>
+    <string name="home_scifi_desc">Mundos futuros, tecnología y lo desconocido</string>
+    <string name="home_watch_now">Ver ahora</string>
+    <string name="home_top_10">Top 10 esta semana</string>
+    <string name="home_continue_watching">Continuar viendo</string>
+    <string name="home_play">Reproducir</string>
+    <string name="home_platforms_this_week">Esta semana en tus plataformas</string>
+    <string name="home_no_platform_news">Sin novedades en %1$s esta semana</string>
+    <string name="home_on_air">EN ANTENA</string>
+
+    <!-- Search Screen -->
+    <string name="search_placeholder">¿Qué quieres ver hoy?</string>
+    <string name="search_filters">Filtros</string>
+    <string name="search_reset">Restablecer</string>
+    <string name="search_genres">Géneros</string>
+    <string name="search_platforms">Plataformas</string>
+    <string name="search_release_year">Año de estreno</string>
+    <string name="search_min_rating">Calificación mínima</string>
+    <string name="search_results_count">%1$d RESULTADOS</string>
+    <string name="search_no_results">Sin resultados para\n\"%1$s\"</string>
+    <string name="search_no_results_person">No se encontraron series para el %1$s \"%2$s\"</string>
+    <string name="search_no_matches">No hay coincidencias</string>
+    <string name="search_trending_label">TENDENCIAS</string>
+    <string name="search_rating_all">Todas</string>
+    <string name="search_rating_format">%1$.0f/10</string>
+
+    <!-- Error messages -->
+    <string name="error_invalid_email">Email no válido</string>
+    <string name="error_password_length">La contraseña debe tener al menos 8 caracteres</string>
+    <string name="error_password_uppercase">La contraseña debe tener al menos una mayúscula</string>
+    <string name="error_password_digit">La contraseña debe tener al menos un número</string>
+    <string name="error_passwords_dont_match">Las contraseñas no coinciden</string>
+    <string name="error_signup_failed">Error al crear la cuenta</string>
+
+    <!-- Google Sign-In — replace with your web client ID from Firebase Console -->
+    <string name="google_web_client_id">TU_WEB_CLIENT_ID_AQUI</string>
+
+    <!-- GDPR Consent -->
+    <string name="consent_title">Antes de continuar</string>
+    <string name="consent_accept">Acepto y continúo</string>
+    <string name="consent_decline">No acepto</string>
+
+    <!-- Generic actions -->
+    <string name="action_close">Cerrar</string>
+
+    <!-- Profile dialogs -->
+    <string name="profile_logout">Cerrar Sesión</string>
+    <string name="profile_logout_confirm">¿Estás seguro de que quieres salir de ShowMate?</string>
+    <string name="profile_logout_action">Salir</string>
+    <string name="profile_avatar_color_title">Color del avatar</string>
+    <string name="profile_avatar_color_subtitle">Elige un color para tu avatar:</string>
+    <string name="profile_reset_title">Reiniciar algoritmo</string>
+    <string name="profile_reset_confirm">Tus recomendaciones volverán a cero. ¿Deseas continuar?</string>
+    <string name="profile_reset_action">Reiniciar</string>
 </resources>
