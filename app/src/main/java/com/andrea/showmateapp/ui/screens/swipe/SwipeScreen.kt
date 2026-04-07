@@ -55,7 +55,7 @@ fun SwipeScreen(navController: NavController) {
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val ratedCount by viewModel.ratedCount.collectAsStateWithLifecycle()
-    val lastRemovedShow by viewModel.lastRemovedShow.collectAsStateWithLifecycle()
+    val lastAction by viewModel.lastAction.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadShows()
@@ -66,7 +66,7 @@ fun SwipeScreen(navController: NavController) {
         errorMessage = errorMessage,
         isLoading = isLoading,
         ratedCount = ratedCount,
-        lastRemovedShow = lastRemovedShow,
+        lastAction = lastAction,
         onLikeShow = { viewModel.likeTopShow() },
         onSkipShow = { viewModel.skipTopShow() },
         onUndoAction = { viewModel.undoLastAction() },
@@ -84,7 +84,7 @@ fun SwipeScreenContent(
     errorMessage: String?,
     isLoading: Boolean,
     ratedCount: Int,
-    lastRemovedShow: MediaContent?,
+    lastAction: SwipeViewModel.SwipeAction?,
     onLikeShow: () -> Unit,
     onSkipShow: () -> Unit,
     onUndoAction: () -> Unit,
@@ -291,7 +291,7 @@ fun SwipeScreenContent(
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val undoActive = lastRemovedShow != null
+                    val undoActive = lastAction != null
                     Box(
                         modifier = Modifier
                             .size(50.dp)

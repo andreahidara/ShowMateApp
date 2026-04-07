@@ -45,4 +45,10 @@ interface ShowDao {
         deleteShowsByCategory(category)
         insertShows(shows)
     }
+
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun insertSeason(season: com.andrea.showmateapp.data.model.SeasonEntity)
+
+    @androidx.room.Query("SELECT * FROM seasons WHERE showId = :showId AND seasonNumber = :seasonNumber")
+    suspend fun getSeason(showId: Int, seasonNumber: Int): com.andrea.showmateapp.data.model.SeasonEntity?
 }

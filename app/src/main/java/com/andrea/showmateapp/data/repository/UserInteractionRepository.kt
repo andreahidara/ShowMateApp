@@ -490,7 +490,7 @@ try {
             val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
 
             val watchedEpisodes = profile.watchedEpisodes.toMutableMap()
-            val episodesForShow = watchedEpisodes[showId.toString()]?.toMutableList() ?: mutableListOf()
+            val episodesForShow = watchedEpisodes[showId.toString()]?.toMutableSet() ?: mutableSetOf()
 
             val isNowWatched = if (episodesForShow.contains(episodeId)) {
                 episodesForShow.remove(episodeId)
@@ -500,8 +500,8 @@ try {
                 true
             }
 
-            watchedEpisodes[showId.toString()] = episodesForShow
-            transaction.set(userRef, profile.copy(watchedEpisodes = watchedEpisodes))
+            watchedEpisodes[showId.toString()] = episodesForShow.toList()
+            transaction.update(userRef, "watchedEpisodes", watchedEpisodes)
             isNowWatched
         }.await().also { isNowWatched ->
             if (isNowWatched) runCatching { achievementChecker.get().addXp(AchievementDefs.XP_WATCH_EPISODE) }
@@ -515,12 +515,14 @@ try {
             val snapshot = transaction.get(userRef)
             val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
             val watchedEpisodes = profile.watchedEpisodes.toMutableMap()
+
             if (episodeIds.isEmpty()) {
                 watchedEpisodes.remove(showId.toString())
             } else {
                 watchedEpisodes[showId.toString()] = episodeIds
             }
-            transaction.set(userRef, profile.copy(watchedEpisodes = watchedEpisodes))
+            transaction.update(userRef, "watchedEpisodes", watchedEpisodes)
+            null
         }.await()
     }
 

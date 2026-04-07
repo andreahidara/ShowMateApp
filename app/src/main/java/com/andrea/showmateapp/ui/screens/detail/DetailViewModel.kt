@@ -275,21 +275,71 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    fun toggleEpisodeWatched(episodeId: Int) {
+    fun toggleEpisodeWatched(episodeId: Int, markPrevious: Boolean = false) {
         val showId = _uiState.value.media?.id ?: return
         val currentWatched = _uiState.value.watchedEpisodes.toMutableList()
-        
-        if (currentWatched.contains(episodeId)) currentWatched.remove(episodeId)
-        else currentWatched.add(episodeId)
-        
+        val season = _uiState.value.selectedSeason
+
+        if (markPrevious && season != null) {
+            val epIndex = season.episodes.indexOfFirst { it.id == episodeId }
+            if (epIndex != -1) {
+                val toMark = season.episodes.take(epIndex + 1).map { it.id }
+                val allMarked = toMark.all { it in currentWatched }
+
+                if (allMarked) {
+                    currentWatched.removeAll(toMark)
+                } else {
+                    toMark.forEach { if (it !in currentWatched) currentWatched.add(it) }
+                }
+            }
+        } else {
+            if (currentWatched.contains(episodeId)) currentWatched.remove(episodeId)
+            else currentWatched.add(episodeId)
+        }
+
         _uiState.update { it.copy(watchedEpisodes = currentWatched) }
 
         viewModelScope.launch {
             try {
-                val isNowWatched = interactionRepository.toggleEpisodeWatched(showId, episodeId)
-                if (isNowWatched) {
+                if (markPrevious && season != null) {
+                    interactionRepository.setAllEpisodesWatched(showId, currentWatched)
+                } else {
+                    val isNowWatched = interactionRepository.toggleEpisodeWatched(showId, episodeId)
+                    if (isNowWatched) {
+                        launchAchievementEvaluate()
+                        runCatching { userRepository.recordViewingSession(showId, 1) }
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                checkInteractions(showId)
+            }
+        }
+    }
+
+    fun toggleSeasonWatched() {
+        val showId = _uiState.value.media?.id ?: return
+        val season = _uiState.value.selectedSeason ?: return
+        val currentWatched = _uiState.value.watchedEpisodes.toMutableSet()
+        val seasonEpIds = season.episodes.map { it.id }
+
+        val isSeasonCompleted = seasonEpIds.all { it in currentWatched }
+
+        if (isSeasonCompleted) {
+            currentWatched.removeAll(seasonEpIds.toSet())
+        } else {
+            currentWatched.addAll(seasonEpIds)
+        }
+
+        val newList = currentWatched.toList()
+        _uiState.update { it.copy(watchedEpisodes = newList) }
+
+        viewModelScope.launch {
+            try {
+                interactionRepository.setAllEpisodesWatched(showId, newList)
+                if (!isSeasonCompleted) {
                     launchAchievementEvaluate()
-                    runCatching { userRepository.recordViewingSession(showId, 1) }
+                    runCatching { userRepository.recordViewingSession(showId, seasonEpIds.size) }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

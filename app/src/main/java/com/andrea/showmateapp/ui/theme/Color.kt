@@ -26,11 +26,11 @@ val SurfaceDialog = InputBackground
 val SuccessGreen = Color(0xFF4CAF50)
 val ErrorRed = Color(0xFFFF5252)
 
-val BackgroundLight = Color(0xFF1C1B33)
-val SurfaceLight = Color(0xFF272545)
-val SurfaceVariantLight = Color(0xFF322E58)
-val TextDark = TextWhite
-val TextGrayLight = TextGray
+val BackgroundLight = Color(0xFFF8F9FA)
+val SurfaceLight = Color(0xFFFFFFFF)
+val SurfaceVariantLight = Color(0xFFE9ECEF)
+val TextDark = Color(0xFF1A1A1A)
+val TextGrayLight = Color(0xFF6C757D)
 
 val PrimaryMagenta   = Color(0xFFE040FB)
 val MatchGreen       = Color(0xFF4CAF50)

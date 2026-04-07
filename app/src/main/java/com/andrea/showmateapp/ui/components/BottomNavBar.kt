@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,7 +27,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,7 +66,7 @@ fun BottomNavBar(
     val items = listOf(
         BottomNavItem(Screen.Home, "Inicio", Icons.Default.Home),
         BottomNavItem(Screen.Search, "Buscar", Icons.Default.Search),
-        BottomNavItem(Screen.Discover, "Descubrir", Icons.Default.Star),
+        BottomNavItem(Screen.Discover, "Descubrir", Icons.Default.Whatshot),
         BottomNavItem(Screen.Friends, "Amigos", Icons.Default.Group),
         BottomNavItem(Screen.Profile, "Perfil", Icons.Default.Person)
     )
@@ -79,7 +80,8 @@ fun BottomNavBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 56.dp)
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),

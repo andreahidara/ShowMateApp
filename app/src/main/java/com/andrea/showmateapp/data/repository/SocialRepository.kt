@@ -8,6 +8,7 @@ import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.ISocialRepository
 import com.andrea.showmateapp.util.GenreMapper
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CancellationException
@@ -17,6 +18,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -105,9 +107,17 @@ class SocialRepository @Inject constructor(
         withContext(ioDispatcher) {
             val myUid = auth.currentUser?.uid ?: return@withContext
             try {
-                friendRequests.document(requestId)
-                    .update("status", FriendRequest.STATUS_ACCEPTED)
-                    .await()
+                db.runTransaction { transaction ->
+                    val requestRef = friendRequests.document(requestId)
+                    transaction.update(requestRef, "status", FriendRequest.STATUS_ACCEPTED)
+
+                    val myUserRef = users.document(myUid)
+                    transaction.update(myUserRef, "friendIds", FieldValue.arrayUnion(fromUid))
+
+                    val fromUserRef = users.document(fromUid)
+                    transaction.update(fromUserRef, "friendIds", FieldValue.arrayUnion(myUid))
+                }.await()
+
                 val myUsername = resolveUsername(myUid)
                 users.document(fromUid).collection("notifications").add(
                     mapOf(
@@ -121,6 +131,7 @@ class SocialRepository @Inject constructor(
                 ).await()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                Timber.e(e, "Error accepting friend request")
             }
         }
 

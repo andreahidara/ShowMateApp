@@ -275,21 +275,14 @@ fun SettingsScreenContent(
                         iconTint = Color(0xFF2196F3),
                         onClick = {
                             onSendPasswordReset { success ->
-                                showFeedback(
-                                    if (success) "Email de recuperación enviado. Revisa tu bandeja."
-                                    else "Error al enviar el email. Inténtalo de nuevo."
-                                )
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        if (success) "Email de recuperación enviado a $currentEmail. Revisa tu bandeja."
+                                        else "Error al enviar el email. Inténtalo de nuevo."
+                                    )
+                                }
                             }
                         }
-                    )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = "Privacidad de datos",
-                        subtitle = "Gestiona tus datos personales",
-                        icon = Icons.Default.Shield,
-                        iconTint = Color(0xFF4CAF50),
-                        showChevron = false,
-                        onClick = { showFeedback("Tus datos se almacenan de forma segura conforme al RGPD.") }
                     )
                 }
             }
@@ -308,14 +301,36 @@ fun SettingsScreenContent(
                         }
                     )
                     SettingsDivider()
+                    var showLanguageDialog by remember { mutableStateOf(false) }
                     SettingsItem(
                         title = "Idioma",
                         icon = Icons.Default.Language,
                         iconTint = Color(0xFF00BCD4),
                         value = "Español",
-                        showChevron = false,
-                        onClick = { showFeedback("El idioma se gestiona desde los ajustes del dispositivo") }
+                        onClick = { showLanguageDialog = true }
                     )
+
+                    if (showLanguageDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showLanguageDialog = false },
+                            title = { Text("Seleccionar idioma") },
+                            text = {
+                                Column {
+                                    TextButton(onClick = {
+                                        showFeedback("Idioma cambiado a Español")
+                                        showLanguageDialog = false
+                                    }) { Text("Español") }
+                                    TextButton(onClick = {
+                                        showFeedback("English selection (Coming soon)")
+                                        showLanguageDialog = false
+                                    }) { Text("English") }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { showLanguageDialog = false }) { Text("Cerrar") }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -373,20 +388,41 @@ fun SettingsScreenContent(
             }
 
             item {
+                val context = androidx.compose.ui.platform.LocalContext.current
                 SettingsSection(title = "Soporte") {
                     SettingsItem(
                         title = "Enviar feedback",
                         subtitle = "Sugerencias o problemas con la app",
                         icon = Icons.Default.Feedback,
                         iconTint = Color(0xFF00BCD4),
-                        onClick = { showFeedback("¡Gracias! Tu feedback es muy valioso.") }
+                        onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                data = android.net.Uri.parse("mailto:soporte@showmate.app")
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback ShowMate")
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                showFeedback("No hay apps de correo instaladas")
+                            }
+                        }
                     )
                     SettingsDivider()
                     SettingsItem(
                         title = "Reportar un problema",
                         icon = Icons.Default.BugReport,
                         iconTint = Color(0xFFFF5722),
-                        onClick = { showFeedback("Reporte enviado. Lo revisaremos en breve.") }
+                        onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                data = android.net.Uri.parse("mailto:soporte@showmate.app")
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Reporte de error ShowMate")
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                showFeedback("No hay apps de correo instaladas")
+                            }
+                        }
                     )
                 }
             }

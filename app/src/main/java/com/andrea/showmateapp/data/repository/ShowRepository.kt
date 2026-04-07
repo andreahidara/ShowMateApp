@@ -61,9 +61,22 @@ class ShowRepository @Inject constructor(
     }
 
     override suspend fun getSeasonDetails(showId: Int, seasonNumber: Int): Resource<SeasonResponse> {
-        return safeApiCall {
+        val cached = showDao.getSeason(showId, seasonNumber)
+        if (cached != null && System.currentTimeMillis() - cached.cachedAt < CACHE_TTL_MS) {
+            return Resource.Success(cached.toDomain())
+        }
+
+        val networkResource = safeApiCall {
             withTimeoutOrNull(API_TIMEOUT_MS) { apiService.getSeasonDetails(showId, seasonNumber) }
                 ?: throw Exception("Tiempo de espera agotado")
+        }
+
+        return when (networkResource) {
+            is Resource.Success -> {
+                showDao.insertSeason(networkResource.data.toEntity(showId))
+                networkResource
+            }
+            else -> networkResource
         }
     }
 
@@ -163,7 +176,12 @@ class ShowRepository @Inject constructor(
         }
         val result = safeApiCall {
             withTimeoutOrNull(API_TIMEOUT_MS) {
-                apiService.discoverMedia(genreId = genres, sortBy = "popularity.desc")
+                apiService.discoverMedia(
+                    genreId = genres,
+                    sortBy = "popularity.desc",
+                    minRating = 6f,
+                    minVoteCount = 100
+                )
             }?.results ?: throw Exception("Tiempo de espera agotado")
         }
         val list = (result as? Resource.Success)?.data ?: emptyList()

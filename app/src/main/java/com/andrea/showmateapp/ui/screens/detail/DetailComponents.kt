@@ -1,24 +1,19 @@
 package com.andrea.showmateapp.ui.screens.detail
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.automirrored.filled.List
-
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.WatchLater
 import androidx.compose.material3.*
@@ -426,6 +421,8 @@ fun StarRatingSection(
     }
 }
 
+
+
 @Composable
 fun ReviewSection(
     reviewText: String,
@@ -589,6 +586,8 @@ fun ReviewSection(
     }
 }
 
+
+
 @Composable
 fun EpisodesSection(
     seasons: List<com.andrea.showmateapp.data.network.Season>,
@@ -596,9 +595,10 @@ fun EpisodesSection(
     isSeasonLoading: Boolean,
     watchedEpisodes: List<Int>,
     modifier: Modifier = Modifier,
-    onEpisodeToggle: (Int) -> Unit,
+    onEpisodeToggle: (Int, Boolean) -> Unit,
     onSeasonChange: (Int) -> Unit,
-    onMarkNextEpisode: () -> Unit = {}
+    onMarkNextEpisode: () -> Unit = {},
+    viewModel: DetailViewModel
 ) {
     val episodeProgressGradient = remember {
         Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryPurple))
@@ -665,53 +665,96 @@ fun EpisodesSection(
             val progress = watchedInSeason.toFloat() / totalEps.toFloat()
             val isCompleted = watchedInSeason == totalEps
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.04f))
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(R.string.detail_progress),
-                            color = TextGray,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "$watchedInSeason / $totalEps ep",
-                            color = if (isCompleted) SuccessGreen else PrimaryPurpleLight,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(5.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                    ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.04f))
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.detail_progress),
+                                    color = TextGray,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "$watchedInSeason / $totalEps ep",
+                                    color = if (isCompleted) SuccessGreen else PrimaryPurpleLight,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Button(
+                                onClick = { viewModel.toggleSeasonWatched() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isCompleted) SuccessGreen.copy(alpha = 0.1f) else PrimaryPurple.copy(alpha = 0.1f),
+                                    contentColor = if (isCompleted) SuccessGreen else PrimaryPurpleLight
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isCompleted) Icons.Default.DoneAll else Icons.Default.Checklist,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isCompleted) "Desmarcar" else "Marcar toda",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(progress)
+                                .fillMaxWidth()
                                 .height(5.dp)
                                 .clip(CircleShape)
-                                .background(if (isCompleted) completedGradient else episodeProgressGradient)
+                                .background(Color.White.copy(alpha = 0.08f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progress)
+                                    .height(5.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isCompleted) completedGradient else episodeProgressGradient)
+                            )
+                        }
+                    }
+                }
+            }
+
+            val episodes = selectedSeason.episodes
+            Column(modifier = Modifier.fillMaxWidth()) {
+                episodes.forEach { episode ->
+                    EpisodeItem(
+                        episode = episode,
+                        isWatched = watchedEpisodes.contains(episode.id),
+                        onToggle = { onEpisodeToggle(episode.id, false) },
+                        onTogglePrevious = { onEpisodeToggle(episode.id, true) }
+                    )
+                    if (episode != episodes.last()) {
+                        HorizontalDivider(
+                            color = Color.White.copy(alpha = 0.05f),
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-        }
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (selectedSeason != null) {
             val nextEpisode = selectedSeason.episodes.firstOrNull { it.id !in watchedEpisodes }
             if (nextEpisode != null) {
                 Box(
@@ -760,20 +803,29 @@ fun EpisodesSection(
     }
 }
 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EpisodeItem(
     episode: com.andrea.showmateapp.data.network.Episode,
     isWatched: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onTogglePrevious: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onToggle()
-            }
+            .combinedClickable(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggle()
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onTogglePrevious()
+                }
+            )
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

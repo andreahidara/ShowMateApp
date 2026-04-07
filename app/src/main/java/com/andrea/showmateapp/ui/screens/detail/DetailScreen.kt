@@ -5,7 +5,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -14,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.WatchLater
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,15 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -95,7 +92,7 @@ fun DetailScreen(
         onSimilarShowClick = { show, tag ->
             navController.navigate(Screen.Detail(showId = show.id, sharedElementTag = tag))
         },
-        onEpisodeToggle = { viewModel.toggleEpisodeWatched(it) },
+        onEpisodeToggle = { epId, markPrev -> viewModel.toggleEpisodeWatched(epId, markPrev) },
         onSeasonChange = { showId, seasonNum -> viewModel.loadSeasonDetails(showId, seasonNum) },
         onClearActionError = { viewModel.clearActionError() },
         onReviewTextChange = { viewModel.onReviewTextChange(it) },
@@ -109,7 +106,8 @@ fun DetailScreen(
         whyFactors = whyFactors,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
-        sharedElementTag = sharedElementTag
+        sharedElementTag = sharedElementTag,
+        viewModel = viewModel
     )
 
 }
@@ -131,7 +129,7 @@ fun DetailScreenContent(
     onClearRateClick: () -> Unit,
     onRetry: () -> Unit,
     onSimilarShowClick: (MediaContent, String) -> Unit,
-    onEpisodeToggle: (Int) -> Unit,
+    onEpisodeToggle: (Int, Boolean) -> Unit,
     onSeasonChange: (Int, Int) -> Unit,
     onClearActionError: () -> Unit,
     onReviewTextChange: (String) -> Unit = {},
@@ -145,11 +143,11 @@ fun DetailScreenContent(
     whyFactors: List<RecommendationReason> = emptyList(),
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    sharedElementTag: String?
+    sharedElementTag: String?,
+    viewModel: DetailViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val haptic = LocalHapticFeedback.current
 
     if (uiState.showAddToListDialog) {
         AddToListDialog(
@@ -195,10 +193,7 @@ fun DetailScreenContent(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        val scrollState = rememberScrollState()
 
         Box(modifier = Modifier.fillMaxWidth().height(460.dp)) {
             with(sharedTransitionScope) {
@@ -228,28 +223,28 @@ fun DetailScreenContent(
                         .align(Alignment.BottomEnd)
                         .padding(end = 20.dp, bottom = 72.dp)
                 ) {
-                    MatchBadge(score = show.voteAverage.toFloat(), isAffinity = false)
+                    MatchBadge(score = show.voteAverage, isAffinity = false)
                 }
             }
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 40.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
         ) {
-            item { Spacer(modifier = Modifier.height(330.dp)) }
+            Spacer(modifier = Modifier.height(330.dp))
 
-            item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 28.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 28.dp)
-                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -258,10 +253,10 @@ fun DetailScreenContent(
                             Text(
                                 text = show.name,
                                 color = Color.White,
-                                fontSize = 32.sp,
+                                fontSize = 28.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = (-0.5).sp,
-                                lineHeight = 38.sp,
+                                lineHeight = 34.sp,
                                 modifier = Modifier.weight(1f)
                             )
                             if (show.affinityScore > 0f && whyFactors.isNotEmpty()) {
@@ -286,7 +281,7 @@ fun DetailScreenContent(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         val year = remember(show.firstAirDate) { show.firstAirDate?.take(4) ?: "" }
                         val seasonsCount = remember(show.numberOfSeasons) {
@@ -300,7 +295,7 @@ fun DetailScreenContent(
                             if (seasonsCount.isNotEmpty()) MetaChip(seasonsCount)
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
                         DetailActionButtonsRow(
                             isWatched = localWatched,
@@ -318,8 +313,8 @@ fun DetailScreenContent(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(
                                     Brush.linearGradient(
                                         listOf(
@@ -336,14 +331,14 @@ fun DetailScreenContent(
                                     Icons.AutoMirrored.Filled.List,
                                     contentDescription = null,
                                     tint = PrimaryPurpleLight,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     stringResource(R.string.detail_add_to_list),
                                     color = PrimaryPurpleLight,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                    fontSize = 13.sp
                                 )
                             }
                         }
@@ -352,13 +347,13 @@ fun DetailScreenContent(
                             it.site == "YouTube" && it.type == "Trailer"
                         }?.key
                         if (trailerKey != null) {
-                            Spacer(modifier = Modifier.height(28.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
                             val uriHandler = LocalUriHandler.current
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(20.dp))
+                                    .height(180.dp)
+                                    .clip(RoundedCornerShape(18.dp))
                                     .clickable {
                                         uriHandler.openUri("https://www.youtube.com/watch?v=$trailerKey")
                                     }
@@ -384,7 +379,7 @@ fun DetailScreenContent(
                                 )
                                 Box(
                                     modifier = Modifier
-                                        .size(64.dp)
+                                        .size(54.dp)
                                         .align(Alignment.Center)
                                         .clip(CircleShape)
                                         .background(
@@ -398,13 +393,13 @@ fun DetailScreenContent(
                                         Icons.Default.PlayArrow,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(36.dp)
+                                        modifier = Modifier.size(32.dp)
                                     )
                                 }
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopStart)
-                                        .padding(14.dp)
+                                        .padding(12.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(Color.Black.copy(alpha = 0.55f))
                                 ) {
@@ -412,22 +407,21 @@ fun DetailScreenContent(
                                         stringResource(R.string.detail_official_trailer),
                                         color = Color.White,
                                         fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 10.sp,
+                                        fontSize = 9.sp,
                                         letterSpacing = 1.sp,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(28.dp))
 
                         var selectedDetailTab by remember { mutableIntStateOf(0) }
                         val detailTabs = listOf(
                             stringResource(R.string.detail_tab_info),
                             stringResource(R.string.detail_tab_review)
                         )
-                        val hasReviewContent = uiState.userRating != null || uiState.isReviewSaved
 
                         PremiumTabRow(
                             tabs = listOf(0, 1),
@@ -437,7 +431,7 @@ fun DetailScreenContent(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         AnimatedContent(
                             targetState = selectedDetailTab,
@@ -457,17 +451,17 @@ fun DetailScreenContent(
                                          !esProviders.buy.isNullOrEmpty())
                                     ) {
                                         WatchProvidersSection(providers = esProviders, showName = show.name)
-                                        Spacer(modifier = Modifier.height(32.dp))
+                                        Spacer(modifier = Modifier.height(28.dp))
                                     }
 
                                     var isSynopsisExpanded by remember { mutableStateOf(false) }
                                     DetailSectionHeader(title = stringResource(R.string.detail_synopsis))
-                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Spacer(modifier = Modifier.height(10.dp))
                                     Text(
                                         text = show.overview.ifEmpty { stringResource(R.string.detail_no_synopsis) },
                                         color = TextGray,
-                                        fontSize = 15.sp,
-                                        lineHeight = 24.sp,
+                                        fontSize = 14.sp,
+                                        lineHeight = 22.sp,
                                         maxLines = if (isSynopsisExpanded) Int.MAX_VALUE else 4,
                                         modifier = Modifier
                                             .animateContentSize()
@@ -486,7 +480,7 @@ fun DetailScreenContent(
                                     }
 
                                     if (!show.seasons.isNullOrEmpty()) {
-                                        Spacer(modifier = Modifier.height(32.dp))
+                                        Spacer(modifier = Modifier.height(28.dp))
                                         EpisodesSection(
                                             seasons = show.seasons,
                                             selectedSeason = uiState.selectedSeason,
@@ -496,15 +490,16 @@ fun DetailScreenContent(
                                             onSeasonChange = { seasonNum ->
                                                 onSeasonChange(show.id, seasonNum)
                                             },
-                                            onMarkNextEpisode = onMarkNextEpisode
+                                            onMarkNextEpisode = onMarkNextEpisode,
+                                            viewModel = viewModel
                                         )
                                     }
 
                                     val cast = show.credits?.cast ?: emptyList()
                                     if (cast.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(32.dp))
+                                        Spacer(modifier = Modifier.height(28.dp))
                                         DetailSectionHeader(title = stringResource(R.string.detail_top_cast))
-                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Spacer(modifier = Modifier.height(14.dp))
                                         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                             items(cast.take(10), key = { it.id }) { member ->
                                                 CastMemberItem(member)
@@ -513,9 +508,9 @@ fun DetailScreenContent(
                                     }
 
                                     if (uiState.isSimilarLoading || uiState.similarShows.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(32.dp))
+                                        Spacer(modifier = Modifier.height(28.dp))
                                         DetailSectionHeader(title = stringResource(R.string.detail_similar_shows))
-                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Spacer(modifier = Modifier.height(14.dp))
                                         if (uiState.isSimilarLoading) {
                                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                                 items(5) {
@@ -551,6 +546,15 @@ fun DetailScreenContent(
                                         onClearRateClick = onClearRateClick
                                     )
                                     Spacer(modifier = Modifier.height(24.dp))
+                                    ReviewSection(
+                                        reviewText = uiState.userReview,
+                                        isSaving = uiState.isSavingReview,
+                                        isReviewSaved = uiState.isReviewSaved,
+                                        onTextChange = onReviewTextChange,
+                                        onSave = onSaveReview,
+                                        onDelete = onDeleteReview
+                                    )
+                                    Spacer(modifier = Modifier.height(24.dp))
                                     SocialReviewsSection(
                                         showId = show.id,
                                         numberOfSeasons = show.numberOfSeasons ?: 1
@@ -558,10 +562,14 @@ fun DetailScreenContent(
                                 }
                             }
                         }
-                    }
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
 
         Surface(
             onClick = onBackClick,

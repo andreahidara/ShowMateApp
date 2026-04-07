@@ -39,25 +39,34 @@ class SwipeViewModel @Inject constructor(
     private val _ratedCount = MutableStateFlow(0)
     val ratedCount: StateFlow<Int> = _ratedCount.asStateFlow()
 
-    private val _lastRemovedShow = MutableStateFlow<MediaContent?>(null)
-    val lastRemovedShow: StateFlow<MediaContent?> = _lastRemovedShow.asStateFlow()
+    private val _lastAction = MutableStateFlow<SwipeAction?>(null)
+    val lastAction: StateFlow<SwipeAction?> = _lastAction.asStateFlow()
+
+    data class SwipeAction(val show: MediaContent, val isLike: Boolean)
 
     fun undoLastAction() {
-        val show = _lastRemovedShow.value ?: return
+        val action = _lastAction.value ?: return
         val currentList = _shows.value.toMutableList()
-        currentList.add(0, show)
+        currentList.add(0, action.show)
         _shows.value = currentList
         _ratedCount.value = (_ratedCount.value - 1).coerceAtLeast(0)
-        _lastRemovedShow.value = null
+        _lastAction.value = null
+
+        viewModelScope.launch {
+            if (action.isLike) {
+                interactionRepository.toggleFavorite(action.show, setLiked = false)
+            }
+        }
     }
 
     fun likeTopShow() {
         val currentList = _shows.value.toMutableList()
         if (currentList.isNotEmpty()) {
             val show = currentList.removeAt(0)
-            _lastRemovedShow.value = show
+            _lastAction.value = SwipeAction(show, true)
             _shows.value = currentList
             _ratedCount.value++
+            if (currentList.size < 5) loadShows(false)
             viewModelScope.launch {
                 interactionRepository.toggleFavorite(show, setLiked = true)
                 interactionRepository.trackMediaInteraction(
@@ -90,9 +99,10 @@ class SwipeViewModel @Inject constructor(
         val currentList = _shows.value.toMutableList()
         if (currentList.isNotEmpty()) {
             val show = currentList.removeAt(0)
-            _lastRemovedShow.value = show
+            _lastAction.value = SwipeAction(show, false)
             _shows.value = currentList
             _ratedCount.value++
+            if (currentList.size < 5) loadShows(false)
             viewModelScope.launch {
                 interactionRepository.trackMediaInteraction(
                     mediaId = show.id,

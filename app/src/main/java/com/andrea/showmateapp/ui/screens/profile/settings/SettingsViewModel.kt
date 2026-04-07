@@ -62,9 +62,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val profile = userRepository.getUserProfile()
-            _currentEmail.value = profile?.username?.takeIf { it.isNotBlank() }
-                ?: userRepository.getCurrentUserEmail() ?: ""
+            _currentEmail.value = userRepository.getCurrentUserEmail() ?: ""
         }
     }
 

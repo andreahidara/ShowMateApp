@@ -20,7 +20,7 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextGray
 )
 
-private val NavyColorScheme = darkColorScheme(
+private val LightColorScheme = androidx.compose.material3.lightColorScheme(
     primary = PrimaryPurple,
     secondary = AccentBlue,
     background = BackgroundLight,
@@ -44,7 +44,7 @@ fun ShowMateAppTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> DarkColorScheme
-        else -> NavyColorScheme
+        else -> LightColorScheme
     }
 
     MaterialTheme(

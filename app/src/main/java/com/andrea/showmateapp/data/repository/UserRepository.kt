@@ -186,17 +186,24 @@ class UserRepository @Inject constructor(
         val userRef = userDoc(uid)
         val today   = java.time.LocalDate.now().toString()
         db.runTransaction { transaction ->
-            val profile = transaction.get(userRef).toObject(UserProfile::class.java)
+            val snapshot = transaction.get(userRef)
+            val profile = snapshot.toObject(UserProfile::class.java)
                 ?: UserProfile(userId = uid)
             val history = profile.viewingHistory.toMutableList()
-            val existingIdx = history.indexOfFirst { it.startsWith("$today:$showId:") }
+
+            val entryPrefix = "$today:$showId:"
+            val existingIdx = history.indexOfFirst { it.startsWith(entryPrefix) }
+
             if (existingIdx >= 0) {
-                val prevCount = history[existingIdx].split(":").getOrNull(2)?.toIntOrNull() ?: 0
+                val parts = history[existingIdx].split(":")
+                val prevCount = parts.getOrNull(2)?.toIntOrNull() ?: 0
                 history[existingIdx] = "$today:$showId:${prevCount + episodeCount}"
             } else {
                 history.add("$today:$showId:$episodeCount")
             }
-            transaction.set(userRef, profile.copy(viewingHistory = history))
+
+            transaction.update(userRef, "viewingHistory", history)
+            null
         }.await()
         invalidateProfileCache()
     }
