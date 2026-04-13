@@ -43,23 +43,25 @@ class HomeScreenContentTest {
         composeTestRule.setContent {
             SharedTransitionLayout {
                 AnimatedContent(targetState = true, label = "test") { isActive ->
-                    if (isActive) HomeScreenContent(
-                        userName = "TestUser",
-                        upNextShows = upNextShows,
-                        trendingShows = trendingShows,
-                        actionShows = actionShows,
-                        comedyShows = comedyShows,
-                        mysteryShows = mysteryShows,
-                        thisWeekShows = thisWeekShows,
-                        isLoading = isLoading,
-                        isRefreshing = isRefreshing,
-                        criticalError = criticalError,
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this@AnimatedContent,
-                        onMediaClick = { _, _ -> },
-                        onRetry = onRetry,
-                        onRefresh = onRefresh
-                    )
+                    if (isActive) {
+                        HomeScreenContent(
+                            userName = "TestUser",
+                            upNextShows = upNextShows,
+                            trendingShows = trendingShows,
+                            actionShows = actionShows,
+                            comedyShows = comedyShows,
+                            mysteryShows = mysteryShows,
+                            thisWeekShows = thisWeekShows,
+                            isLoading = isLoading,
+                            isRefreshing = isRefreshing,
+                            criticalError = criticalError,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@AnimatedContent,
+                            onMediaClick = { _, _ -> },
+                            onRetry = onRetry,
+                            onRefresh = onRefresh
+                        )
+                    }
                 }
             }
         }

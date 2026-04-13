@@ -1,11 +1,13 @@
 package com.andrea.showmateapp.ui.screens.profile.lists
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -14,8 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
+@Immutable
 data class CustomListsUiState(
     val lists: Map<String, List<Int>> = emptyMap(),
     val posterPaths: Map<String, String?> = emptyMap(),
@@ -40,10 +42,10 @@ class CustomListsViewModel @Inject constructor(
 
     fun loadLists() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val lists = interactionRepository.getCustomLists()
-            _uiState.update { it.copy(lists = lists, isLoading = false) }
-            loadPosters(lists)
+            interactionRepository.getCustomListsFlow().collect { lists ->
+                _uiState.update { it.copy(lists = lists, isLoading = false) }
+                loadPosters(lists)
+            }
         }
     }
 

@@ -21,10 +21,7 @@ import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.TextGray
 
 @Composable
-fun LogoutConfirmDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
+fun LogoutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF1A1A2E),
@@ -120,10 +117,7 @@ fun AvatarColorPickerDialog(
 }
 
 @Composable
-fun ResetAlgorithmDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
+fun ResetAlgorithmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF1A1A2E),

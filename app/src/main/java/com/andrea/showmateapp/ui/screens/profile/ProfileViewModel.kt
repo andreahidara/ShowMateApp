@@ -2,38 +2,39 @@ package com.andrea.showmateapp.ui.screens.profile
 
 import android.content.Context
 import android.net.Uri
-import timber.log.Timber
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.CancellationException
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.model.toDomain
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.di.IoDispatcher
-import com.andrea.showmateapp.domain.repository.IInteractionRepository
-import com.google.firebase.storage.FirebaseStorage
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.tasks.await
-import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.repository.IAchievementRepository
+import com.andrea.showmateapp.domain.repository.IInteractionRepository
+import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.domain.usecase.GetProfileStatsUseCase
 import com.andrea.showmateapp.domain.usecase.GetViewerPersonalityUseCase
+import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Locale
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
-import javax.inject.Inject
+import kotlinx.coroutines.tasks.await
+import timber.log.Timber
 
 data class WatchedShowItem(
     val show: MediaContent,
@@ -61,8 +62,14 @@ class ProfileViewModel @Inject constructor(
 
     companion object {
         val AVATAR_PALETTE = listOf(
-            0xFF7C4DFF.toInt(), 0xFFE91E63.toInt(), 0xFF00BCD4.toInt(), 0xFF4CAF50.toInt(),
-            0xFFFF5722.toInt(), 0xFF2196F3.toInt(), 0xFFFFB300.toInt(), 0xFF795548.toInt()
+            0xFF7C4DFF.toInt(),
+            0xFFE91E63.toInt(),
+            0xFF00BCD4.toInt(),
+            0xFF4CAF50.toInt(),
+            0xFFFF5722.toInt(),
+            0xFF2196F3.toInt(),
+            0xFFFFB300.toInt(),
+            0xFF795548.toInt()
         )
         private const val PREFS_NAME = "profile_prefs"
         private const val KEY_AVATAR_COLOR = "avatar_color"
@@ -91,11 +98,12 @@ class ProfileViewModel @Inject constructor(
     val xp: StateFlow<Int> = _xp.asStateFlow()
 
     private val _achievementProgress = MutableStateFlow(0 to AchievementDefs.all.size)
+
     /** (unlockedCount, totalCount) */
     val achievementProgress: StateFlow<Pair<Int, Int>> = _achievementProgress.asStateFlow()
 
     val userLevel: StateFlow<UserLevel> = _xp.map { xp ->
-        val lvl  = AchievementDefs.levelForXp(xp)
+        val lvl = AchievementDefs.levelForXp(xp)
         val prog = AchievementDefs.progressInLevel(xp)
         val next = AchievementDefs.levels.getOrNull(lvl.level)?.name
         UserLevel(lvl.name, prog, next)
@@ -110,6 +118,7 @@ class ProfileViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    @Suppress("ktlint:standard:property-naming")
     private val _watchedEpisodesMap = MutableStateFlow<Map<String, List<Int>>>(emptyMap())
 
     private val _customLists = MutableStateFlow<Map<String, List<Int>>>(emptyMap())
@@ -128,7 +137,7 @@ class ProfileViewModel @Inject constructor(
             }
         }.stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
@@ -136,11 +145,16 @@ class ProfileViewModel @Inject constructor(
         interactionRepository.getLikedShowsFlow().map { entities -> entities.map { it.toDomain() } }
             .stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
+                started = SharingStarted.Lazily,
                 initialValue = emptyList()
             )
 
+    @Suppress("ktlint:standard:property-naming")
     private val _userProfileFlow = MutableStateFlow<UserProfile?>(null)
+
+    val friendCount: StateFlow<Int> = _userProfileFlow.map {
+        it?.friendIds?.size ?: 0
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     val stats: StateFlow<GetProfileStatsUseCase.ProfileStats> =
         combine(watchedShows, _userProfileFlow) { items, profile ->
@@ -148,11 +162,30 @@ class ProfileViewModel @Inject constructor(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = GetProfileStatsUseCase.ProfileStats(totalWatchedHours = 0, watchedCount = 0)
+            initialValue = GetProfileStatsUseCase.ProfileStats(totalHours = 0, watchedCount = 0)
         )
 
     init {
         loadProfileData()
+        observeProfile()
+    }
+
+    private fun observeProfile() {
+        viewModelScope.launch {
+            userRepository.getUserProfileFlow().collect { userProfile ->
+                if (userProfile != null) {
+                    _displayName.value = userProfile.username.takeIf { it.isNotBlank() }
+                        ?: userRepository.getCurrentUserEmail()?.substringBefore("@")?.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                        } ?: "Usuario"
+                    _photoUrl.value = userProfile.photoUrl
+                    _watchedEpisodesMap.value = userProfile.watchedEpisodes
+                    _customLists.value = userProfile.customLists
+                    _viewerPersonality.value = getViewerPersonalityUseCase.execute(userProfile)
+                    _userProfileFlow.value = userProfile
+                }
+            }
+        }
     }
 
     fun refresh() {
@@ -222,7 +255,11 @@ class ProfileViewModel @Inject constructor(
 
     fun logout(onSuccess: () -> Unit) {
         viewModelScope.launch {
-            try { userRepository.clearUserCache() } catch (e: Exception) { if (e is CancellationException) throw e;}
+            try {
+                userRepository.clearUserCache()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
             authRepository.signOut()
             onSuccess()
         }
@@ -233,7 +270,8 @@ class ProfileViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 userRepository.resetAlgorithmData()
-            } catch (e: Exception) { if (e is CancellationException) throw e;
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
             } finally {
                 _isLoading.value = false
                 onComplete()
@@ -243,7 +281,10 @@ class ProfileViewModel @Inject constructor(
 
     fun updateUsername(newName: String, onComplete: () -> Unit) {
         val trimmed = newName.trim()
-        if (trimmed.isBlank()) { onComplete(); return }
+        if (trimmed.isBlank()) {
+            onComplete()
+            return
+        }
         viewModelScope.launch {
             try {
                 userRepository.updateProfile(trimmed)

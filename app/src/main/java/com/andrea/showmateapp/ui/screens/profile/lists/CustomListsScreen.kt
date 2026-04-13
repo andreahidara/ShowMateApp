@@ -3,8 +3,6 @@ package com.andrea.showmateapp.ui.screens.profile.lists
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
-import com.andrea.showmateapp.util.TmdbUtils
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -29,14 +27,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.components.premium.outlinedTextFieldColors
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.HeartRed
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
-import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.SurfaceVariantDark
 import com.andrea.showmateapp.ui.theme.TextGray
+import com.andrea.showmateapp.util.TmdbUtils
 
 private val ListAccentColors = listOf(
     Color(0xFF7C4DFF),
@@ -46,18 +45,14 @@ private val ListAccentColors = listOf(
     Color(0xFFFFB300),
     Color(0xFFFF5722),
     Color(0xFFE91E63),
-    Color(0xFF795548),
+    Color(0xFF795548)
 )
 
-private fun accentForName(name: String): Color =
-    ListAccentColors[Math.abs(name.hashCode()) % ListAccentColors.size]
+private fun accentForName(name: String): Color = ListAccentColors[Math.abs(name.hashCode()) % ListAccentColors.size]
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomListsScreen(
-    navController: NavController,
-    viewModel: CustomListsViewModel = hiltViewModel()
-) {
+fun CustomListsScreen(navController: NavController, viewModel: CustomListsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var listToDelete by remember { mutableStateOf<String?>(null) }
 
@@ -74,7 +69,12 @@ fun CustomListsScreen(
                             .background(PrimaryPurple.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.PlaylistAdd,
+                            contentDescription = null,
+                            tint = PrimaryPurple,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                     Spacer(Modifier.width(10.dp))
                     Text("Nueva lista", color = Color.White, fontWeight = FontWeight.Bold)
@@ -109,15 +109,29 @@ fun CustomListsScreen(
             containerColor = Color(0xFF1A1A2E),
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = HeartRed, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = HeartRed,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text("Eliminar lista", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
-            text = { Text("¿Eliminar «$listToDelete»? Esta acción no se puede deshacer.", color = TextGray, lineHeight = 20.sp) },
+            text = {
+                Text(
+                    "¿Eliminar «$listToDelete»? Esta acción no se puede deshacer.",
+                    color = TextGray,
+                    lineHeight = 20.sp
+                )
+            },
             confirmButton = {
                 Button(
-                    onClick = { listToDelete?.let { viewModel.deleteList(it) }; listToDelete = null },
+                    onClick = {
+                        listToDelete?.let { viewModel.deleteList(it) }
+                        listToDelete = null
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = HeartRed)
                 ) { Text("Eliminar", fontWeight = FontWeight.Bold) }
             },
@@ -303,10 +317,7 @@ private fun CustomListCard(
 }
 
 @Composable
-private fun EmptyListsState(
-    modifier: Modifier = Modifier,
-    onCreateClick: () -> Unit
-) {
+private fun EmptyListsState(modifier: Modifier = Modifier, onCreateClick: () -> Unit) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,

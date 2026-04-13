@@ -1,19 +1,20 @@
 package com.andrea.showmateapp.ui.screens.detail
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.WatchLater
 import androidx.compose.material3.*
@@ -21,18 +22,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.ReasonType
 import com.andrea.showmateapp.data.model.RecommendationReason
@@ -41,10 +45,7 @@ import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
 
 @Composable
-fun DetailSectionHeader(
-    title: String,
-    modifier: Modifier = Modifier
-) {
+fun DetailSectionHeader(title: String, modifier: Modifier = Modifier) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -87,8 +88,12 @@ fun DetailActionButtonsRow(
             text = stringResource(R.string.detail_watched),
             containerColor = if (isWatched) SuccessGreen else Color.White.copy(alpha = 0.08f),
             contentColor = if (isWatched) Color.White else TextGray,
+            isActive = isWatched,
             modifier = Modifier.weight(1f),
-            onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onWatchedClick() }
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onWatchedClick()
+            }
         )
 
         DetailActionButton(
@@ -96,8 +101,12 @@ fun DetailActionButtonsRow(
             text = stringResource(R.string.detail_favorite),
             containerColor = if (isLiked) HeartRed else Color.White.copy(alpha = 0.08f),
             contentColor = Color.White,
+            isActive = isLiked,
             modifier = Modifier.weight(1f),
-            onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onLikeClick() }
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onLikeClick()
+            }
         )
 
         DetailActionButton(
@@ -105,8 +114,12 @@ fun DetailActionButtonsRow(
             text = stringResource(R.string.detail_top),
             containerColor = if (isEssential) StarYellow else Color.White.copy(alpha = 0.08f),
             contentColor = Color.White,
+            isActive = isEssential,
             modifier = Modifier.weight(0.8f),
-            onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onEssentialClick() }
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onEssentialClick()
+            }
         )
 
         DetailActionButton(
@@ -114,8 +127,12 @@ fun DetailActionButtonsRow(
             text = stringResource(R.string.detail_watchlist),
             containerColor = if (isInWatchlist) AccentBlue else Color.White.copy(alpha = 0.08f),
             contentColor = Color.White,
+            isActive = isInWatchlist,
             modifier = Modifier.weight(1f),
-            onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onWatchlistClick() }
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onWatchlistClick()
+            }
         )
     }
 }
@@ -126,14 +143,22 @@ fun DetailActionButton(
     text: String,
     containerColor: Color,
     contentColor: Color,
+    isActive: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val iconScale by animateFloatAsState(
+        targetValue = if (isActive) 1.22f else 1f,
+        animationSpec = spring(dampingRatio = 0.45f, stiffness = 500f),
+        label = "iconScale"
+    )
+
     Box(
         modifier = modifier
             .height(58.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(containerColor)
+            .semantics { role = Role.Button }
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -144,9 +169,11 @@ fun DetailActionButton(
         ) {
             Icon(
                 icon,
-                contentDescription = null,
+                contentDescription = text,
                 tint = contentColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier
+                    .size(20.dp)
+                    .scale(iconScale)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -180,22 +207,45 @@ fun MetaChip(text: String) {
 @Composable
 fun CastMemberItem(
     member: com.andrea.showmateapp.data.network.CastMember,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: ((Int, String) -> Unit)? = null
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.width(84.dp)
+        modifier = modifier
+            .width(84.dp)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClickLabel = "Ver perfil de ${member.name}") {
+                        onClick(member.id, member.name)
+                    }
+                } else {
+                    Modifier
+                }
+            )
+            .semantics { contentDescription = "${member.name}, ${member.character}" }
     ) {
         Box(
             modifier = Modifier
                 .size(80.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.05f)),
+                .background(Color.White.copy(alpha = 0.05f))
+                .then(
+                    if (onClick != null) {
+                        Modifier.border(
+                            1.dp,
+                            PrimaryPurple.copy(alpha = 0.3f),
+                            CircleShape
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             TmdbImage(
                 path = member.profilePath,
-                contentDescription = member.name,
+                contentDescription = null,
                 size = TmdbUtils.ImageSize.W185,
                 modifier = Modifier
                     .size(74.dp)
@@ -205,7 +255,7 @@ fun CastMemberItem(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = member.name,
-            color = Color.White,
+            color = if (onClick != null) Color.White else Color.White.copy(alpha = 0.9f),
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
@@ -263,7 +313,7 @@ fun WatchProvidersSection(providers: com.andrea.showmateapp.data.network.Country
         Text(
             text = stringResource(R.string.detail_justwatch_attribution),
             fontSize = 11.sp,
-            color = TextGray.copy(alpha = 0.6f),
+            color = TextGray.copy(alpha = 0.6f)
         )
     }
 }
@@ -296,7 +346,11 @@ fun ProviderTypeRow(
 }
 
 @Composable
-fun ProviderLogo(provider: com.andrea.showmateapp.data.network.Provider, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+fun ProviderLogo(
+    provider: com.andrea.showmateapp.data.network.Provider,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
     TmdbImage(
         path = provider.logoPath,
         contentDescription = provider.providerName,
@@ -311,20 +365,20 @@ fun ProviderLogo(provider: com.andrea.showmateapp.data.network.Provider, modifie
 private fun providerSearchUrl(providerId: Int, showName: String): String? {
     val encoded = java.net.URLEncoder.encode(showName, "UTF-8")
     return when (providerId) {
-        8, 213  -> "https://www.netflix.com/search?q=$encoded"
-        9, 119  -> "https://www.primevideo.com/search?k=$encoded"
-        337     -> "https://www.disneyplus.com/es-es/search/$encoded"
+        8, 213 -> "https://www.netflix.com/search?q=$encoded"
+        9, 119 -> "https://www.primevideo.com/search?k=$encoded"
+        337 -> "https://www.disneyplus.com/es-es/search/$encoded"
         384, 29 -> "https://play.max.com/search?q=$encoded"
-        2, 350  -> "https://tv.apple.com/search?term=$encoded"
-        531     -> "https://www.paramountplus.com/es/search/$encoded/"
-        1773    -> "https://www.skyshowtime.com/es/search?q=$encoded"
-        63      -> "https://www.filmin.es/buscar?q=$encoded"
-        149     -> "https://ver.movistarplus.es/buscar/?q=$encoded"
+        2, 350 -> "https://tv.apple.com/search?term=$encoded"
+        531 -> "https://www.paramountplus.com/es/search/$encoded/"
+        1773 -> "https://www.skyshowtime.com/es/search?q=$encoded"
+        63 -> "https://www.filmin.es/buscar?q=$encoded"
+        149 -> "https://ver.movistarplus.es/buscar/?q=$encoded"
         35, 105 -> "https://www.rakuten.tv/es/search?q=$encoded"
-        541     -> "https://www.atresplayer.com/buscar/?q=$encoded"
-        566     -> "https://www.rtve.es/play/buscar/?q=$encoded"
-        188     -> "https://www.youtube.com/results?search_query=$encoded"
-        else    -> null
+        541 -> "https://www.atresplayer.com/buscar/?q=$encoded"
+        566 -> "https://www.rtve.es/play/buscar/?q=$encoded"
+        188 -> "https://www.youtube.com/results?search_query=$encoded"
+        else -> null
     }
 }
 
@@ -421,8 +475,6 @@ fun StarRatingSection(
     }
 }
 
-
-
 @Composable
 fun ReviewSection(
     reviewText: String,
@@ -483,13 +535,22 @@ fun ReviewSection(
                                     onClick = { isEditing = true },
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text(stringResource(R.string.edit), color = PrimaryPurpleLight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        stringResource(R.string.edit),
+                                        color = PrimaryPurpleLight,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                                 TextButton(
                                     onClick = onDelete,
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text(stringResource(R.string.delete), color = ErrorRed.copy(alpha = 0.8f), fontSize = 13.sp)
+                                    Text(
+                                        stringResource(R.string.delete),
+                                        color = ErrorRed.copy(alpha = 0.8f),
+                                        fontSize = 13.sp
+                                    )
                                 }
                             }
                         }
@@ -554,8 +615,11 @@ fun ReviewSection(
                     ) {
                         Text(
                             text = "${reviewText.length}/500",
-                            color = if (reviewText.length > 450) StarYellow
-                                    else Color.White.copy(alpha = 0.28f),
+                            color = if (reviewText.length > 450) {
+                                StarYellow
+                            } else {
+                                Color.White.copy(alpha = 0.28f)
+                            },
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f)
                         )
@@ -576,7 +640,12 @@ fun ReviewSection(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text(stringResource(R.string.save), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(
+                                    stringResource(R.string.save),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
                             }
                         }
                     }
@@ -585,8 +654,6 @@ fun ReviewSection(
         }
     }
 }
-
-
 
 @Composable
 fun EpisodesSection(
@@ -597,8 +664,8 @@ fun EpisodesSection(
     modifier: Modifier = Modifier,
     onEpisodeToggle: (Int, Boolean) -> Unit,
     onSeasonChange: (Int) -> Unit,
-    onMarkNextEpisode: () -> Unit = {},
-    viewModel: DetailViewModel
+    onToggleSeason: () -> Unit,
+    onMarkNextEpisode: () -> Unit = {}
 ) {
     val episodeProgressGradient = remember {
         Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryPurple))
@@ -611,37 +678,38 @@ fun EpisodesSection(
         DetailSectionHeader(title = stringResource(R.string.detail_episodes))
         Spacer(modifier = Modifier.height(16.dp))
 
-        var selectedTabIndex by remember(selectedSeason) {
+        val filteredSeasons = remember(seasons) { seasons.filter { it.seasonNumber > 0 } }
+
+        var selectedSeasonNumber by remember(selectedSeason) {
             mutableIntStateOf(
-                seasons.indexOfFirst { it.seasonNumber == selectedSeason?.seasonNumber }.coerceAtLeast(0)
+                selectedSeason?.seasonNumber ?: filteredSeasons.firstOrNull()?.seasonNumber ?: 1
             )
         }
 
-        val filteredSeasons = remember(seasons) { seasons.filter { it.seasonNumber > 0 } }
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 4.dp)
         ) {
             items(filteredSeasons, key = { it.seasonNumber }) { season ->
-                val index = filteredSeasons.indexOf(season)
-                val isSelected = selectedTabIndex == index
+                val isSelected = selectedSeasonNumber == season.seasonNumber
                 Box(
                     modifier = Modifier
                         .height(36.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isSelected)
+                            if (isSelected) {
                                 Brush.linearGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
-                            else
+                            } else {
                                 Brush.linearGradient(
                                     listOf(
                                         Color.White.copy(alpha = 0.07f),
                                         Color.White.copy(alpha = 0.07f)
                                     )
                                 )
+                            }
                         )
                         .clickable {
-                            selectedTabIndex = index
+                            selectedSeasonNumber = season.seasonNumber
                             onSeasonChange(season.seasonNumber)
                         },
                     contentAlignment = Alignment.Center
@@ -659,7 +727,11 @@ fun EpisodesSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (selectedSeason != null && selectedSeason.episodes.isNotEmpty()) {
+        if (isSeasonLoading) {
+            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = PrimaryPurple)
+            }
+        } else if (selectedSeason != null && selectedSeason.episodes.isNotEmpty()) {
             val totalEps = selectedSeason.episodes.size
             val watchedInSeason = selectedSeason.episodes.count { watchedEpisodes.contains(it.id) }
             val progress = watchedInSeason.toFloat() / totalEps.toFloat()
@@ -693,9 +765,15 @@ fun EpisodesSection(
                                 )
                             }
                             Button(
-                                onClick = { viewModel.toggleSeasonWatched() },
+                                onClick = onToggleSeason,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isCompleted) SuccessGreen.copy(alpha = 0.1f) else PrimaryPurple.copy(alpha = 0.1f),
+                                    containerColor = if (isCompleted) {
+                                        SuccessGreen.copy(
+                                            alpha = 0.1f
+                                        )
+                                    } else {
+                                        PrimaryPurple.copy(alpha = 0.1f)
+                                    },
                                     contentColor = if (isCompleted) SuccessGreen else PrimaryPurpleLight
                                 ),
                                 shape = RoundedCornerShape(8.dp),
@@ -709,7 +787,13 @@ fun EpisodesSection(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (isCompleted) "Desmarcar" else "Marcar toda",
+                                    text = if (isCompleted) {
+                                        stringResource(
+                                            R.string.detail_unmark_all
+                                        )
+                                    } else {
+                                        stringResource(R.string.detail_mark_all)
+                                    },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -788,7 +872,11 @@ fun EpisodesSection(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = stringResource(R.string.detail_next_episode_format, nextEpisode.episodeNumber, nextEpisode.name),
+                            text = stringResource(
+                                R.string.detail_next_episode_format,
+                                nextEpisode.episodeNumber,
+                                nextEpisode.name
+                            ),
                             color = PrimaryPurpleLight,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
@@ -802,7 +890,6 @@ fun EpisodesSection(
         }
     }
 }
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -894,10 +981,7 @@ fun EpisodeItem(
 }
 
 @Composable
-fun WhyRecommendedDialog(
-    factors: List<RecommendationReason>,
-    onDismiss: () -> Unit
-) {
+fun WhyRecommendedDialog(factors: List<RecommendationReason>, onDismiss: () -> Unit) {
     var barsVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { barsVisible = true }
 
@@ -929,15 +1013,15 @@ fun WhyRecommendedDialog(
                 } else {
                     factors.forEach { reason ->
                         val barColor = when (reason.type) {
-                            ReasonType.GENRE         -> PillGenre
-                            ReasonType.ACTOR         -> PillActor
-                            ReasonType.NARRATIVE     -> PillNarrative
-                            ReasonType.CREATOR       -> PillCreator
-                            ReasonType.HIDDEN_GEM    -> PillHiddenGem
+                            ReasonType.GENRE -> PillGenre
+                            ReasonType.ACTOR -> PillActor
+                            ReasonType.NARRATIVE -> PillNarrative
+                            ReasonType.CREATOR -> PillCreator
+                            ReasonType.HIDDEN_GEM -> PillHiddenGem
                             ReasonType.COLLABORATIVE -> PillCollab
-                            ReasonType.BINGE         -> PillBinge
-                            ReasonType.COMPLETENESS  -> PillCompleteness
-                            ReasonType.TRENDING      -> PillTrending
+                            ReasonType.BINGE -> PillBinge
+                            ReasonType.COMPLETENESS -> PillCompleteness
+                            ReasonType.TRENDING -> PillTrending
                         }
                         val animatedFraction by animateFloatAsState(
                             targetValue = if (barsVisible) reason.weight else 0f,

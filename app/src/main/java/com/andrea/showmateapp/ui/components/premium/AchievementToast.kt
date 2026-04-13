@@ -44,11 +44,7 @@ import com.andrea.showmateapp.ui.theme.StarYellow
 import kotlinx.coroutines.delay
 
 @Composable
-fun AchievementToastOverlay(
-    achievement: Achievement?,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun AchievementToastOverlay(achievement: Achievement?, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(achievement) {
@@ -64,7 +60,7 @@ fun AchievementToastOverlay(
     AnimatedVisibility(
         visible = visible && achievement != null,
         enter = slideInVertically { -it - 40 } + fadeIn(tween(280)),
-        exit  = slideOutVertically { -it - 40 } + fadeOut(tween(280)),
+        exit = slideOutVertically { -it - 40 } + fadeOut(tween(280)),
         modifier = modifier
             .zIndex(20f)
             .statusBarsPadding()

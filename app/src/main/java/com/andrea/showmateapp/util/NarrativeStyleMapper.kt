@@ -43,7 +43,7 @@ object NarrativeStyleMapper {
     )
 
     fun extractStyles(keywords: List<String>, episodeRuntime: Int?): Map<String, Float> {
-        val lower  = keywords.map { it.lowercase() }
+        val lower = keywords.map { it.lowercase() }
         val result = mutableMapOf<String, Float>()
         for ((cluster, clusterKeywords) in CLUSTERS) {
             val matches = clusterKeywords.count { ck -> lower.any { kw -> kw.contains(ck) } }
@@ -53,23 +53,23 @@ object NarrativeStyleMapper {
         }
         when {
             episodeRuntime != null && episodeRuntime <= 30 -> result["ritmo_episodico"] = 1f
-            episodeRuntime != null && episodeRuntime > 50  -> result["ritmo_largo"] = 1f
+            episodeRuntime != null && episodeRuntime > 50 -> result["ritmo_largo"] = 1f
         }
         return result
     }
 
     fun getStyleLabel(key: String): String = when (key) {
-        "narrativa_compleja"     -> "Narrativa compleja"
+        "narrativa_compleja" -> "Narrativa compleja"
         "protagonista_detective" -> "Protagonista detective"
-        "protagonista_antihero"  -> "Protagonista anti-héroe"
-        "protagonista_genio"     -> "Protagonista genio"
-        "tono_oscuro"            -> "Tono oscuro"
-        "tono_emocional"         -> "Tono emocional"
-        "tono_ligero"            -> "Tono ligero"
-        "ritmo_intenso"          -> "Ritmo intenso"
-        "ritmo_lento"            -> "Ritmo lento"
-        "ritmo_episodico"        -> "Episodios cortos"
-        "ritmo_largo"            -> "Episodios largos"
-        else                     -> key
+        "protagonista_antihero" -> "Protagonista anti-héroe"
+        "protagonista_genio" -> "Protagonista genio"
+        "tono_oscuro" -> "Tono oscuro"
+        "tono_emocional" -> "Tono emocional"
+        "tono_ligero" -> "Tono ligero"
+        "ritmo_intenso" -> "Ritmo intenso"
+        "ritmo_lento" -> "Ritmo lento"
+        "ritmo_episodico" -> "Episodios cortos"
+        "ritmo_largo" -> "Episodios largos"
+        else -> key
     }
 }

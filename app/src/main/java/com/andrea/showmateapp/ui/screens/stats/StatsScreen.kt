@@ -29,42 +29,26 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.domain.usecase.GetViewerPersonalityUseCase
 import com.andrea.showmateapp.domain.usecase.GetWrappedStatsUseCase
 import com.andrea.showmateapp.ui.components.premium.shimmerBrush
 import com.andrea.showmateapp.ui.theme.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsScreen(
-    navController: NavController,
-    viewModel: StatsViewModel = hiltViewModel()
-) {
+fun StatsScreen(navController: NavController, viewModel: StatsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Estadísticas", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
         if (uiState.isLoading) {
             StatsSkeleton(modifier = Modifier.padding(paddingValues))
         } else {
@@ -72,97 +56,142 @@ fun StatsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Header con gradiente (consistente con Home/Discover/Friends)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.LocalFireDepartment,
-                        iconTint = Color(0xFFFF6B35),
-                        value = "${uiState.currentStreak}",
-                        label = "Racha actual",
-                        subtitle = "días seguidos"
-                    )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.AutoMirrored.Filled.TrendingUp,
-                        iconTint = PrimaryPurple,
-                        value = "${uiState.longestStreak}",
-                        label = "Racha récord",
-                        subtitle = "días"
-                    )
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Estadísticas",
+                            style = TextStyle(
+                                brush = Brush.linearGradient(listOf(PrimaryPurple, PrimaryMagenta))
+                            ),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-1.5).sp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 2.dp)
+                                .width(34.dp)
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(Brush.linearGradient(listOf(PrimaryPurple, PrimaryMagenta)))
+                        )
+                    }
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Star,
-                        iconTint = StarYellow,
-                        value = "${uiState.dailyRecord}",
-                        label = "Récord diario",
-                        subtitle = "episodios"
-                    )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Movie,
-                        iconTint = Color(0xFF4CAF50),
-                        value = "${uiState.totalEpisodesWatched}",
-                        label = "Total episodios",
-                        subtitle = "vistos"
-                    )
-                }
-
-                uiState.wrappedStats?.let { wrapped ->
-                    WrappedHeroCard(wrapped)
-                }
-
-                val lineData = uiState.wrappedStats?.monthlyActivity
-                    ?.takeIf { it.isNotEmpty() }
-                    ?: uiState.activityByMonth.entries.sortedBy { it.key }.takeLast(6)
-                        .map { it.key.takeLast(5) to it.value }
-
-                if (lineData.isNotEmpty()) {
-                    MonthlyLineChartCard(data = lineData)
-                }
-
-                if (uiState.topGenresByMonth.isNotEmpty()) {
-                    TopGenresSection(topGenresByMonth = uiState.topGenresByMonth)
-                }
-
-                uiState.wrappedStats?.let { wrapped ->
-                    if (wrapped.topActorName != null || wrapped.topDirectorName != null) {
-                        TopPeopleCard(
-                            actorName = wrapped.topActorName,
-                            directorName = wrapped.topDirectorName
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.LocalFireDepartment,
+                            iconTint = Color(0xFFFF6B35),
+                            value = "${uiState.currentStreak}",
+                            label = "Racha actual",
+                            subtitle = "días seguidos"
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            iconTint = PrimaryPurple,
+                            value = "${uiState.longestStreak}",
+                            label = "Racha récord",
+                            subtitle = "días"
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Star,
+                            iconTint = StarYellow,
+                            value = "${uiState.dailyRecord}",
+                            label = "Récord diario",
+                            subtitle = "episodios"
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Movie,
+                            iconTint = Color(0xFF4CAF50),
+                            value = "${uiState.totalEpisodesWatched}",
+                            label = "Total episodios",
+                            subtitle = "vistos"
                         )
                     }
 
-                    if (wrapped.mostActiveMonthLabel != null || wrapped.favoriteDayOfWeek != null) {
-                        TemporalInsightsCard(
-                            mostActiveMonth = wrapped.mostActiveMonthLabel,
-                            favoriteDay = wrapped.favoriteDayOfWeek
-                        )
+                    uiState.wrappedStats?.let { wrapped ->
+                        WrappedHeroCard(wrapped)
                     }
 
-                    if (wrapped.topRewatchedShows.isNotEmpty()) {
-                        TopRewatchedCard(shows = wrapped.topRewatchedShows)
+                    val lineData = uiState.wrappedStats?.monthlyActivity
+                        ?.takeIf { it.isNotEmpty() }
+                        ?: uiState.activityByMonth.entries.sortedBy { it.key }.takeLast(6)
+                            .map { it.key.takeLast(5) to it.value }
+
+                    if (lineData.isNotEmpty()) {
+                        MonthlyLineChartCard(data = lineData)
                     }
 
-                    if (wrapped.countryDistribution.isNotEmpty()) {
-                        CountryDistributionCard(distribution = wrapped.countryDistribution)
+                    if (uiState.topGenresByMonth.isNotEmpty()) {
+                        TopGenresSection(topGenresByMonth = uiState.topGenresByMonth)
                     }
-                }
 
-                uiState.personalityProfile?.let { PersonalitySection(it) }
+                    uiState.wrappedStats?.let { wrapped ->
+                        if (wrapped.topActorName != null || wrapped.topDirectorName != null) {
+                            TopPeopleCard(
+                                actorName = wrapped.topActorName,
+                                directorName = wrapped.topDirectorName
+                            )
+                        }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                        if (wrapped.mostActiveMonthLabel != null || wrapped.favoriteDayOfWeek != null) {
+                            TemporalInsightsCard(
+                                mostActiveMonth = wrapped.mostActiveMonthLabel,
+                                favoriteDay = wrapped.favoriteDayOfWeek
+                            )
+                        }
+
+                        if (wrapped.topRewatchedShows.isNotEmpty()) {
+                            TopRewatchedCard(shows = wrapped.topRewatchedShows)
+                        }
+
+                        if (wrapped.countryDistribution.isNotEmpty()) {
+                            CountryDistributionCard(distribution = wrapped.countryDistribution)
+                        }
+                    }
+
+                    uiState.personalityProfile?.let { PersonalitySection(it) }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+                } // close inner padding Column
             }
         }
     }
@@ -288,10 +317,7 @@ fun MonthlyLineChartCard(data: List<Pair<String, Int>>) {
 }
 
 @Composable
-private fun LineChart(
-    data: List<Pair<String, Int>>,
-    modifier: Modifier = Modifier
-) {
+private fun LineChart(data: List<Pair<String, Int>>, modifier: Modifier = Modifier) {
     val animProgress = remember { Animatable(0f) }
     LaunchedEffect(data) {
         animProgress.snapTo(0f)
@@ -355,7 +381,8 @@ private fun LineChart(
                 fillPath,
                 brush = Brush.verticalGradient(
                     colors = listOf(PrimaryPurple.copy(alpha = 0.25f), Color.Transparent),
-                    startY = 0f, endY = chartH
+                    startY = 0f,
+                    endY = chartH
                 )
             )
 
@@ -414,13 +441,7 @@ fun TopPeopleCard(actorName: String?, directorName: String?) {
 }
 
 @Composable
-private fun PersonCard(
-    modifier: Modifier,
-    icon: ImageVector,
-    iconTint: Color,
-    label: String,
-    name: String
-) {
+private fun PersonCard(modifier: Modifier, icon: ImageVector, iconTint: Color, label: String, name: String) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
@@ -633,7 +654,18 @@ fun StatCard(
         label = "statCardScale"
     )
 
-    Box(modifier = modifier.clip(RoundedCornerShape(20.dp)).background(SurfaceVariantDark)) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0f to iconTint.copy(alpha = 0.10f),
+                        1f to SurfaceVariantDark
+                    )
+                )
+            )
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth().height(3.dp).align(Alignment.TopCenter)
@@ -642,14 +674,20 @@ fun StatCard(
         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.Start) {
             Box(
                 modifier = Modifier.size(40.dp).clip(CircleShape)
-                    .background(iconTint.copy(alpha = 0.12f)),
+                    .background(iconTint.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(22.dp))
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = value, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black,
-                lineHeight = 34.sp, modifier = Modifier.scale(scale))
+            Text(
+                text = value,
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
+                lineHeight = 34.sp,
+                modifier = Modifier.scale(scale)
+            )
             Text(text = label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Text(text = subtitle, color = TextGray, fontSize = 12.sp)
         }
@@ -668,7 +706,12 @@ fun PersonalitySection(profile: GetViewerPersonalityUseCase.PersonalityProfile) 
                         .background(PrimaryPurple.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Psychology, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(22.dp))
+                    Icon(
+                        Icons.Default.Psychology,
+                        contentDescription = null,
+                        tint = PrimaryPurple,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -746,7 +789,9 @@ fun TopGenresSection(topGenresByMonth: Map<String, List<Pair<String, Int>>>) {
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = stringResource(R.string.stats_favorite_genres),
-                    color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))

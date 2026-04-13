@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -54,17 +55,16 @@ class FriendActivityWorker @AssistedInject constructor(
         }
     }
 
-    private fun sendNotification(
-        friendName: String,
-        showTitle: String,
-        compatibility: Int,
-        showId: Int
-    ) {
+    private fun sendNotification(friendName: String, showTitle: String, compatibility: Int, showId: Int) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val intent = Intent(context, MainActivity::class.java).apply {
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("showmate://detail/$showId"),
+            context,
+            MainActivity::class.java
+        ).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("open_show_id", showId)
         }
         val pi = PendingIntent.getActivity(
             context,
@@ -75,19 +75,16 @@ class FriendActivityWorker @AssistedInject constructor(
 
         val notification = NotificationCompat.Builder(context, NotificationChannels.FRIEND_ACTIVITY)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Tu amigo $friendName acaba de terminar $showTitle")
-            .setContentText("Coincidís en un $compatibility% \u2014 \u00bfla ves t\u00fa tambi\u00e9n?")
+            .setContentTitle(context.getString(R.string.notif_friend_title, friendName, showTitle))
+            .setContentText(context.getString(R.string.notif_friend_content, compatibility))
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText(
-                        "Tu amigo $friendName acaba de terminar \u201c$showTitle\u201d y vuestra " +
-                        "compatibilidad es del $compatibility\u202f%. \u00a1Puede ser tu pr\u00f3xima serie!"
-                    )
+                    .bigText(context.getString(R.string.notif_friend_big_text, friendName, showTitle, compatibility))
             )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(pi)
-            .addAction(R.drawable.ic_launcher_foreground, "Ver detalles", pi)
+            .addAction(R.drawable.ic_launcher_foreground, context.getString(R.string.notif_friend_action), pi)
             .build()
 
         nm.notify((friendName + showTitle).hashCode(), notification)

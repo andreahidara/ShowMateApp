@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <!-- Outlined Star icon for splash screen -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M60,35l8.34,16.9l18.66,2.71l-13.5,13.15l3.19,18.59L60,77.58L43.31,86.35l3.19,-18.59l-13.5,-13.15l18.66,-2.71z" />
+</vector>

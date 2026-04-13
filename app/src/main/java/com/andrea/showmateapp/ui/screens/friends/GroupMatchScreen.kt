@@ -1,13 +1,12 @@
 package com.andrea.showmateapp.ui.screens.friends
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -29,7 +28,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -39,15 +37,16 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.data.model.GroupFilters
-import com.andrea.showmateapp.data.model.GroupSession
 import com.andrea.showmateapp.data.model.MemberVoteDoc
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
@@ -55,11 +54,9 @@ import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.GenreMapper
 import com.andrea.showmateapp.util.TmdbUtils
-import kotlin.math.absoluteValue
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.launch
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun GroupMatchScreen(
@@ -81,11 +78,11 @@ fun GroupMatchScreen(
             label = "phase"
         ) { phase ->
             when (phase) {
-                GroupPhase.LOADING     -> LoadingContent()
-                GroupPhase.LOBBY       -> LobbyContent(uiState, viewModel, navController)
-                GroupPhase.VOTING      -> VotingContent(uiState, viewModel)
+                GroupPhase.LOADING -> LoadingContent()
+                GroupPhase.LOBBY -> LobbyContent(uiState, viewModel, navController)
+                GroupPhase.VOTING -> VotingContent(uiState, viewModel)
                 GroupPhase.MATCH_FOUND -> MatchFoundContent(uiState, viewModel, navController)
-                GroupPhase.NO_MATCH    -> NoMatchContent(uiState, viewModel)
+                GroupPhase.NO_MATCH -> NoMatchContent(uiState, viewModel)
             }
         }
 
@@ -96,15 +93,15 @@ fun GroupMatchScreen(
 
     if (uiState.showFiltersSheet) {
         FiltersBottomSheet(
-            filters  = uiState.filters,
+            filters = uiState.filters,
             onDismiss = viewModel::hideFilters,
-            onApply  = viewModel::updateFilters
+            onApply = viewModel::updateFilters
         )
     }
 
     if (uiState.showNightTitleDialog) {
         NightTitleDialog(
-            initial   = uiState.nightTitle,
+            initial = uiState.nightTitle,
             onConfirm = viewModel::saveNightTitle,
             onDismiss = viewModel::dismissNightTitleDialog
         )
@@ -125,13 +122,9 @@ private fun LoadingContent() {
 }
 
 @Composable
-private fun LobbyContent(
-    uiState: GroupMatchUiState,
-    viewModel: GroupMatchViewModel,
-    navController: NavController
-) {
+private fun LobbyContent(uiState: GroupMatchUiState, viewModel: GroupMatchViewModel, navController: NavController) {
     val session = uiState.session
-    val isHost  = viewModel.isHost()
+    val isHost = viewModel.isHost()
 
     Column(
         modifier = Modifier
@@ -139,10 +132,10 @@ private fun LobbyContent(
             .verticalScroll(rememberScrollState())
     ) {
         Row(
-            modifier              = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalAlignment     = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
@@ -152,7 +145,8 @@ private fun LobbyContent(
                 if (session != null) {
                     Text(
                         "Sesión #${session.id.take(6).uppercase()}",
-                        color = TextGray, fontSize = 12.sp
+                        color = TextGray,
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -166,7 +160,7 @@ private fun LobbyContent(
         SectionTitle("PARTICIPANTES", modifier = Modifier.padding(horizontal = 16.dp))
         Spacer(Modifier.height(8.dp))
         LazyRow(
-            contentPadding        = PaddingValues(horizontal = 16.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             val allMembers = session?.memberEmails ?: (listOf("tú") + uiState.members)
@@ -190,24 +184,31 @@ private fun LobbyContent(
         ) {
             if (uiState.isComputingCandidates) {
                 Row(
-                    verticalAlignment     = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = PrimaryPurple, strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = PrimaryPurple,
+                        strokeWidth = 2.dp
+                    )
                     Text("Analizando gustos del grupo…", color = TextGray, fontSize = 14.sp)
                 }
             } else {
                 val count = uiState.candidates.size.takeIf { it > 0 }
                     ?: session?.candidateIds?.size ?: 0
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Icon(
                         if (count > 0) Icons.Default.CheckCircle else Icons.Default.HourglassEmpty,
                         null,
-                        tint   = if (count > 0) SuccessGreen else TextGray,
+                        tint = if (count > 0) SuccessGreen else TextGray,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text  = if (count > 0) "$count series listas para votar" else "Preparando series…",
+                        text = if (count > 0) "$count series listas para votar" else "Preparando series…",
                         color = if (count > 0) Color.White else TextGray,
                         fontSize = 14.sp
                     )
@@ -226,18 +227,18 @@ private fun LobbyContent(
         Spacer(Modifier.height(24.dp))
 
         if (isHost) {
-            val canStart = (uiState.candidates.isNotEmpty() || (session?.candidateIds?.isNotEmpty() == true))
-                && !uiState.isComputingCandidates
+            val canStart = (uiState.candidates.isNotEmpty() || (session?.candidateIds?.isNotEmpty() == true)) &&
+                !uiState.isComputingCandidates
 
             val infiniteTransition = rememberInfiniteTransition(label = "startPulse")
             val glowAlpha by infiniteTransition.animateFloat(
-                initialValue  = 0.3f,
-                targetValue   = 0.85f,
+                initialValue = 0.3f,
+                targetValue = 0.85f,
                 animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-                label         = "glow"
+                label = "glow"
             )
             Box(
-                modifier         = Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
@@ -252,14 +253,14 @@ private fun LobbyContent(
                     )
                 }
                 Button(
-                    onClick  = viewModel::startVoting,
-                    enabled  = canStart,
+                    onClick = viewModel::startVoting,
+                    enabled = canStart,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape  = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor         = PrimaryPurple,
+                        containerColor = PrimaryPurple,
                         disabledContainerColor = PrimaryPurple.copy(alpha = 0.3f)
                     )
                 ) {
@@ -271,13 +272,13 @@ private fun LobbyContent(
         } else {
             val infiniteTransition = rememberInfiniteTransition(label = "waitDots")
             val dotPhase by infiniteTransition.animateFloat(
-                initialValue  = 0f,
-                targetValue   = 3f,
+                initialValue = 0f,
+                targetValue = 3f,
                 animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
-                label         = "dots"
+                label = "dots"
             )
             Box(
-                modifier         = Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .clip(RoundedCornerShape(18.dp))
@@ -285,16 +286,25 @@ private fun LobbyContent(
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text("🎮", fontSize = 20.sp)
                     Column {
-                        Text("Esperando al host", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Esperando al host",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                         Text(
                             buildString {
                                 append("Preparando la sala")
                                 repeat((dotPhase.toInt() % 3) + 1) { append("·") }
                             },
-                            color = TextGray, fontSize = 12.sp
+                            color = TextGray,
+                            fontSize = 12.sp
                         )
                     }
                 }
@@ -305,10 +315,7 @@ private fun LobbyContent(
 }
 
 @Composable
-private fun VotingContent(
-    uiState: GroupMatchUiState,
-    viewModel: GroupMatchViewModel
-) {
+private fun VotingContent(uiState: GroupMatchUiState, viewModel: GroupMatchViewModel) {
     if (uiState.isVotingDone) {
         WaitingForOthersContent(uiState)
         return
@@ -318,36 +325,37 @@ private fun VotingContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier              = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment     = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     "${uiState.currentIndex + 1} / ${uiState.candidates.size}",
-                    color = TextGray, fontSize = 12.sp
+                    color = TextGray,
+                    fontSize = 12.sp
                 )
                 LinearProgressIndicator(
-                    progress          = { uiState.votingProgress },
-                    modifier          = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
-                    color             = PrimaryPurple,
-                    trackColor        = Color.White.copy(alpha = 0.08f)
+                    progress = { uiState.votingProgress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                    color = PrimaryPurple,
+                    trackColor = Color.White.copy(alpha = 0.08f)
                 )
             }
             VetoButton(used = uiState.myVetoUsed, onClick = viewModel::useVeto)
         }
 
         LazyRow(
-            modifier              = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(uiState.session?.memberEmails ?: emptyList()) { email ->
                 MemberProgress(
-                    email      = email,
+                    email = email,
                     votedCount = uiState.memberVoteCount(email),
-                    total      = uiState.candidates.size
+                    total = uiState.candidates.size
                 )
             }
         }
@@ -355,16 +363,16 @@ private fun VotingContent(
         Spacer(Modifier.height(8.dp))
 
         LiveVoteBanner(
-            mediaId  = candidate.id,
+            mediaId = candidate.id,
             allVotes = uiState.allVotes,
-            members  = uiState.session?.memberEmails ?: emptyList(),
+            members = uiState.session?.memberEmails ?: emptyList(),
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
         Spacer(Modifier.height(8.dp))
 
         Box(
-            modifier         = Modifier
+            modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
@@ -372,13 +380,13 @@ private fun VotingContent(
         ) {
             key(candidate.id) {
                 VoteSwipeCard(
-                    media        = candidate,
-                    allVotes     = uiState.allVotes,
-                    members      = uiState.session?.memberEmails ?: emptyList(),
-                    onVoteYes    = viewModel::voteYes,
-                    onVoteNo     = viewModel::voteNo,
-                    onVoteMaybe  = viewModel::voteMaybe,
-                    modifier     = Modifier
+                    media = candidate,
+                    allVotes = uiState.allVotes,
+                    members = uiState.session?.memberEmails ?: emptyList(),
+                    onVoteYes = viewModel::voteYes,
+                    onVoteNo = viewModel::voteNo,
+                    onVoteMaybe = viewModel::voteMaybe,
+                    modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight(0.88f)
                 )
@@ -386,31 +394,31 @@ private fun VotingContent(
         }
 
         Row(
-            modifier              = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment     = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             BigVoteButton(
-                label    = "✗",
+                label = "✗",
                 sublabel = "No",
-                color    = ErrorRed,
-                onClick  = viewModel::voteNo,
+                color = ErrorRed,
+                onClick = viewModel::voteNo,
                 modifier = Modifier.weight(1f)
             )
             BigVoteButton(
-                label    = "?",
+                label = "?",
                 sublabel = "Quizás",
-                color    = StarYellow,
-                onClick  = viewModel::voteMaybe,
+                color = StarYellow,
+                onClick = viewModel::voteMaybe,
                 modifier = Modifier.weight(1f)
             )
             BigVoteButton(
-                label    = "✓",
+                label = "✓",
                 sublabel = "Sí",
-                color    = SuccessGreen,
-                onClick  = viewModel::voteYes,
+                color = SuccessGreen,
+                onClick = viewModel::voteYes,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -421,14 +429,15 @@ private fun VotingContent(
 private fun WaitingForOthersContent(uiState: GroupMatchUiState) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alpha by infiniteTransition.animateFloat(
-        initialValue  = 0.4f, targetValue = 1f,
+        initialValue = 0.4f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label         = "pulse_alpha"
+        label = "pulse_alpha"
     )
     Column(
-        modifier              = Modifier.fillMaxSize(),
-        horizontalAlignment   = Alignment.CenterHorizontally,
-        verticalArrangement   = Arrangement.Center
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text("🎉", fontSize = 60.sp)
         Spacer(Modifier.height(16.dp))
@@ -446,19 +455,19 @@ private fun WaitingForOthersContent(uiState: GroupMatchUiState) {
             session.memberEmails.forEach { email ->
                 val ready = uiState.allVotes[email]?.ready == true
                 Row(
-                    modifier              = Modifier.padding(4.dp),
+                    modifier = Modifier.padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment     = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         if (ready) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                         null,
-                        tint     = if (ready) SuccessGreen else TextGray,
+                        tint = if (ready) SuccessGreen else TextGray,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         email.substringBefore("@"),
-                        color    = if (ready) Color.White else TextGray,
+                        color = if (ready) Color.White else TextGray,
                         fontSize = 14.sp
                     )
                 }
@@ -469,32 +478,32 @@ private fun WaitingForOthersContent(uiState: GroupMatchUiState) {
 
 @Composable
 private fun LiveVoteBanner(
-    mediaId:  Int,
+    mediaId: Int,
     allVotes: Map<String, MemberVoteDoc>,
-    members:  List<String>,
+    members: List<String>,
     modifier: Modifier = Modifier
 ) {
     if (members.size < 2) return
 
     Row(
-        modifier              = modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(Color.White.copy(alpha = 0.04f))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment     = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text("En vivo", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
         Spacer(Modifier.weight(1f))
         members.forEach { email ->
             val vote = allVotes[email]
             val emoji = when {
-                vote == null              -> "⬜"
-                mediaId in vote.yes       -> "✅"
-                mediaId in vote.no        -> "❌"
-                mediaId in vote.maybe     -> "❓"
-                else                      -> "⬜"
+                vote == null -> "⬜"
+                mediaId in vote.yes -> "✅"
+                mediaId in vote.no -> "❌"
+                mediaId in vote.maybe -> "❓"
+                else -> "⬜"
             }
             val initial = email.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
             Column(
@@ -502,16 +511,17 @@ private fun LiveVoteBanner(
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 Box(
-                    modifier         = Modifier
+                    modifier = Modifier
                         .size(22.dp)
                         .background(
                             when {
-                                vote == null          -> Color.White.copy(alpha = 0.06f)
-                                mediaId in vote.yes   -> SuccessGreen.copy(alpha = 0.25f)
-                                mediaId in vote.no    -> ErrorRed.copy(alpha = 0.25f)
+                                vote == null -> Color.White.copy(alpha = 0.06f)
+                                mediaId in vote.yes -> SuccessGreen.copy(alpha = 0.25f)
+                                mediaId in vote.no -> ErrorRed.copy(alpha = 0.25f)
                                 mediaId in vote.maybe -> StarYellow.copy(alpha = 0.25f)
-                                else                  -> Color.White.copy(alpha = 0.06f)
-                            }, CircleShape
+                                else -> Color.White.copy(alpha = 0.06f)
+                            },
+                            CircleShape
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -530,19 +540,20 @@ private fun MatchFoundContent(
     navController: NavController
 ) {
     val media = uiState.matchedMedia
+    val context = LocalContext.current
 
     val scale by animateFloatAsState(
-        targetValue   = 1f,
+        targetValue = 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label         = "scale"
+        label = "scale"
     )
 
     Column(
-        modifier              = Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp),
-        horizontalAlignment   = Alignment.CenterHorizontally,
-        verticalArrangement   = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text("🎉 ¡MATCH!", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(Modifier.height(4.dp))
@@ -552,25 +563,30 @@ private fun MatchFoundContent(
         if (media != null) {
             Box(
                 modifier = Modifier
-                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
                     .width(200.dp)
                     .aspectRatio(2f / 3f)
                     .clip(RoundedCornerShape(20.dp))
                     .shadow(24.dp, RoundedCornerShape(20.dp))
             ) {
                 TmdbImage(
-                    path              = media.posterPath,
+                    path = media.posterPath,
                     contentDescription = media.name,
-                    size              = TmdbUtils.ImageSize.W342,
-                    modifier          = Modifier.fillMaxSize(),
-                    contentScale      = ContentScale.Crop
+                    size = TmdbUtils.ImageSize.W342,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
                         .height(100.dp)
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, BackgroundDark.copy(alpha = 0.9f))))
+                        .background(
+                            Brush.verticalGradient(listOf(Color.Transparent, BackgroundDark.copy(alpha = 0.9f)))
+                        )
                 )
                 Column(
                     modifier = Modifier
@@ -587,69 +603,80 @@ private fun MatchFoundContent(
 
         Spacer(Modifier.height(28.dp))
 
-        val displayTitle = uiState.nightTitle.ifBlank { "Sin nombre" }
-        Surface(
-            onClick = viewModel::showNightTitleDialog,
-            shape   = RoundedCornerShape(12.dp),
-            color   = PrimaryPurple.copy(alpha = 0.15f),
-            border  = androidx.compose.foundation.BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.3f))
-        ) {
-            Row(
-                modifier              = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(Icons.Default.Edit, null, tint = PrimaryPurpleLight, modifier = Modifier.size(14.dp))
-                Text(
-                    "Noche: $displayTitle",
-                    color    = PrimaryPurpleLight,
-                    fontSize = 13.sp
-                )
+        if (media?.watchProviders?.results?.get("ES")?.flatrate?.isNotEmpty() == true) {
+            Text("Disponible en:", color = TextGray, fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(media.watchProviders.results["ES"]?.flatrate ?: emptyList()) { provider ->
+                    TmdbImage(
+                        path = provider.logoPath,
+                        contentDescription = provider.providerName,
+                        size = TmdbUtils.ImageSize.W154,
+                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
+                    )
+                }
             }
+            Spacer(Modifier.height(20.dp))
         }
 
-        Spacer(Modifier.height(24.dp))
-
         if (media != null) {
+            val watchLink = media.watchProviders?.results?.get("ES")?.link
             Button(
-                onClick  = { navController.navigate(Screen.Detail(media.id)) },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape    = RoundedCornerShape(16.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                onClick = {
+                    if (watchLink != null) {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(watchLink))
+                        context.startActivity(intent)
+                    } else {
+                        navController.navigate(Screen.Detail(media.id))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
             ) {
-                Icon(Icons.Default.PlayCircle, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Ver detalles", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Icon(
+                    if (watchLink != null) Icons.Default.Launch else Icons.Default.PlayCircle,
+                    null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    if (watchLink != null) "¡A verla ahora!" else "Ver detalles",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 16.sp
+                )
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
         }
 
         val members = uiState.session?.memberEmails ?: emptyList()
         val matchedMedia = uiState.matchedMedia
         if (members.isNotEmpty() && matchedMedia != null) {
             Row(
-                modifier              = Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White.copy(alpha = 0.04f))
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment     = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 members.forEach { email ->
                     val vote = uiState.allVotes[email]
                     val matchedId = matchedMedia.id
                     val emoji = when {
-                        vote == null            -> "⬜"
-                        matchedId in vote.yes   -> "✅"
+                        vote == null -> "⬜"
+                        matchedId in vote.yes -> "✅"
                         matchedId in vote.maybe -> "❓"
-                        else                    -> "⬜"
+                        else -> "⬜"
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(emoji, fontSize = 22.sp)
                         Text(
                             email.substringBefore("@").take(8),
-                            color = TextGray, fontSize = 10.sp, maxLines = 1
+                            color = TextGray,
+                            fontSize = 10.sp,
+                            maxLines = 1
                         )
                     }
                 }
@@ -658,10 +685,10 @@ private fun MatchFoundContent(
         }
 
         OutlinedButton(
-            onClick  = { navController.navigate(Screen.GroupNights) },
+            onClick = { navController.navigate(Screen.GroupNights) },
             modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape    = RoundedCornerShape(16.dp),
-            border   = androidx.compose.foundation.BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.4f))
+            shape = RoundedCornerShape(16.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.4f))
         ) {
             Icon(Icons.Default.History, null, tint = PrimaryPurpleLight, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
@@ -671,26 +698,35 @@ private fun MatchFoundContent(
 }
 
 @Composable
-private fun NoMatchContent(
-    uiState: GroupMatchUiState,
-    viewModel: GroupMatchViewModel
-) {
+private fun NoMatchContent(uiState: GroupMatchUiState, viewModel: GroupMatchViewModel) {
     Column(
-        modifier              = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment   = Alignment.CenterHorizontally,
-        verticalArrangement   = Arrangement.Center
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text("😅", fontSize = 56.sp)
         Spacer(Modifier.height(16.dp))
-        Text("Sin match esta vez", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+        Text(
+            "Sin match esta vez",
+            color = Color.White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(8.dp))
-        Text("No hay ninguna serie en la que todo el grupo haya coincidido.", color = TextGray, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp)
+        Text(
+            "No hay ninguna serie en la que todo el grupo haya coincidido.",
+            color = TextGray,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp
+        )
         Spacer(Modifier.height(32.dp))
         Button(
-            onClick  = { /* Parent reinitiates */ },
+            onClick = { /* Parent reinitiates */ },
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape    = RoundedCornerShape(16.dp),
-            colors   = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
         ) {
             Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
@@ -710,26 +746,26 @@ private fun VoteSwipeCard(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val offsetX        = remember { Animatable(0f) }
-    val offsetY        = remember { Animatable(0f) }
-    val thresholdH     = 220f
-    val thresholdV     = 180f
+    val offsetX = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(0f) }
+    val thresholdH = 220f
+    val thresholdV = 180f
 
-    val yesAlpha   = (offsetX.value  / thresholdH).coerceIn(0f, 1f)
-    val noAlpha    = (-offsetX.value / thresholdH).coerceIn(0f, 1f)
+    val yesAlpha = (offsetX.value / thresholdH).coerceIn(0f, 1f)
+    val noAlpha = (-offsetX.value / thresholdH).coerceIn(0f, 1f)
     val maybeAlpha = (-offsetY.value / thresholdV).coerceIn(0f, 1f)
-    val rotation   = (offsetX.value / 20f).coerceIn(-12f, 12f)
+    val rotation = (offsetX.value / 20f).coerceIn(-12f, 12f)
 
-    val yesCount   = remember(allVotes, media.id) { allVotes.values.count { media.id in it.yes } }
-    val noCount    = remember(allVotes, media.id) { allVotes.values.count { media.id in it.no } }
+    val yesCount = remember(allVotes, media.id) { allVotes.values.count { media.id in it.yes } }
+    val noCount = remember(allVotes, media.id) { allVotes.values.count { media.id in it.no } }
     val maybeCount = remember(allVotes, media.id) { allVotes.values.count { media.id in it.maybe } }
 
     Box(
         modifier = modifier
             .graphicsLayer {
-                translationX    = offsetX.value
-                translationY    = offsetY.value
-                rotationZ       = rotation
+                translationX = offsetX.value
+                translationY = offsetY.value
+                rotationZ = rotation
                 shadowElevation = 24.dp.toPx()
             }
             .clip(RoundedCornerShape(24.dp))
@@ -739,23 +775,26 @@ private fun VoteSwipeCard(
                         coroutineScope.launch {
                             val bounceSpec = spring<Float>(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness    = Spring.StiffnessLow
+                                stiffness = Spring.StiffnessLow
                             )
                             when {
                                 offsetX.value > thresholdH -> {
                                     offsetX.animateTo(1400f, tween(210))
                                     onVoteYes()
-                                    offsetX.snapTo(0f); offsetY.snapTo(0f)
+                                    offsetX.snapTo(0f)
+                                    offsetY.snapTo(0f)
                                 }
                                 offsetX.value < -thresholdH -> {
                                     offsetX.animateTo(-1400f, tween(210))
                                     onVoteNo()
-                                    offsetX.snapTo(0f); offsetY.snapTo(0f)
+                                    offsetX.snapTo(0f)
+                                    offsetY.snapTo(0f)
                                 }
                                 offsetY.value < -thresholdV -> {
                                     offsetY.animateTo(-1400f, tween(210))
                                     onVoteMaybe()
-                                    offsetX.snapTo(0f); offsetY.snapTo(0f)
+                                    offsetX.snapTo(0f)
+                                    offsetY.snapTo(0f)
                                 }
                                 else -> {
                                     coroutineScope.launch { offsetX.animateTo(0f, bounceSpec) }
@@ -774,11 +813,11 @@ private fun VoteSwipeCard(
             }
     ) {
         TmdbImage(
-            path               = media.posterPath,
+            path = media.posterPath,
             contentDescription = media.name,
-            size               = TmdbUtils.ImageSize.W342,
-            modifier           = Modifier.fillMaxSize(),
-            contentScale       = ContentScale.Crop
+            size = TmdbUtils.ImageSize.W342,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
 
         Box(
@@ -786,7 +825,12 @@ private fun VoteSwipeCard(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Transparent, BackgroundDark.copy(0.6f), BackgroundDark.copy(0.97f)),
+                        listOf(
+                            Color.Transparent,
+                            Color.Transparent,
+                            BackgroundDark.copy(0.6f),
+                            BackgroundDark.copy(0.97f)
+                        ),
                         startY = 0f
                     )
                 )
@@ -796,11 +840,23 @@ private fun VoteSwipeCard(
                 .align(Alignment.BottomStart)
                 .padding(20.dp)
         ) {
-            Text(media.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                media.name,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (media.voteAverage > 0f) {
-                    Text("⭐ ${"%.1f".format(media.voteAverage)}", color = StarYellow, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "⭐ ${"%.1f".format(media.voteAverage)}",
+                        color = StarYellow,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 media.firstAirDate?.take(4)?.let { year ->
                     Text("·  $year", color = TextGray, fontSize = 13.sp)
@@ -816,24 +872,38 @@ private fun VoteSwipeCard(
 
         if (members.size > 1) {
             Row(
-                modifier              = Modifier
+                modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(10.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(BackgroundDark.copy(alpha = 0.72f))
                     .padding(horizontal = 10.dp, vertical = 5.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment     = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (yesCount   > 0) Text("✅ $yesCount",   color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                if (maybeCount > 0) Text("❓ $maybeCount", color = StarYellow,   fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                if (noCount    > 0) Text("❌ $noCount",    color = ErrorRed,     fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                if (yesCount > 0) {
+                    Text(
+                        "✅ $yesCount",
+                        color = SuccessGreen,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (maybeCount > 0) {
+                    Text(
+                        "❓ $maybeCount",
+                        color = StarYellow,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (noCount > 0) Text("❌ $noCount", color = ErrorRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
 
         if (yesAlpha < 0.05f && noAlpha < 0.05f && maybeAlpha < 0.05f) {
             Row(
-                modifier              = Modifier
+                modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 12.dp)
                     .clip(RoundedCornerShape(10.dp))
@@ -848,7 +918,12 @@ private fun VoteSwipeCard(
         }
 
         if (yesAlpha > 0.05f) {
-            Box(modifier = Modifier.fillMaxSize().background(SuccessGreen.copy(alpha = yesAlpha * 0.35f), RoundedCornerShape(24.dp)))
+            Box(
+                modifier = Modifier.fillMaxSize().background(
+                    SuccessGreen.copy(alpha = yesAlpha * 0.35f),
+                    RoundedCornerShape(24.dp)
+                )
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -863,7 +938,12 @@ private fun VoteSwipeCard(
         }
 
         if (noAlpha > 0.05f) {
-            Box(modifier = Modifier.fillMaxSize().background(ErrorRed.copy(alpha = noAlpha * 0.35f), RoundedCornerShape(24.dp)))
+            Box(
+                modifier = Modifier.fillMaxSize().background(
+                    ErrorRed.copy(alpha = noAlpha * 0.35f),
+                    RoundedCornerShape(24.dp)
+                )
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -878,7 +958,12 @@ private fun VoteSwipeCard(
         }
 
         if (maybeAlpha > 0.05f) {
-            Box(modifier = Modifier.fillMaxSize().background(StarYellow.copy(alpha = maybeAlpha * 0.3f), RoundedCornerShape(24.dp)))
+            Box(
+                modifier = Modifier.fillMaxSize().background(
+                    StarYellow.copy(alpha = maybeAlpha * 0.3f),
+                    RoundedCornerShape(24.dp)
+                )
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -894,16 +979,26 @@ private fun VoteSwipeCard(
 }
 
 private data class Particle(
-    val x0: Float, val speed: Float, val hSpeed: Float,
-    val phase: Float, val freq: Float,
-    val color: Color, val size: Float, val rotSpeed: Float,
+    val x0: Float,
+    val speed: Float,
+    val hSpeed: Float,
+    val phase: Float,
+    val freq: Float,
+    val color: Color,
+    val size: Float,
+    val rotSpeed: Float,
     val isCircle: Boolean
 )
 
 private val confettiColors = listOf(
-    Color(0xFF9C27B0), Color(0xFFFFD700), Color(0xFF4CAF50),
-    Color(0xFFFF5722), Color(0xFFE91E63), Color(0xFF2196F3),
-    Color(0xFF00BCD4), Color(0xFFFFEB3B)
+    Color(0xFF9C27B0),
+    Color(0xFFFFD700),
+    Color(0xFF4CAF50),
+    Color(0xFFFF5722),
+    Color(0xFFE91E63),
+    Color(0xFF2196F3),
+    Color(0xFF00BCD4),
+    Color(0xFFFFEB3B)
 )
 
 @Composable
@@ -911,13 +1006,13 @@ fun ConfettiOverlay(modifier: Modifier = Modifier) {
     val particles = remember {
         List(110) {
             Particle(
-                x0       = Random.nextFloat(),
-                speed    = 0.20f + Random.nextFloat() * 0.70f,
-                hSpeed   = (Random.nextFloat() - 0.5f) * 0.30f,
-                phase    = Random.nextFloat() * 6.28f,
-                freq     = 0.5f + Random.nextFloat() * 2.5f,
-                color    = confettiColors[Random.nextInt(confettiColors.size)],
-                size     = 8f + Random.nextFloat() * 16f,
+                x0 = Random.nextFloat(),
+                speed = 0.20f + Random.nextFloat() * 0.70f,
+                hSpeed = (Random.nextFloat() - 0.5f) * 0.30f,
+                phase = Random.nextFloat() * 6.28f,
+                freq = 0.5f + Random.nextFloat() * 2.5f,
+                color = confettiColors[Random.nextInt(confettiColors.size)],
+                size = 8f + Random.nextFloat() * 16f,
                 rotSpeed = (Random.nextFloat() - 0.5f) * 4f,
                 isCircle = Random.nextBoolean()
             )
@@ -925,36 +1020,40 @@ fun ConfettiOverlay(modifier: Modifier = Modifier) {
     }
     val transition = rememberInfiniteTransition(label = "confetti")
     val time by transition.animateFloat(
-        initialValue  = 0f,
-        targetValue   = 1f,
+        initialValue = 0f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing)),
-        label         = "confetti_t"
+        label = "confetti_t"
     )
 
     val emojiScale by transition.animateFloat(
-        initialValue  = 0.85f,
-        targetValue   = 1.15f,
+        initialValue = 0.85f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label         = "emoji_scale"
+        label = "emoji_scale"
     )
 
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             particles.forEach { p ->
                 val rawY = (time * p.speed + p.phase / 6.28f) % 1.3f - 0.15f
-                val y    = rawY * size.height
-                val xNorm = ((p.x0 + p.hSpeed * time +
-                        sin((time * p.freq * 6.28f + p.phase).toDouble()).toFloat() * 0.05f)
-                    .coerceIn(0f, 1f))
+                val y = rawY * size.height
+                val xNorm = (
+                    (
+                        p.x0 + p.hSpeed * time +
+                            sin((time * p.freq * 6.28f + p.phase).toDouble()).toFloat() * 0.05f
+                        )
+                        .coerceIn(0f, 1f)
+                    )
                 val x = xNorm * size.width
                 withTransform({ rotate(time * 360f * p.rotSpeed, Offset(x, y)) }) {
                     if (p.isCircle) {
                         drawCircle(p.color, p.size / 2f, Offset(x, y))
                     } else {
                         drawRect(
-                            color   = p.color,
+                            color = p.color,
                             topLeft = Offset(x - p.size / 2f, y - p.size * 0.3f),
-                            size    = Size(p.size, p.size * 0.55f)
+                            size = Size(p.size, p.size * 0.55f)
                         )
                     }
                 }
@@ -962,10 +1061,13 @@ fun ConfettiOverlay(modifier: Modifier = Modifier) {
         }
 
         Row(
-            modifier              = Modifier
+            modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 60.dp)
-                .graphicsLayer { scaleX = emojiScale; scaleY = emojiScale },
+                .graphicsLayer {
+                    scaleX = emojiScale
+                    scaleY = emojiScale
+                },
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             listOf("🎉", "🏆", "🎬", "🍿", "✨").forEach { emoji ->
@@ -977,11 +1079,7 @@ fun ConfettiOverlay(modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FiltersBottomSheet(
-    filters: GroupFilters,
-    onDismiss: () -> Unit,
-    onApply: (GroupFilters) -> Unit
-) {
+private fun FiltersBottomSheet(filters: GroupFilters, onDismiss: () -> Unit, onApply: (GroupFilters) -> Unit) {
     var duration by remember { mutableIntStateOf(filters.maxEpisodeDuration) }
     var excluded by remember { mutableStateOf(filters.excludedGenreIds.toSet()) }
 
@@ -992,9 +1090,9 @@ private fun FiltersBottomSheet(
     )
 
     ModalBottomSheet(
-        onDismissRequest   = onDismiss,
-        containerColor     = SurfaceDark,
-        sheetState         = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceDark,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(
             modifier = Modifier
@@ -1007,19 +1105,26 @@ private fun FiltersBottomSheet(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("Duración máx. por episodio", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text(
+                        "Duración máx. por episodio",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
+                    )
                     Text(
                         if (duration == 0) "Sin límite" else "$duration min",
-                        color = PrimaryPurpleLight, fontSize = 14.sp, fontWeight = FontWeight.Bold
+                        color = PrimaryPurpleLight,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
                 Slider(
-                    value        = duration.toFloat(),
+                    value = duration.toFloat(),
                     onValueChange = { duration = it.toInt() },
-                    valueRange   = 0f..120f,
-                    steps        = 11,
-                    colors       = SliderDefaults.colors(
-                        thumbColor       = PrimaryPurple,
+                    valueRange = 0f..120f,
+                    steps = 11,
+                    colors = SliderDefaults.colors(
+                        thumbColor = PrimaryPurple,
                         activeTrackColor = PrimaryPurple
                     )
                 )
@@ -1033,15 +1138,15 @@ private fun FiltersBottomSheet(
                             val isExcluded = id in excluded
                             FilterChip(
                                 selected = isExcluded,
-                                onClick  = {
+                                onClick = {
                                     excluded = if (isExcluded) excluded - id else excluded + id
                                 },
-                                label    = { Text(name, fontSize = 11.sp) },
-                                colors   = FilterChipDefaults.filterChipColors(
+                                label = { Text(name, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = ErrorRed.copy(alpha = 0.2f),
-                                    selectedLabelColor     = ErrorRed,
-                                    containerColor         = Color.White.copy(alpha = 0.05f),
-                                    labelColor             = TextGray
+                                    selectedLabelColor = ErrorRed,
+                                    containerColor = Color.White.copy(alpha = 0.05f),
+                                    labelColor = TextGray
                                 )
                             )
                         }
@@ -1050,10 +1155,10 @@ private fun FiltersBottomSheet(
             }
 
             Button(
-                onClick  = { onApply(GroupFilters(duration, excluded.toList())) },
+                onClick = { onApply(GroupFilters(duration, excluded.toList())) },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape    = RoundedCornerShape(14.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
             ) {
                 Text("Aplicar filtros", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
@@ -1062,28 +1167,24 @@ private fun FiltersBottomSheet(
 }
 
 @Composable
-private fun NightTitleDialog(
-    initial: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
+private fun NightTitleDialog(initial: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor   = SurfaceDark,
+        containerColor = SurfaceDark,
         title = { Text("🌙 Nombra la noche", color = Color.White, fontWeight = FontWeight.Black) },
-        text  = {
+        text = {
             OutlinedTextField(
-                value         = text,
+                value = text,
                 onValueChange = { text = it },
-                placeholder   = { Text("Viernes de terror 🎃", color = TextGray) },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth(),
-                colors        = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor   = PrimaryPurple,
+                placeholder = { Text("Viernes de terror 🎃", color = TextGray) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryPurple,
                     unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-                    focusedTextColor     = Color.White,
-                    unfocusedTextColor   = Color.White
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
                 )
             )
         },
@@ -1106,12 +1207,15 @@ private fun MemberChipLobby(email: String, isHost: Boolean) {
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Box(
-            modifier         = Modifier
+            modifier = Modifier
                 .size(44.dp)
                 .background(
                     Brush.linearGradient(
-                        if (isHost) listOf(PrimaryPurple, Color(0xFF9C27B0))
-                        else listOf(SurfaceDark, SurfaceDark)
+                        if (isHost) {
+                            listOf(PrimaryPurple, Color(0xFF9C27B0))
+                        } else {
+                            listOf(SurfaceDark, SurfaceDark)
+                        }
                     ),
                     CircleShape
                 )
@@ -1120,7 +1224,9 @@ private fun MemberChipLobby(email: String, isHost: Boolean) {
         ) {
             Text(
                 label.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black
             )
         }
         Text(label, color = if (isHost) PrimaryPurpleLight else TextGray, fontSize = 11.sp, maxLines = 1)
@@ -1140,9 +1246,13 @@ private fun MemberProgress(email: String, votedCount: Int, total: Int) {
                 .size(32.dp)
                 .background(
                     Brush.sweepGradient(
-                        listOf(PrimaryPurple.copy(alpha = progress), PrimaryPurple.copy(alpha = progress),
-                            Color.White.copy(alpha = 0.08f))
-                    ), CircleShape
+                        listOf(
+                            PrimaryPurple.copy(alpha = progress),
+                            PrimaryPurple.copy(alpha = progress),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
+                    CircleShape
                 )
                 .border(
                     1.5.dp,
@@ -1153,7 +1263,9 @@ private fun MemberProgress(email: String, votedCount: Int, total: Int) {
         ) {
             Text(
                 email.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
         }
         Text("$votedCount", color = TextGray, fontSize = 9.sp)
@@ -1181,11 +1293,14 @@ private fun VetoButton(used: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun BigVoteButton(
-    label: String, sublabel: String, color: Color,
-    onClick: () -> Unit, modifier: Modifier = Modifier
+    label: String,
+    sublabel: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier         = modifier
+        modifier = modifier
             .clip(RoundedCornerShape(18.dp))
             .background(color.copy(alpha = 0.12f))
             .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
@@ -1212,19 +1327,26 @@ private fun GenreChip(name: String) {
 
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    Text(text, color = TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, modifier = modifier)
+    Text(
+        text,
+        color = TextGray,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.5.sp,
+        modifier = modifier
+    )
 }
 
 @Composable
 private fun ActiveFiltersBanner(filters: GroupFilters, modifier: Modifier = Modifier) {
     Row(
-        modifier              = modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(PrimaryPurple.copy(alpha = 0.08f))
             .border(1.dp, PrimaryPurple.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment     = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(Icons.Default.FilterList, null, tint = PrimaryPurpleLight, modifier = Modifier.size(16.dp))
@@ -1232,7 +1354,13 @@ private fun ActiveFiltersBanner(filters: GroupFilters, modifier: Modifier = Modi
             if (filters.maxEpisodeDuration > 0) add("≤${filters.maxEpisodeDuration} min/ep")
             filters.excludedGenreIds.forEach { id -> add("sin ${GenreMapper.getGenreName(id)}") }
         }
-        Text(parts.joinToString(" · "), color = PrimaryPurpleLight, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            parts.joinToString(" · "),
+            color = PrimaryPurpleLight,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

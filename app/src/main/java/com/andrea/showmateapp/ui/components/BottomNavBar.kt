@@ -28,6 +28,9 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -59,10 +62,7 @@ import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
 
 @Composable
-fun BottomNavBar(
-    navController: NavController,
-    onScrollToTop: (Any) -> Unit = {}
-) {
+fun BottomNavBar(navController: NavController, onScrollToTop: (Any) -> Unit = {}, friendsBadgeCount: Int = 0) {
     val items = listOf(
         BottomNavItem(Screen.Home, "Inicio", Icons.Default.Home),
         BottomNavItem(Screen.Search, "Buscar", Icons.Default.Search),
@@ -81,7 +81,7 @@ fun BottomNavBar(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 56.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -90,96 +90,129 @@ fun BottomNavBar(
             shadowElevation = 20.dp,
             border = BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.25f))
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items.forEach { item ->
-                    val isSelected = currentDestination?.hierarchy
-                        ?.any { it.hasRoute(item.route::class) } == true
+            Column {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    thickness = 1.dp,
+                    color = Color.White.copy(alpha = 0.05f)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items.forEach { item ->
+                        val isSelected = currentDestination?.hierarchy
+                            ?.any { it.hasRoute(item.route::class) } == true
 
-                    val iconScale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.18f else 1f,
-                        animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
-                        label = "iconScale"
-                    )
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.18f else 1f,
+                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
+                            label = "iconScale"
+                        )
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                val now = System.currentTimeMillis()
-                                if (isSelected && lastClickedRoute == item.route && now - lastClickTime < 400L) {
-                                    onScrollToTop(item.route)
-                                }
-                                lastClickedRoute = item.route
-                                lastClickTime = now
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    val now = System.currentTimeMillis()
+                                    if (isSelected && lastClickedRoute == item.route && now - lastClickTime < 400L) {
+                                        onScrollToTop(item.route)
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                    lastClickedRoute = item.route
+                                    lastClickTime = now
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(
-                                        if (isSelected) Brush.linearGradient(
-                                            listOf(
-                                                PrimaryPurple.copy(alpha = 0.30f),
-                                                PrimaryPurpleLight.copy(alpha = 0.15f)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                val showBadge = item.route is Screen.Friends && friendsBadgeCount > 0
+                                BadgedBox(
+                                    badge = {
+                                        if (showBadge) {
+                                            Badge(
+                                                containerColor = PrimaryPurple,
+                                                contentColor = Color.White
+                                            ) {
+                                                Text(
+                                                    text = if (friendsBadgeCount > 9) {
+                                                        "9+"
+                                                    } else {
+                                                        friendsBadgeCount.toString()
+                                                    },
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(
+                                                if (isSelected) {
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            PrimaryPurple.copy(alpha = 0.30f),
+                                                            PrimaryPurpleLight.copy(alpha = 0.15f)
+                                                        )
+                                                    )
+                                                } else {
+                                                    Brush.linearGradient(
+                                                        listOf(Color.Transparent, Color.Transparent)
+                                                    )
+                                                }
                                             )
-                                        ) else Brush.linearGradient(
-                                            listOf(Color.Transparent, Color.Transparent)
+                                    ) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = item.title,
+                                            modifier = Modifier
+                                                .size(22.dp)
+                                                .scale(iconScale),
+                                            tint = if (isSelected) PrimaryPurple else TextGray
                                         )
-                                    )
-                            ) {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.title,
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .scale(iconScale),
-                                    tint = if (isSelected) PrimaryPurple else TextGray
-                                )
-                            }
+                                    }
+                                }
 
-                            AnimatedVisibility(
-                                visible = isSelected,
-                                enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-                                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
-                            ) {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = PrimaryPurple,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(top = 2.dp)
-                                )
+                                AnimatedVisibility(
+                                    visible = isSelected,
+                                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+                                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+                                ) {
+                                    Text(
+                                        text = item.title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = PrimaryPurple,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 10.sp,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
+            } // close Column
         }
     }
 }

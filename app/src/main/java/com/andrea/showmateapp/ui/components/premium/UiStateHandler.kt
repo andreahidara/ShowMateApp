@@ -1,7 +1,6 @@
 package com.andrea.showmateapp.ui.components.premium
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,11 +29,7 @@ import com.andrea.showmateapp.util.ErrorType
 import com.andrea.showmateapp.util.Resource
 
 @Composable
-fun ErrorContent(
-    type: ErrorType,
-    onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
+fun ErrorContent(type: ErrorType, onRetry: (() -> Unit)? = null, modifier: Modifier = Modifier) {
     val (icon, tint, title) = errorUiConfig(type)
 
     Column(
@@ -230,8 +225,8 @@ fun <T> UiStateHandler(
     ) { state ->
         when (state) {
             is Resource.Loading -> loadingContent()
-            is Resource.Empty   -> emptyContent()
-            is Resource.Error   -> ErrorContent(type = state.type, onRetry = onRetry)
+            is Resource.Empty -> emptyContent()
+            is Resource.Error -> ErrorContent(type = state.type, onRetry = onRetry)
             is Resource.Success -> content(state.data)
         }
     }

@@ -32,5 +32,7 @@ data class UserProfile(
     val xp: Int = 0,
     val unlockedAchievementIds: List<String> = emptyList(),
     val completedGroupMatches: Int = 0,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    val friendIds: List<String> = emptyList(),
+    val onboardingCompleted: Boolean = false
 )

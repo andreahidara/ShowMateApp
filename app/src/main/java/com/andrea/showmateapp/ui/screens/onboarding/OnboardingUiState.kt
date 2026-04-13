@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.onboarding
 
+import androidx.compose.runtime.Immutable
 import com.andrea.showmateapp.data.network.MediaContent
 
 enum class EpisodeLengthPref(val label: String, val description: String) {
@@ -30,7 +31,8 @@ enum class OnboardingPersonalityType(
         "El Detective",
         "🔍",
         "Analítico · Intrigante · Perspicaz",
-        "Las tramas complejas y los giros inesperados son tu pasión. Resuelves los misterios antes que los protagonistas."
+        "Las tramas complejas y los giros inesperados son tu pasión. " +
+            "Resuelves los misterios antes que los protagonistas."
     ),
     VISIONARY(
         "El Visionario",
@@ -66,7 +68,8 @@ enum class OnboardingPersonalityType(
         "El Ecléctico",
         "🌈",
         "Versátil · Abierto · Singular",
-        "Tu gusto no conoce fronteras. Saltas de géneros con total naturalidad y siempre encuentras algo que te engancha."
+        "Tu gusto no conoce fronteras. Saltas de géneros con total naturalidad " +
+            "y siempre encuentras algo que te engancha."
     ),
     MARATHON(
         "El Maratonero",
@@ -76,34 +79,35 @@ enum class OnboardingPersonalityType(
     )
 }
 
+@Immutable
 data class OnboardingUiState(
     val step: Int = 1,
 
     val availableGenres: Map<String, String> = mapOf(
         "10759" to "Acción y Aventura",
-        "16"    to "Animación",
-        "35"    to "Comedia",
-        "80"    to "Crimen",
-        "99"    to "Documental",
-        "18"    to "Drama",
+        "16" to "Animación",
+        "35" to "Comedia",
+        "80" to "Crimen",
+        "99" to "Documental",
+        "18" to "Drama",
         "10751" to "Familiar",
-        "9648"  to "Misterio",
+        "9648" to "Misterio",
         "10765" to "Sci-Fi y Fantasía",
-        "37"    to "Western",
+        "37" to "Western",
         "10768" to "Política",
         "10764" to "Reality"
     ),
     val genreEmojis: Map<String, String> = mapOf(
         "10759" to "⚔️",
-        "16"    to "🎨",
-        "35"    to "😂",
-        "80"    to "🔫",
-        "99"    to "📽️",
-        "18"    to "🎭",
+        "16" to "🎨",
+        "35" to "😂",
+        "80" to "🔫",
+        "99" to "📽️",
+        "18" to "🎭",
         "10751" to "👨‍👩‍👧",
-        "9648"  to "🔍",
+        "9648" to "🔍",
         "10765" to "🚀",
-        "37"    to "🤠",
+        "37" to "🤠",
         "10768" to "🗳️",
         "10764" to "📺"
     ),

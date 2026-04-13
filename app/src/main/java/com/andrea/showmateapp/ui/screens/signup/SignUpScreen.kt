@@ -1,5 +1,7 @@
 package com.andrea.showmateapp.ui.screens.signup
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,27 +21,22 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.premium.AuthBackground
 import com.andrea.showmateapp.ui.components.premium.PrimaryButton
 import com.andrea.showmateapp.ui.components.premium.PrimaryTextField
-import com.andrea.showmateapp.ui.navigation.Screen
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
-import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.TextGray
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun SignUpScreen(
@@ -142,7 +139,11 @@ fun SignUpScreen(
                             IconButton(onClick = { viewModel.togglePasswordVisibility() }) {
                                 Icon(
                                     painter = painterResource(
-                                        id = if (state.isPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
+                                        id = if (state.isPasswordVisible) {
+                                            R.drawable.ic_visibility
+                                        } else {
+                                            R.drawable.ic_visibility_off
+                                        }
                                     ),
                                     contentDescription = null,
                                     tint = Color.White.copy(alpha = 0.5f),
@@ -150,14 +151,28 @@ fun SignUpScreen(
                                 )
                             }
                         },
-                        visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (state.isPasswordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
                         modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text(
+                        text = "Mínimo 8 caracteres, una mayúscula y un número",
+                        color = TextGray.copy(alpha = 0.7f),
+                        fontSize = 11.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, top = 4.dp)
                     )
 
                     if (state.password.isNotEmpty()) {
                         val strength = when {
                             state.password.length < 8 -> 0
-                            state.password.length < 10 || (!state.password.any { it.isUpperCase() } || !state.password.any { it.isDigit() }) -> 1
+                            state.password.length < 10 ||
+                                (!state.password.any { it.isUpperCase() } || !state.password.any { it.isDigit() }) -> 1
                             state.password.any { !it.isLetterOrDigit() } -> 3
                             else -> 2
                         }
@@ -213,7 +228,11 @@ fun SignUpScreen(
                             IconButton(onClick = { viewModel.toggleConfirmPasswordVisibility() }) {
                                 Icon(
                                     painter = painterResource(
-                                        id = if (state.isConfirmPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
+                                        id = if (state.isConfirmPasswordVisible) {
+                                            R.drawable.ic_visibility
+                                        } else {
+                                            R.drawable.ic_visibility_off
+                                        }
                                     ),
                                     contentDescription = null,
                                     tint = Color.White.copy(alpha = 0.5f),
@@ -221,7 +240,11 @@ fun SignUpScreen(
                                 )
                             }
                         },
-                        visualTransformation = if (state.isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (state.isConfirmPasswordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
 

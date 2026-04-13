@@ -12,13 +12,13 @@ interface TmdbApiService {
     suspend fun getMediaDetails(
         @Path("tv_id") tvId: Int,
         @Query("language") language: String = "es-ES",
-        @Query("append_to_response") appendToResponse: String? = "credits,keywords,watch/providers,content_ratings,videos"
+        @Query(
+            "append_to_response"
+        ) appendToResponse: String? = "credits,keywords,watch/providers,content_ratings,videos"
     ): MediaContent
 
     @GET("trending/tv/week")
-    suspend fun getTrendingThisWeek(
-        @Query("language") language: String = "es-ES"
-    ): MediaResponse
+    suspend fun getTrendingThisWeek(@Query("language") language: String = "es-ES"): MediaResponse
 
     @GET("tv/popular")
     suspend fun getPopularMedia(
@@ -53,6 +53,9 @@ interface TmdbApiService {
         @Query("first_air_date.lte") firstAirDateLte: String? = null
     ): MediaResponse
 
+    @GET("trending/person/week")
+    suspend fun getTrendingPeople(@Query("language") language: String = "es-ES"): PersonSearchResponse
+
     @GET("person/{person_id}")
     suspend fun getPersonDetails(
         @Path("person_id") personId: Int,
@@ -70,7 +73,8 @@ interface TmdbApiService {
     @GET("search/tv")
     suspend fun searchMedia(
         @Query("query") query: String,
-        @Query("language") language: String = "es-ES"
+        @Query("language") language: String = "es-ES",
+        @Query("page") page: Int = 1
     ): MediaResponse
 
     @GET("search/person")
@@ -122,5 +126,10 @@ data class Episode(
 data class PersonResponse(
     val id: Int = 0,
     val name: String = "",
-    @SerializedName("profile_path") val profilePath: String? = null
+    @SerializedName("profile_path") val profilePath: String? = null,
+    val biography: String = "",
+    val birthday: String? = null,
+    @SerializedName("place_of_birth") val placeOfBirth: String? = null,
+    @SerializedName("known_for_department") val knownForDepartment: String? = null,
+    val popularity: Float = 0f
 )

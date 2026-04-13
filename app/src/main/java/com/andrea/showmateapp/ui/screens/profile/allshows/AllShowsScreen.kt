@@ -10,32 +10,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.navigation.Screen
-import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.util.TmdbUtils
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AllShowsScreen(
-    navController: NavController,
-    viewModel: AllShowsViewModel = hiltViewModel()
-) {
+fun AllShowsScreen(navController: NavController, viewModel: AllShowsViewModel = hiltViewModel()) {
     val shows by viewModel.shows.collectAsStateWithLifecycle()
     val title = if (viewModel.type == "watched") "Lo que he visto" else "Favoritos"
 

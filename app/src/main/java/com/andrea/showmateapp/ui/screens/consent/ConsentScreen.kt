@@ -33,10 +33,7 @@ import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.TextGray
 
 @Composable
-fun ConsentScreen(
-    onAccepted: () -> Unit,
-    viewModel: ConsentViewModel = hiltViewModel()
-) {
+fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltViewModel()) {
     val isConsentGiven by viewModel.isConsentGiven.collectAsStateWithLifecycle()
 
     LaunchedEffect(isConsentGiven) {
@@ -53,14 +50,16 @@ fun ConsentScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Box(
                 modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(18.dp))
                     .background(
-                        Brush.linearGradient(listOf(PrimaryPurple.copy(alpha = 0.3f), PrimaryPurpleDark.copy(alpha = 0.2f)))
+                        Brush.linearGradient(
+                            listOf(PrimaryPurple.copy(alpha = 0.3f), PrimaryPurpleDark.copy(alpha = 0.2f))
+                        )
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -68,90 +67,81 @@ fun ConsentScreen(
                     Icons.Default.Shield,
                     contentDescription = null,
                     tint = PrimaryPurpleLight,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "ShowMate",
                 color = PrimaryPurple,
-                fontSize = 20.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Black
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "Antes de continuar",
                 color = Color.White,
-                fontSize = 24.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = (-0.5).sp
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = "Queremos que sepas cómo usamos tus datos",
                 color = TextGray,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 textAlign = TextAlign.Center,
-                lineHeight = 20.sp
+                lineHeight = 18.sp
             )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    ConsentDataRow(
-                        icon = Icons.Default.Person,
-                        title = "Datos de cuenta",
-                        description = "Tu email y nombre de usuario se almacenan en Firebase para identificarte."
-                    )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
-                    ConsentDataRow(
-                        icon = Icons.Default.Lock,
-                        title = "Historial de uso",
-                        description = "Tus interacciones (series vistas, favoritos, valoraciones) se usan para personalizar tus recomendaciones."
-                    )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
-                    ConsentDataRow(
-                        icon = Icons.Default.Gavel,
-                        title = "Cumplimiento RGPD",
-                        description = "Tus datos se almacenan de forma segura conforme al Reglamento General de Protección de Datos (UE) 2016/679. Puedes solicitar su eliminación en cualquier momento desde Ajustes."
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PrimaryPurple.copy(alpha = 0.08f))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.05f))
             ) {
-                Text(
-                    text = "ShowMate no vende ni comparte tus datos con terceros. Toda la información se usa exclusivamente para mejorar tu experiencia en la app.",
-                    color = TextGray,
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                    textAlign = TextAlign.Center
-                )
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ConsentDataRow(
+                        icon = Icons.Default.Person,
+                        title = "Datos de cuenta",
+                        description = "Tu email se usa para identificarte."
+                    )
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
+                    ConsentDataRow(
+                        icon = Icons.Default.Lock,
+                        title = "Historial de uso",
+                        description = "Tus votos personalizan tus recomendaciones."
+                    )
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
+                    ConsentDataRow(
+                        icon = Icons.Default.Gavel,
+                        title = "RGPD",
+                        description = "Tus datos están seguros según la normativa UE."
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "No vendemos tus datos a terceros. Los usamos solo para mejorar tu experiencia.",
+                color = TextGray,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
@@ -159,8 +149,8 @@ fun ConsentScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp),
+                    .height(50.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
             ) {
                 Text(
@@ -170,30 +160,24 @@ fun ConsentScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             TextButton(
                 onClick = { android.os.Process.killProcess(android.os.Process.myPid()) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "No acepto (salir de la app)",
+                    text = "No acepto (salir)",
                     color = TextGray,
                     fontSize = 13.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-private fun ConsentDataRow(
-    icon: ImageVector,
-    title: String,
-    description: String
-) {
+private fun ConsentDataRow(icon: ImageVector, title: String, description: String) {
     Row(
         verticalAlignment = Alignment.Top
     ) {

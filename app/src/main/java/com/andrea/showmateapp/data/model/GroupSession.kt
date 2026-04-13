@@ -14,8 +14,8 @@ data class GroupSession(
     val finishedAt: Long = 0L
 ) {
     companion object {
-        const val STATUS_LOBBY    = "lobby"
-        const val STATUS_VOTING   = "voting"
+        const val STATUS_LOBBY = "lobby"
+        const val STATUS_VOTING = "voting"
         const val STATUS_FINISHED = "finished"
     }
 }
@@ -30,7 +30,8 @@ data class MemberVoteDoc(
     val yes: List<Int> = emptyList(),
     val no: List<Int> = emptyList(),
     val maybe: List<Int> = emptyList(),
+    val superLikeId: Int = 0,
     val ready: Boolean = false
 )
 
-enum class VoteType { YES, NO, MAYBE }
+enum class VoteType { YES, NO, MAYBE, SUPER_LIKE }

@@ -1,17 +1,17 @@
 package com.andrea.showmateapp.data.repository
 
+import com.andrea.showmateapp.di.IoDispatcher
+import com.andrea.showmateapp.domain.repository.IAuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import com.andrea.showmateapp.domain.repository.IAuthRepository
-import com.andrea.showmateapp.di.IoDispatcher
-import kotlinx.coroutines.CoroutineDispatcher
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class AuthRepository @Inject constructor(

@@ -44,13 +44,15 @@ private val pages = listOf(
     WelcomePage(
         icon = Icons.Default.Stars,
         title = "Descubre series que amarás",
-        subtitle = "Un algoritmo personal aprende de tus gustos con cada interacción y te recomienda exactamente lo que necesitas ver.",
+        subtitle = "Un algoritmo personal aprende de tus gustos con cada interacción " +
+            "y te recomienda exactamente lo que necesitas ver.",
         accentColor = Color(0xFF7C4DFF)
     ),
     WelcomePage(
         icon = Icons.Default.Psychology,
         title = "Conoce tu perfil de espectador",
-        subtitle = "Identifica tus géneros, estilos narrativos y temas favoritos. Descubre qué tipo de espectador eres.",
+        subtitle = "Identifica tus géneros, estilos narrativos y temas favoritos. " +
+            "Descubre qué tipo de espectador eres.",
         accentColor = Color(0xFF9C27B0)
     ),
     WelcomePage(
@@ -100,24 +102,30 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                 repeat(pages.size) { index ->
                     val isSelected = pagerState.currentPage == index
                     val width by animateDpAsState(
-                        targetValue = if (isSelected) 24.dp else 8.dp,
+                        targetValue = if (isSelected) 32.dp else 6.dp,
                         animationSpec = tween(300),
                         label = "dotWidth"
                     )
+                    // Páginas ya visitadas: rellenas; actual: rellena; futuras: vacías
+                    val isPast = index < pagerState.currentPage
                     Box(
                         modifier = Modifier
-                            .height(8.dp)
+                            .height(4.dp)
                             .width(width)
                             .clip(CircleShape)
-                            .background(
-                                if (isSelected)
-                                    Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
-                                else
-                                    Brush.horizontalGradient(
-                                        listOf(Color.White.copy(alpha = 0.2f), Color.White.copy(alpha = 0.2f))
+                            .background(Color.White.copy(alpha = 0.15f))
+                    ) {
+                        if (isSelected || isPast) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth()
+                                    .background(
+                                        Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryPurpleDark))
                                     )
                             )
-                    )
+                        }
+                    }
                 }
             }
 

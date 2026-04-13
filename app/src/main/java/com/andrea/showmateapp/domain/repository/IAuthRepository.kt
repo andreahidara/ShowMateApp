@@ -1,7 +1,7 @@
 package com.andrea.showmateapp.domain.repository
 
-import kotlinx.coroutines.flow.Flow
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.flow.Flow
 
 interface IAuthRepository {
     suspend fun login(email: String, pass: String): Result<Unit>

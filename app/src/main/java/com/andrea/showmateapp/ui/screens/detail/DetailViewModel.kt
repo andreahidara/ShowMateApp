@@ -1,9 +1,10 @@
 package com.andrea.showmateapp.ui.screens.detail
 
-import timber.log.Timber
-import com.google.firebase.crashlytics.FirebaseCrashlytics
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.R
+import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.data.network.SeasonResponse
@@ -11,49 +12,28 @@ import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
+import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
+import com.andrea.showmateapp.util.BaseUiState
 import com.andrea.showmateapp.util.NarrativeStyleMapper
+import com.andrea.showmateapp.util.Resource
+import com.andrea.showmateapp.util.UiText
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import com.andrea.showmateapp.util.Resource
-import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import javax.inject.Inject
-import com.andrea.showmateapp.data.model.RecommendationReason
-import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
-import com.andrea.showmateapp.util.UiText
-import com.andrea.showmateapp.R
+import timber.log.Timber
 
-data class DetailUiState(
-    val isLoading: Boolean = true,
-    val media: MediaContent? = null,
-    val errorMessage: UiText? = null,
-    val isLiked: Boolean = false,
-    val isEssential: Boolean = false,
-    val isWatched: Boolean = false,
-    val isInWatchlist: Boolean = false,
-    val userRating: Int? = null,
-    val userReview: String = "",
-    val isSavingReview: Boolean = false,
-    val isReviewSaved: Boolean = false,
-    val similarShows: List<MediaContent> = emptyList(),
-    val isSimilarLoading: Boolean = true,
-    val actionError: UiText? = null,
-    val snackbarMessage: UiText? = null,
-    val watchedEpisodes: List<Int> = emptyList(),
-    val selectedSeason: SeasonResponse? = null,
-    val isSeasonLoading: Boolean = false,
-    val customLists: Map<String, List<Int>> = emptyMap(),
-    val showAddToListDialog: Boolean = false
-)
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(
@@ -73,8 +53,12 @@ class DetailViewModel @Inject constructor(
     private val _showWhyDialog = MutableStateFlow(false)
     val showWhyDialog: StateFlow<Boolean> = _showWhyDialog.asStateFlow()
 
-    fun showWhyDialog() { _showWhyDialog.value = true }
-    fun dismissWhyDialog() { _showWhyDialog.value = false }
+    fun showWhyDialog() {
+        _showWhyDialog.value = true
+    }
+    fun dismissWhyDialog() {
+        _showWhyDialog.value = false
+    }
 
     private val toggleMutex = Mutex()
 
@@ -86,27 +70,28 @@ class DetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         val details = result.data
 
-                        val profile = try { userRepository.getUserProfile() } catch (e: Exception) {
-                            Timber.w(e, "Could not load profile"); null
+                        val profile = try {
+                            userRepository.getUserProfile()
+                        } catch (e: Exception) {
+                            Timber.w(e, "Could not load profile")
+                            null
                         }
 
-                        val scoredDetails = getRecommendationsUseCase.scoreShows(listOf(details)).firstOrNull() ?: details
+                        val scoredDetails =
+                            getRecommendationsUseCase.scoreShows(listOf(details)).firstOrNull() ?: details
                         _uiState.update { it.copy(media = scoredDetails) }
 
-                        coroutineScope {
-                            launch { checkInteractions(scoredDetails.id, profile) }
-                            launch { loadUserRating(scoredDetails.id) }
-                            launch { loadUserReview(scoredDetails.id) }
-                        }
+                        checkInteractions(scoredDetails.id, profile)
+                        loadUserRating(scoredDetails.id)
+                        loadUserReview(scoredDetails.id)
 
                         if (scoredDetails.reasons.isNotEmpty()) {
                             _whyFactors.value = scoredDetails.reasons
                         }
 
-                        launch { loadSimilarShows(showId) }
-                        launch { loadCustomLists() }
+                        loadCustomLists()
                         scoredDetails.seasons?.firstOrNull()?.let {
-                            launch { loadSeasonDetails(showId, it.seasonNumber) }
+                            loadSeasonDetails(showId, it.seasonNumber)
                         }
                     }
                     is Resource.Error -> {
@@ -136,13 +121,15 @@ class DetailViewModel @Inject constructor(
                     if (e is CancellationException) throw e
                     emptyList()
                 }
-                _uiState.update { it.copy(
-                    isLiked = localState.isLiked,
-                    isEssential = localState.isEssential,
-                    isWatched = localState.isWatched,
-                    isInWatchlist = localState.isInWatchlist,
-                    watchedEpisodes = episodes
-                ) }
+                _uiState.update {
+                    it.copy(
+                        isLiked = localState.isLiked,
+                        isEssential = localState.isEssential,
+                        isWatched = localState.isWatched,
+                        isInWatchlist = localState.isInWatchlist,
+                        watchedEpisodes = episodes
+                    )
+                }
             } else {
                 val profile = cachedProfile ?: userRepository.getUserProfile()
                 val episodes = profile?.watchedEpisodes?.get(showId.toString()) ?: emptyList()
@@ -152,13 +139,15 @@ class DetailViewModel @Inject constructor(
                     ?: interactionRepository.getEssentials().any { it.id == showId }
                 val isWatched = showId in interactionRepository.getWatchedMediaIds()
                 val isInWatchlist = interactionRepository.isInWatchlist(showId)
-                _uiState.update { it.copy(
-                    isLiked = isLiked,
-                    isEssential = isEssential,
-                    isWatched = isWatched,
-                    isInWatchlist = isInWatchlist,
-                    watchedEpisodes = episodes
-                ) }
+                _uiState.update {
+                    it.copy(
+                        isLiked = isLiked,
+                        isEssential = isEssential,
+                        isWatched = isWatched,
+                        isInWatchlist = isInWatchlist,
+                        watchedEpisodes = episodes
+                    )
+                }
                 interactionRepository.cacheInteractionState(showId, isLiked, isEssential, isWatched)
             }
         } catch (e: Exception) {
@@ -167,70 +156,86 @@ class DetailViewModel @Inject constructor(
         }
     }
 
+    private suspend fun updateInteraction(
+        current: Boolean,
+        action: suspend (Boolean) -> Unit,
+        updateState: (DetailUiState, Boolean) -> DetailUiState,
+        onSuccess: (suspend () -> Unit)? = null
+    ) {
+        val newState = !current
+        toggleMutex.withLock {
+            try {
+                action(newState)
+                onSuccess?.invoke()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { updateState(it, current) }
+            }
+        }
+    }
+
     fun toggleLiked() {
         val currentShow = _uiState.value.media ?: return
-        val previousState = _uiState.value.isLiked
-        val newState = !previousState
-        _uiState.update { it.copy(isLiked = newState) }
+        val current = _uiState.value.isLiked
+        _uiState.update { it.copy(isLiked = !current) }
 
         viewModelScope.launch {
-            toggleMutex.withLock {
-                try {
-                    interactionRepository.toggleFavorite(currentShow, newState)
-                    if (newState) {
+            updateInteraction(
+                current = current,
+                action = { interactionRepository.toggleFavorite(currentShow, it) },
+                updateState = { state, old -> state.copy(isLiked = old, actionError = UiText.StringResource(R.string.error_update_failed)) },
+                onSuccess = {
+                    if (!current) {
                         trackInteraction(currentShow, IInteractionRepository.InteractionType.Like)
                         launchAchievementEvaluate()
                     }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    _uiState.update { it.copy(isLiked = previousState, actionError = UiText.StringResource(R.string.error_update_failed)) }
                 }
-            }
+            )
         }
     }
 
     fun toggleEssential() {
         val currentShow = _uiState.value.media ?: return
-        val previousState = _uiState.value.isEssential
-        val newState = !previousState
-        _uiState.update { it.copy(isEssential = newState) }
+        val current = _uiState.value.isEssential
+        _uiState.update { it.copy(isEssential = !current) }
 
         viewModelScope.launch {
-            toggleMutex.withLock {
-                try {
-                    interactionRepository.toggleEssential(currentShow, newState)
-                    if (newState) {
+            updateInteraction(
+                current = current,
+                action = { interactionRepository.toggleEssential(currentShow, it) },
+                updateState = { state, old -> state.copy(isEssential = old, actionError = UiText.StringResource(R.string.error_update_failed)) },
+                onSuccess = {
+                    if (!current) {
                         trackInteraction(currentShow, IInteractionRepository.InteractionType.Essential)
                         launchAchievementEvaluate()
                     }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    _uiState.update { it.copy(isEssential = previousState, actionError = UiText.StringResource(R.string.error_update_failed)) }
                 }
-            }
+            )
         }
     }
 
     fun toggleWatched() {
         val currentShow = _uiState.value.media ?: return
-        val previousState = _uiState.value.isWatched
-        val newState = !previousState
-        _uiState.update { it.copy(isWatched = newState) }
+        val current = _uiState.value.isWatched
+        _uiState.update { it.copy(isWatched = !current) }
 
         viewModelScope.launch {
-            toggleMutex.withLock {
-                try {
-                    interactionRepository.toggleWatched(currentShow, newState)
-                    markAllSeasonsWatched(currentShow, newState)
-                    if (newState) {
+            updateInteraction(
+                current = current,
+                action = {
+                    interactionRepository.toggleWatched(currentShow, it)
+                    markAllSeasonsWatched(currentShow, it)
+                },
+                updateState = { state, old -> state.copy(isWatched = old, actionError = UiText.StringResource(R.string.error_update_failed)) },
+                onSuccess = {
+                    if (!current) {
                         trackInteraction(currentShow, IInteractionRepository.InteractionType.Watched)
+                        val totalEps = currentShow.seasons?.sumOf { it.episodeCount } ?: (currentShow.numberOfSeasons ?: 1) * 10
+                        runCatching { userRepository.recordViewingSession(currentShow.id, totalEps) }
                         launchAchievementEvaluate()
                     }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    _uiState.update { it.copy(isWatched = previousState, actionError = UiText.StringResource(R.string.error_update_failed)) }
                 }
-            }
+            )
         }
     }
 
@@ -269,7 +274,12 @@ class DetailViewModel @Inject constructor(
                     interactionRepository.toggleWatchlist(currentShow, newState)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    _uiState.update { it.copy(isInWatchlist = previousState, actionError = UiText.StringResource(R.string.error_update_failed)) }
+                    _uiState.update {
+                        it.copy(
+                            isInWatchlist = previousState,
+                            actionError = UiText.StringResource(R.string.error_update_failed)
+                        )
+                    }
                 }
             }
         }
@@ -284,17 +294,11 @@ class DetailViewModel @Inject constructor(
             val epIndex = season.episodes.indexOfFirst { it.id == episodeId }
             if (epIndex != -1) {
                 val toMark = season.episodes.take(epIndex + 1).map { it.id }
-                val allMarked = toMark.all { it in currentWatched }
-
-                if (allMarked) {
-                    currentWatched.removeAll(toMark)
-                } else {
-                    toMark.forEach { if (it !in currentWatched) currentWatched.add(it) }
-                }
+                if (toMark.all { it in currentWatched }) currentWatched.removeAll(toMark)
+                else toMark.forEach { if (it !in currentWatched) currentWatched.add(it) }
             }
         } else {
-            if (currentWatched.contains(episodeId)) currentWatched.remove(episodeId)
-            else currentWatched.add(episodeId)
+            if (!currentWatched.remove(episodeId)) currentWatched.add(episodeId)
         }
 
         _uiState.update { it.copy(watchedEpisodes = currentWatched) }
@@ -302,10 +306,12 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (markPrevious && season != null) {
+                    val prevCount = _uiState.value.watchedEpisodes.size
                     interactionRepository.setAllEpisodesWatched(showId, currentWatched)
+                    val delta = currentWatched.size - prevCount
+                    if (delta > 0) runCatching { userRepository.recordViewingSession(showId, delta) }
                 } else {
-                    val isNowWatched = interactionRepository.toggleEpisodeWatched(showId, episodeId)
-                    if (isNowWatched) {
+                    if (interactionRepository.toggleEpisodeWatched(showId, episodeId)) {
                         launchAchievementEvaluate()
                         runCatching { userRepository.recordViewingSession(showId, 1) }
                     }
@@ -323,13 +329,9 @@ class DetailViewModel @Inject constructor(
         val currentWatched = _uiState.value.watchedEpisodes.toMutableSet()
         val seasonEpIds = season.episodes.map { it.id }
 
-        val isSeasonCompleted = seasonEpIds.all { it in currentWatched }
-
-        if (isSeasonCompleted) {
-            currentWatched.removeAll(seasonEpIds.toSet())
-        } else {
-            currentWatched.addAll(seasonEpIds)
-        }
+        val isCompleted = seasonEpIds.all { it in currentWatched }
+        if (isCompleted) currentWatched.removeAll(seasonEpIds.toSet())
+        else currentWatched.addAll(seasonEpIds)
 
         val newList = currentWatched.toList()
         _uiState.update { it.copy(watchedEpisodes = newList) }
@@ -337,7 +339,7 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 interactionRepository.setAllEpisodesWatched(showId, newList)
-                if (!isSeasonCompleted) {
+                if (!isCompleted) {
                     launchAchievementEvaluate()
                     runCatching { userRepository.recordViewingSession(showId, seasonEpIds.size) }
                 }
@@ -379,11 +381,20 @@ class DetailViewModel @Inject constructor(
     }
 
     private suspend fun loadUserReview(showId: Int) {
-        val review = try { interactionRepository.getReview(showId) } catch (e: Exception) { if (e is CancellationException) throw e; null }
-        _uiState.update { it.copy(
-            userReview = review ?: "",
-            isReviewSaved = !review.isNullOrBlank()
-        ) }
+        val review = try {
+            interactionRepository.getReview(showId)
+        } catch (
+            e: Exception
+        ) {
+            if (e is CancellationException) throw e
+            null
+        }
+        _uiState.update {
+            it.copy(
+                userReview = review ?: "",
+                isReviewSaved = !review.isNullOrBlank()
+            )
+        }
     }
 
     fun loadCustomLists() {
@@ -391,7 +402,9 @@ class DetailViewModel @Inject constructor(
             try {
                 val lists = interactionRepository.getCustomLists()
                 _uiState.update { it.copy(customLists = lists) }
-            } catch (e: Exception) { if (e is CancellationException) throw e;}
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -410,9 +423,14 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 interactionRepository.addToCustomList(listName, showId)
-                _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.detail_added_to_list, listName)) }
+                _uiState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.detail_added_to_list, listName)
+                    )
+                }
                 loadCustomLists()
-            } catch (e: Exception) { if (e is CancellationException) throw e;
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(actionError = UiText.StringResource(R.string.error_add_to_list_failed)) }
             }
         }
@@ -478,6 +496,11 @@ class DetailViewModel @Inject constructor(
         }
     }
 
+    fun loadSimilarShowsIfNeeded(showId: Int) {
+        if (_uiState.value.similarShows.isNotEmpty() || _uiState.value.isSimilarLoading) return
+        loadSimilarShows(showId)
+    }
+
     private fun loadSimilarShows(showId: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSimilarLoading = true) }
@@ -504,10 +527,10 @@ class DetailViewModel @Inject constructor(
             runCatching {
                 achievementChecker.evaluate(
                     AchievementChecker.EvalContext(
-                        profile                    = profile,
-                        episodesToday              = episodesToday,
-                        watchedShowVoteCount       = media.voteCount,
-                        watchedShowOriginCountries = media.originCountry
+                        profile = profile,
+                        episodesToday = episodesToday,
+                        voteCount = media.voteCount,
+                        countries = media.originCountry
                     )
                 )
             }
@@ -533,5 +556,4 @@ class DetailViewModel @Inject constructor(
             interactionType = type
         )
     }
-
 }

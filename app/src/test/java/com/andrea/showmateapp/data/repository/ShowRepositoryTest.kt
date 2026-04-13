@@ -6,6 +6,7 @@ import com.andrea.showmateapp.data.model.MediaResponse
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.data.network.TmdbApiService
 import com.andrea.showmateapp.util.Resource
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -16,7 +17,6 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.io.IOException
 
 class ShowRepositoryTest {
 
@@ -33,7 +33,7 @@ class ShowRepositoryTest {
 
     @Before
     fun setup() {
-        repository = ShowRepository(apiService, showDao, kotlinx.coroutines.Dispatchers.IO)
+        repository = ShowRepository(apiService, showDao)
     }
 
     // ── searchShows ────────────────────────────────────────────────────────────

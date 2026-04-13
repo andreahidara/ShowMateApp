@@ -1,32 +1,32 @@
 package com.andrea.showmateapp.data.network
 
-import com.google.gson.annotations.SerializedName
-import com.andrea.showmateapp.data.model.RecommendationReason
 import androidx.compose.runtime.Immutable
+import com.andrea.showmateapp.data.model.RecommendationReason
+import com.google.gson.annotations.SerializedName
 
 @Immutable
 data class MediaContent(
-    val id: Int = 0,
-    val name: String = "",
-    val overview: String = "",
+    @SerializedName("id") val id: Int = 0,
+    @SerializedName("name") val name: String = "",
+    @SerializedName("overview") val overview: String = "",
     @SerializedName("poster_path") val posterPath: String? = null,
     @SerializedName("genre_ids") val genreIds: List<Int>? = emptyList(),
-    val genres: List<Genre>? = null,
-    val popularity: Float = 0f,
-    val keywords: KeywordsResponse? = null,
-    val credits: CreditsResponse? = null,
+    @SerializedName("genres") val genres: List<Genre>? = null,
+    @SerializedName("popularity") val popularity: Float = 0f,
+    @SerializedName("keywords") val keywords: KeywordsResponse? = null,
+    @SerializedName("credits") val credits: CreditsResponse? = null,
     val affinityScore: Float = 0f,
     val reasons: List<RecommendationReason> = emptyList(),
     @SerializedName("first_air_date") val firstAirDate: String? = null,
     @SerializedName("number_of_seasons") val numberOfSeasons: Int? = null,
-    val status: String? = null,
+    @SerializedName("status") val status: String? = null,
     @SerializedName("vote_average") val voteAverage: Float = 0f,
     @SerializedName("vote_count") val voteCount: Int = 0,
     @SerializedName("episode_run_time") val episodeRunTime: List<Int>? = null,
     @SerializedName("backdrop_path") val backdropPath: String? = null,
     @SerializedName("watch/providers") val watchProviders: WatchProvidersResponse? = null,
-    val seasons: List<Season>? = null,
-    val videos: VideosResponse? = null,
+    @SerializedName("seasons") val seasons: List<Season>? = null,
+    @SerializedName("videos") val videos: VideosResponse? = null,
     @SerializedName("origin_country") val originCountry: List<String> = emptyList()
 ) {
     val safeGenreIds: List<Int>
@@ -46,33 +46,36 @@ data class MediaContent(
 }
 
 @Immutable
-data class Genre(val id: Int = 0, val name: String = "")
+data class Genre(
+    @SerializedName("id") val id: Int = 0,
+    @SerializedName("name") val name: String = ""
+)
 
 data class KeywordsResponse(
-    val results: List<Keyword> = emptyList()
+    @SerializedName("results") val results: List<Keyword> = emptyList()
 )
 
 data class Keyword(
-    val id: Int = 0,
-    val name: String = ""
+    @SerializedName("id") val id: Int = 0,
+    @SerializedName("name") val name: String = ""
 )
 
 data class CreditsResponse(
-    val cast: List<CastMember> = emptyList(),
-    val crew: List<CrewMember> = emptyList()
+    @SerializedName("cast") val cast: List<CastMember> = emptyList(),
+    @SerializedName("crew") val crew: List<CrewMember> = emptyList()
 )
 
 data class CastMember(
-    val id: Int = 0,
-    val name: String = "",
+    @SerializedName("id") val id: Int = 0,
+    @SerializedName("name") val name: String = "",
     @SerializedName("profile_path") val profilePath: String? = null,
     @SerializedName("character") val character: String = ""
 )
 
 data class CrewMember(
-    val id: Int = 0,
-    val name: String = "",
-    val job: String = "",
+    @SerializedName("id") val id: Int = 0,
+    @SerializedName("name") val name: String = "",
+    @SerializedName("job") val job: String = "",
     @SerializedName("profile_path") val profilePath: String? = null
 )
 

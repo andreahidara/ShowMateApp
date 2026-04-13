@@ -4,29 +4,12 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!--
-        Play button outline (hollow triangle pointing right)
-        matching the logo style, centered in the adaptive icon safe zone (18-90).
-        fillType evenOdd creates the hollow interior.
-    -->
+    <!-- Estrella blanca centrada, sin relleno (outline) -->
     <path
-        android:fillColor="#6C63FF"
-        android:fillType="evenOdd"
-        android:pathData="
-        M27,29
-        Q27,20 35,20
-        L71,43
-        Q82,48 82,54
-        Q82,60 71,65
-        L35,88
-        Q27,88 27,79
-        Z
-        M40,39
-        Q40,34 44.5,34
-        L65,46
-        Q71,50 71,54
-        Q71,58 65,62
-        L44.5,74
-        Q40,74 40,69
-        Z" />
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M54,28l7.65,15.5l17.1,2.48l-12.38,12.06l2.92,17.03L54,67.03l-15.29,8.04l2.92,-17.03l-12.38,-12.06l17.1,-2.48z" />
 </vector>

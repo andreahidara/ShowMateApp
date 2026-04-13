@@ -4,30 +4,31 @@ import com.andrea.showmateapp.data.local.MediaInteractionDao
 import com.andrea.showmateapp.data.local.MediaInteractionEntity
 import com.andrea.showmateapp.data.local.ShowDao
 import com.andrea.showmateapp.data.model.ActivityEvent
-import com.andrea.showmateapp.data.model.MediaEntity
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.model.toEntity
 import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IInteractionRepository.InteractionType
 import com.andrea.showmateapp.domain.repository.ISocialRepository
+import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
-import com.andrea.showmateapp.di.IoDispatcher
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Lazy
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class UserInteractionRepository @Inject constructor(
@@ -36,534 +37,266 @@ class UserInteractionRepository @Inject constructor(
     private val interactionDao: MediaInteractionDao,
     private val showDao: ShowDao,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    private val socialRepository: Lazy<ISocialRepository>,
-    private val achievementChecker: Lazy<AchievementChecker>
+    private val userRepo: Lazy<IUserRepository>,
+    private val socialRepo: Lazy<ISocialRepository>,
+    private val achievement: Lazy<AchievementChecker>
 ) : IInteractionRepository {
 
-    private val usersCollection = db.collection("users")
-    private fun userDoc(uid: String) = usersCollection.document(uid)
+    private val uid get() = auth.currentUser?.uid
+    private fun userDoc() = uid?.let { db.collection("users").document(it) }
 
-    override fun getLikedShowsFlow(): Flow<List<MediaEntity>> = showDao.getLikedShowsFlow()
-
-    override fun getWatchedShowsFlow(): Flow<List<MediaEntity>> = showDao.getWatchedShowsFlow()
-
-    override suspend fun getWatchedShows(): List<MediaContent> = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext emptyList()
+    private suspend fun <T> getCollection(path: String, clazz: Class<T>): List<T> = withContext(ioDispatcher) {
         try {
-            val snapshot = userDoc(uid).collection("watched").get().await()
-            snapshot.toObjects(MediaContent::class.java)
+            userDoc()?.collection(path)?.get()?.await()?.toObjects(clazz) ?: emptyList()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             emptyList()
         }
     }
 
-    override suspend fun getWatchlist(): List<MediaContent> = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext emptyList()
+    override fun getLikedShowsFlow() = showDao.getLikedShowsFlow()
+    override fun getWatchedShowsFlow() = showDao.getWatchedShowsFlow()
+    override suspend fun getWatchedShows() = getCollection("watched", MediaContent::class.java)
+    override suspend fun getWatchlist() = getCollection("watchlist", MediaContent::class.java)
+    override suspend fun getFavorites() = getCollection("favorites", MediaContent::class.java)
+    override suspend fun getEssentials() = getCollection("essentials", MediaContent::class.java)
+
+    override suspend fun getWatchedMediaIds() = withContext(ioDispatcher) { interactionDao.getWatchedMediaIds().toSet() }
+    override fun getWatchedMediaIdsFlow() = interactionDao.getWatchedMediaIdsFlow().map { it.toSet() }.distinctUntilChanged()
+    override suspend fun getExcludedMediaIds() = withContext(ioDispatcher) { interactionDao.getExcludedMediaIds().toSet() }
+    override fun getExcludedMediaIdsFlow() = interactionDao.getExcludedMediaIdsFlow().map { it.toSet() }.distinctUntilChanged()
+
+    override suspend fun getLocalInteractionState(mediaId: Int) = withContext(ioDispatcher) { interactionDao.getById(mediaId) }
+
+    private suspend fun toggleBase(
+        media: MediaContent,
+        coll: String,
+        set: Boolean,
+        updateDao: (MediaInteractionEntity) -> MediaInteractionEntity,
+        onSuccess: suspend () -> Unit = {}
+    ): Boolean = withContext(ioDispatcher) {
+        val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
+        interactionDao.upsert(updateDao(current).copy(syncPending = true))
+
         try {
-            val snapshot = userDoc(uid).collection("watchlist").get().await()
-            snapshot.toObjects(MediaContent::class.java)
+            val ref = userDoc()?.collection(coll)?.document(media.id.toString())
+            if (set) ref?.set(media)?.await() else ref?.delete()?.await()
+            interactionDao.upsert(updateDao(current).copy(syncPending = false))
+            onSuccess()
+            userRepo.get().getUserProfile()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            emptyList()
+            Timber.w(e, "Firestore sync failed for $coll")
+        }
+        set
+    }
+
+    override suspend fun toggleWatched(media: MediaContent, setWatched: Boolean) = toggleBase(media, "watched", setWatched, { it.copy(isWatched = setWatched) }) {
+        if (setWatched) showDao.insertShows(listOf(media.toEntity("watched"))) else showDao.deleteWatchedShow(media.id)
+    }
+
+    override suspend fun toggleFavorite(media: MediaContent, setLiked: Boolean) = toggleBase(media, "favorites", setLiked, { it.copy(isLiked = setLiked) }) {
+        if (setLiked) {
+            showDao.insertShows(listOf(media.toEntity("liked")))
+            runCatching { socialRepo.get().postActivityEvent(ActivityEvent.TYPE_LIKED, media.id, media.name, media.posterPath ?: "") }
+            runCatching { achievement.get().addXp(AchievementDefs.XP_LIKE_SHOW) }
+        } else showDao.deleteLikedShow(media.id)
+    }
+
+    override suspend fun toggleEssential(media: MediaContent, setEssential: Boolean) = toggleBase(media, "essentials", setEssential, { it.copy(isEssential = setEssential) }) {
+        if (setEssential) {
+            runCatching { socialRepo.get().postActivityEvent(ActivityEvent.TYPE_ESSENTIAL, media.id, media.name, media.posterPath ?: "") }
+            runCatching { achievement.get().addXp(AchievementDefs.XP_LIKE_SHOW) }
         }
     }
 
-    override suspend fun getFavorites(): List<MediaContent> = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext emptyList()
-        try {
-            val snapshot = userDoc(uid).collection("favorites").get().await()
-            snapshot.toObjects(MediaContent::class.java)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
-        }
-    }
+    override suspend fun toggleWatchlist(media: MediaContent, add: Boolean) = toggleBase(media, "watchlist", add, { it.copy(isInWatchlist = add) })
+    override suspend fun toggleDislike(media: MediaContent, setDisliked: Boolean) = toggleBase(media, "disliked", setDisliked, { it.copy(isDisliked = setDisliked) })
 
-    override suspend fun getEssentials(): List<MediaContent> = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext emptyList()
-        try {
-            val snapshot = userDoc(uid).collection("essentials").get().await()
-            snapshot.toObjects(MediaContent::class.java)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
-        }
-    }
+    override suspend fun isInWatchlist(mediaId: Int) = interactionDao.getById(mediaId)?.isInWatchlist ?: false
 
-    override suspend fun getWatchedMediaIds(): Set<Int> = withContext(ioDispatcher) {
-        interactionDao.getWatchedMediaIds().toSet()
-    }
-
-    override fun getWatchedMediaIdsFlow(): Flow<Set<Int>> = interactionDao.getWatchedMediaIdsFlow()
-        .map { it.toSet() }
-
-    override suspend fun getLocalInteractionState(mediaId: Int): MediaInteractionEntity? = withContext(ioDispatcher) {
-        interactionDao.getById(mediaId)
-    }
-
-    override suspend fun toggleWatched(media: MediaContent, setWatched: Boolean): Boolean = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext false
-        val watchedRef = userDoc(uid).collection("watched").document(media.id.toString())
-
-val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
-        interactionDao.upsert(current.copy(isWatched = setWatched, syncPending = true))
-        if (setWatched) showDao.insertShows(listOf(media.toEntity(ShowRepository.CAT_WATCHED)))
-        else showDao.deleteWatchedShow(media.id)
-
-try {
-            if (setWatched) watchedRef.set(media).await() else watchedRef.delete().await()
-            interactionDao.upsert(current.copy(isWatched = setWatched, syncPending = false))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Timber.w(e, "Firestore toggleWatched failed, will sync later")
-        }
-        setWatched
-    }
-
-    override suspend fun toggleFavorite(media: MediaContent, setLiked: Boolean): Boolean = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext false
-        val favRef = userDoc(uid).collection("favorites").document(media.id.toString())
-
-val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
-        interactionDao.upsert(current.copy(isLiked = setLiked, syncPending = true))
-        if (setLiked) showDao.insertShows(listOf(media.toEntity(ShowRepository.CAT_LIKED)))
-        else showDao.deleteLikedShow(media.id)
-
-try {
-            if (setLiked) {
-                favRef.set(media).await()
-                runCatching {
-                    socialRepository.get().postActivityEvent(
-                        type        = ActivityEvent.TYPE_LIKED,
-                        mediaId     = media.id,
-                        mediaTitle  = media.name,
-                        mediaPoster = media.posterPath ?: ""
-                    )
-                }
-                runCatching { achievementChecker.get().addXp(AchievementDefs.XP_LIKE_SHOW) }
-            } else {
-                favRef.delete().await()
-            }
-            interactionDao.upsert(current.copy(isLiked = setLiked, syncPending = false))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Timber.w(e, "Firestore toggleFavorite failed, will sync later")
-        }
-        setLiked
-    }
-
-    override suspend fun toggleEssential(media: MediaContent, setEssential: Boolean): Boolean = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext false
-        val essentialRef = userDoc(uid).collection("essentials").document(media.id.toString())
-
-val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
-        interactionDao.upsert(current.copy(isEssential = setEssential, syncPending = true))
-
-try {
-            if (setEssential) {
-                essentialRef.set(media).await()
-                runCatching {
-                    socialRepository.get().postActivityEvent(
-                        type        = ActivityEvent.TYPE_ESSENTIAL,
-                        mediaId     = media.id,
-                        mediaTitle  = media.name,
-                        mediaPoster = media.posterPath ?: ""
-                    )
-                }
-                runCatching { achievementChecker.get().addXp(AchievementDefs.XP_LIKE_SHOW) }
-            } else {
-                essentialRef.delete().await()
-            }
-            interactionDao.upsert(current.copy(isEssential = setEssential, syncPending = false))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Timber.w(e, "Firestore toggleEssential failed, will sync later")
-        }
-        setEssential
-    }
-
-    override suspend fun toggleWatchlist(media: MediaContent, add: Boolean): Boolean = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext false
-        val watchlistRef = userDoc(uid).collection("watchlist").document(media.id.toString())
-
-val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
-        interactionDao.upsert(current.copy(isInWatchlist = add, syncPending = true))
-
-try {
-            if (add) watchlistRef.set(media).await() else watchlistRef.delete().await()
-            interactionDao.upsert(current.copy(isInWatchlist = add, syncPending = false))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Timber.w(e, "Firestore toggleWatchlist failed, will sync later")
-        }
-        add
-    }
-
-    override suspend fun isInWatchlist(mediaId: Int): Boolean = withContext(ioDispatcher) {
-        interactionDao.getById(mediaId)?.isInWatchlist ?: false
-    }
-
-    override suspend fun cacheInteractionState(mediaId: Int, isLiked: Boolean, isEssential: Boolean, isWatched: Boolean) = withContext(ioDispatcher) {
+    override suspend fun cacheInteractionState(mediaId: Int, isLiked: Boolean, isEssential: Boolean, isWatched: Boolean) {
         val current = interactionDao.getById(mediaId) ?: MediaInteractionEntity(mediaId = mediaId)
         interactionDao.upsert(current.copy(isLiked = isLiked, isEssential = isEssential, isWatched = isWatched))
     }
 
-    override suspend fun trackMediaInteraction(
-        mediaId: Int,
-        genres: List<String>,
-        keywords: List<String>,
-        actors: List<Int>,
-        narrativeStyles: Map<String, Float>,
-        creators: List<Int>,
-        interactionType: InteractionType
-    ) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        val userRef = userDoc(uid)
-
+    override suspend fun trackMediaInteraction(mediaId: Int, genres: List<String>, keywords: List<String>, actors: List<Int>, narrativeStyles: Map<String, Float>, creators: List<Int>, interactionType: InteractionType) = withContext(ioDispatcher) {
+        val doc = userDoc() ?: return@withContext
         try {
-            db.runTransaction { transaction ->
-                val snapshot = transaction.get(userRef)
-                val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-
-                var weightModifier = 0f
-                val newLiked = profile.likedMediaIds.toMutableList()
-                val newEssential = profile.essentialMediaIds.toMutableList()
-                val newDisliked = profile.dislikedMediaIds.toMutableList()
-                val newRatings = profile.ratings.toMutableMap()
+            db.runTransaction { tx ->
+                val profile = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+                var weight = 0f
+                val liked = profile.likedMediaIds.toMutableList()
+                val essential = profile.essentialMediaIds.toMutableList()
+                val disliked = profile.dislikedMediaIds.toMutableList()
+                val ratings = profile.ratings.toMutableMap()
 
                 when (interactionType) {
-                    is InteractionType.Like -> {
-                        weightModifier = 5f
-                        if (!newLiked.contains(mediaId)) newLiked.add(mediaId)
-                        newDisliked.remove(mediaId)
-                    }
-                    is InteractionType.Essential -> {
-                        weightModifier = 10f
-                        if (!newEssential.contains(mediaId)) newEssential.add(mediaId)
-                        newDisliked.remove(mediaId)
-                    }
+                    is InteractionType.Like -> { weight = 5f; if (!liked.contains(mediaId)) liked.add(mediaId); disliked.remove(mediaId) }
+                    is InteractionType.Essential -> { weight = 10f; if (!essential.contains(mediaId)) essential.add(mediaId); disliked.remove(mediaId) }
                     is InteractionType.Rate -> {
-                        val rating = interactionType.score
-                        newRatings[mediaId.toString()] = rating.toFloat()
-                        val userAvg = if (profile.ratings.isNotEmpty())
-                            profile.ratings.values.average().toFloat() else 3f
-                        weightModifier = ((rating - userAvg) * 1.5f).coerceIn(-4f, 4f)
+                        val score = interactionType.score
+                        ratings[mediaId.toString()] = score.toFloat()
+                        weight = ((score - (if (profile.ratings.isNotEmpty()) profile.ratings.values.average().toFloat() else 3f)) * 1.5f).coerceIn(-4f, 4f)
                     }
-                    is InteractionType.Watched -> {
-                        weightModifier = 3f
-                    }
-                    is InteractionType.Dislike -> {
-                        weightModifier = -8f
-                        if (!newDisliked.contains(mediaId)) newDisliked.add(mediaId)
-                        newLiked.remove(mediaId)
-                        newEssential.remove(mediaId)
-                    }
+                    is InteractionType.Watched -> weight = 3f
+                    is InteractionType.Dislike -> { weight = -8f; if (!disliked.contains(mediaId)) disliked.add(mediaId); liked.remove(mediaId); essential.remove(mediaId) }
                     else -> {}
                 }
 
                 val now = System.currentTimeMillis()
-                val newGenreScores = profile.genreScores.toMutableMap()
-                val newGenreDates  = profile.genreScoreDates.toMutableMap()
-                genres.forEach { id ->
-                    newGenreScores[id] = (newGenreScores[id] ?: 0f) + weightModifier
-                    newGenreDates[id]  = now
-                }
+                fun updateScores(map: Map<String, Float>, dates: Map<String, Long>, keys: List<String>, mod: Float) =
+                    (map.toMutableMap() to dates.toMutableMap()).also { (m, d) -> keys.forEach { k -> m[k] = (m[k] ?: 0f) + mod; d[k] = now } }
 
-                val newKeywordScores = profile.preferredKeywords.toMutableMap()
-                val newKeywordDates  = profile.keywordScoreDates.toMutableMap()
-                keywords.forEach { kw ->
-                    newKeywordScores[kw] = (newKeywordScores[kw] ?: 0f) + weightModifier
-                    newKeywordDates[kw]  = now
-                }
+                val (gS, gD) = updateScores(profile.genreScores, profile.genreScoreDates, genres, weight)
+                val (kS, kD) = updateScores(profile.preferredKeywords, profile.keywordScoreDates, keywords, weight)
+                val (aS, aD) = updateScores(profile.preferredActors, profile.actorScoreDates, actors.map { it.toString() }, weight)
+                val (cS, cD) = updateScores(profile.preferredCreators, profile.creatorScoreDates, creators.map { it.toString() }, weight)
 
-                val newActorScores = profile.preferredActors.toMutableMap()
-                val newActorDates  = profile.actorScoreDates.toMutableMap()
-                actors.forEach { actorId ->
-                    val key = actorId.toString()
-                    newActorScores[key] = (newActorScores[key] ?: 0f) + weightModifier
-                    newActorDates[key]  = now
-                }
+                val nS = profile.narrativeStyleScores.toMutableMap()
+                val nD = profile.narrativeStyleDates.toMutableMap()
+                narrativeStyles.forEach { (s, r) -> nS[s] = (nS[s] ?: 0f) + weight * r; nD[s] = now }
 
-                val newNarrativeScores = profile.narrativeStyleScores.toMutableMap()
-                val newNarrativeDates  = profile.narrativeStyleDates.toMutableMap()
-                narrativeStyles.forEach { (style, relevance) ->
-                    newNarrativeScores[style] = (newNarrativeScores[style] ?: 0f) + weightModifier * relevance
-                    newNarrativeDates[style]  = now
-                }
-
-                val newCreatorScores = profile.preferredCreators.toMutableMap()
-                val newCreatorDates  = profile.creatorScoreDates.toMutableMap()
-                creators.forEach { creatorId ->
-                    val key = creatorId.toString()
-                    newCreatorScores[key] = (newCreatorScores[key] ?: 0f) + weightModifier
-                    newCreatorDates[key]  = now
-                }
-
-                transaction.set(userRef, profile.copy(
-                    genreScores          = newGenreScores,
-                    genreScoreDates      = newGenreDates,
-                    preferredKeywords    = newKeywordScores,
-                    keywordScoreDates    = newKeywordDates,
-                    preferredActors      = newActorScores,
-                    actorScoreDates      = newActorDates,
-                    narrativeStyleScores = newNarrativeScores,
-                    narrativeStyleDates  = newNarrativeDates,
-                    preferredCreators    = newCreatorScores,
-                    creatorScoreDates    = newCreatorDates,
-                    likedMediaIds        = newLiked,
-                    essentialMediaIds    = newEssential,
-                    dislikedMediaIds     = newDisliked,
-                    ratings              = newRatings
-                ))
+                tx.set(doc, profile.copy(genreScores = gS, genreScoreDates = gD, preferredKeywords = kS, keywordScoreDates = kD, preferredActors = aS, actorScoreDates = aD,
+                    narrativeStyleScores = nS, narrativeStyleDates = nD, preferredCreators = cS, creatorScoreDates = cD, likedMediaIds = liked, essentialMediaIds = essential, dislikedMediaIds = disliked, ratings = ratings))
             }.await()
+            userRepo.get().getUserProfile()
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Timber.e(e, "trackMediaInteraction failed")
         }
     }
 
     override suspend fun updateRating(mediaId: Int, rating: Int) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        userDoc(uid).collection("ratings").document(mediaId.toString())
-            .set(mapOf("rating" to rating)).await()
-        runCatching {
-            socialRepository.get().postActivityEvent(
-                type        = ActivityEvent.TYPE_RATED,
-                mediaId     = mediaId,
-                mediaTitle  = mediaId.toString(),
-                mediaPoster = "",
-                score       = rating.toFloat()
-            )
-        }
-        runCatching { achievementChecker.get().addXp(AchievementDefs.XP_RATE_SHOW) }
-        Unit
+        val doc = userDoc() ?: return@withContext
+        val show = showDao.getShowById(mediaId)
+        try {
+            db.runTransaction { tx ->
+                tx.set(doc.collection("ratings").document(mediaId.toString()), mapOf("rating" to rating))
+                val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+                tx.set(doc, p.copy(ratings = p.ratings.toMutableMap().apply { put(mediaId.toString(), rating.toFloat()) }))
+            }.await()
+            runCatching { socialRepo.get().postActivityEvent(ActivityEvent.TYPE_RATED, mediaId, show?.name ?: mediaId.toString(), show?.posterPath ?: "", rating.toFloat()) }
+            runCatching { achievement.get().addXp(AchievementDefs.XP_RATE_SHOW) }
+            userRepo.get().getUserProfile()
+        } catch (e: Exception) { Timber.e(e, "updateRating failed"); throw e }
     }
 
     override suspend fun deleteRating(mediaId: Int) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        userDoc(uid).collection("ratings").document(mediaId.toString()).delete().await()
+        val doc = userDoc() ?: return@withContext
+        try {
+            db.runTransaction { tx ->
+                tx.delete(doc.collection("ratings").document(mediaId.toString()))
+                tx.get(doc).toObject(UserProfile::class.java)?.let { p ->
+                    val r = p.ratings.toMutableMap()
+                    if (r.remove(mediaId.toString()) != null) tx.set(doc, p.copy(ratings = r))
+                }
+            }.await()
+            userRepo.get().getUserProfile()
+        } catch (e: Exception) { Timber.e(e, "deleteRating failed"); throw e }
     }
 
     override suspend fun getAllRatings(): Map<Int, Int> = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext emptyMap()
-        try {
-            val snapshot = userDoc(uid).collection("ratings").get().await()
-            snapshot.documents.mapNotNull { doc ->
-                val id = doc.id.toIntOrNull() ?: return@mapNotNull null
-                val rating = doc.getLong("rating")?.toInt() ?: return@mapNotNull null
-                id to rating
-            }.toMap()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyMap()
-        }
+        val s = userDoc()?.collection("ratings")?.get()?.await()
+        s?.documents?.mapNotNull { d -> d.id.toIntOrNull()?.to(d.getLong("rating")?.toInt() ?: return@mapNotNull null) }?.toMap() ?: emptyMap()
     }
 
-    override suspend fun getUserRating(mediaId: Int): Int? = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext null
-        try {
-            val doc = userDoc(uid).collection("ratings").document(mediaId.toString()).get().await()
-            if (doc.exists()) doc.getLong("rating")?.toInt() else null
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
-    }
+    override suspend fun getUserRating(mediaId: Int) = try { userDoc()?.collection("ratings")?.document(mediaId.toString())?.get()?.await()?.getLong("rating")?.toInt() } catch (e: Exception) { null }
 
     override suspend fun saveReview(mediaId: Int, text: String) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        val userRef = userDoc(uid)
-        try {
-            db.runTransaction { transaction ->
-                val profile = transaction.get(userRef).toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-                val reviews = profile.mediaReviews.toMutableMap()
-                if (text.isBlank()) reviews.remove(mediaId.toString())
-                else reviews[mediaId.toString()] = text
-                transaction.set(userRef, profile.copy(mediaReviews = reviews))
-            }.await()
-        } catch (e: Exception) {
-            Timber.e(e, "saveReview failed")
-            throw e
-        }
+        val doc = userDoc() ?: return@withContext
+        db.runTransaction { tx ->
+            val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+            tx.set(doc, p.copy(mediaReviews = p.mediaReviews.toMutableMap().apply { if (text.isBlank()) remove(mediaId.toString()) else put(mediaId.toString(), text) }))
+        }.await()
+        userRepo.get().getUserProfile()
     }
 
-    override suspend fun getReview(mediaId: Int): String? = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext null
-        try {
-            val snapshot = userDoc(uid).get().await()
-            val profile = snapshot.toObject(UserProfile::class.java)
-            profile?.mediaReviews?.get(mediaId.toString())
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
-    }
+    override suspend fun getReview(mediaId: Int) = userDoc()?.get()?.await()?.toObject(UserProfile::class.java)?.mediaReviews?.get(mediaId.toString())
 
-    override suspend fun addToCustomList(listName: String, mediaId: Int) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        val userRef = userDoc(uid)
-        try {
-            db.runTransaction { transaction ->
-                val profile = transaction.get(userRef).toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-                val lists   = profile.customLists.toMutableMap()
-                val items   = (lists[listName] ?: emptyList()).toMutableList()
-                if (!items.contains(mediaId)) {
-                    items.add(mediaId)
-                    lists[listName] = items
-                    transaction.set(userRef, profile.copy(customLists = lists))
-                }
-            }.await()
-        } catch (e: Exception) {
-            Timber.e(e, "addToCustomList failed")
-        }
-    }
-
-    override suspend fun removeFromCustomList(listName: String, mediaId: Int) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        val userRef = userDoc(uid)
-        try {
-            db.runTransaction { transaction ->
-                val profile = transaction.get(userRef).toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-                val lists   = profile.customLists.toMutableMap()
-                val items   = (lists[listName] ?: emptyList()).toMutableList()
-                if (items.remove(mediaId)) {
-                    lists[listName] = items
-                    transaction.set(userRef, profile.copy(customLists = lists))
-                }
-            }.await()
-        } catch (e: Exception) {
-            Timber.e(e, "removeFromCustomList failed")
-        }
-    }
-
-    override suspend fun createCustomList(listName: String) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        val userRef = userDoc(uid)
-        try {
-            db.runTransaction { transaction ->
-                val profile = transaction.get(userRef).toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-                val lists   = profile.customLists.toMutableMap()
-                if (!lists.containsKey(listName)) {
-                    lists[listName] = emptyList()
-                    transaction.set(userRef, profile.copy(customLists = lists))
-                }
-            }.await()
-        } catch (e: Exception) {
-            Timber.e(e, "createCustomList failed")
-        }
-    }
-
-    override suspend fun deleteCustomList(listName: String) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        val userRef = userDoc(uid)
-        try {
-            db.runTransaction { transaction ->
-                val profile = transaction.get(userRef).toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-                val lists   = profile.customLists.toMutableMap()
-                if (lists.remove(listName) != null) {
-                    transaction.set(userRef, profile.copy(customLists = lists))
-                }
-            }.await()
-        } catch (e: Exception) {
-            Timber.e(e, "deleteCustomList failed")
-        }
-    }
-
-    override suspend fun getCustomLists(): Map<String, List<Int>> = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext emptyMap()
-        try {
-            val snapshot = userDoc(uid).get().await()
-            val profile = snapshot.toObject(UserProfile::class.java)
-            profile?.customLists ?: emptyMap()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyMap()
-        }
-    }
-
-    override suspend fun toggleEpisodeWatched(showId: Int, episodeId: Int): Boolean = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext false
-        val userRef = userDoc(uid)
-
-        db.runTransaction { transaction ->
-            val snapshot = transaction.get(userRef)
-            val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-
-            val watchedEpisodes = profile.watchedEpisodes.toMutableMap()
-            val episodesForShow = watchedEpisodes[showId.toString()]?.toMutableSet() ?: mutableSetOf()
-
-            val isNowWatched = if (episodesForShow.contains(episodeId)) {
-                episodesForShow.remove(episodeId)
-                false
-            } else {
-                episodesForShow.add(episodeId)
-                true
+    private suspend fun updateCustomList(list: String, action: (MutableList<Int>) -> Boolean) = withContext(ioDispatcher) {
+        val doc = userDoc() ?: return@withContext
+        db.runTransaction { tx ->
+            val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+            val lists = p.customLists.toMutableMap()
+            val items = (lists[list] ?: emptyList()).toMutableList()
+            if (action(items)) {
+                lists[list] = items
+                tx.set(doc, p.copy(customLists = lists))
             }
+        }.await()
+        userRepo.get().getUserProfile()
+    }
 
-            watchedEpisodes[showId.toString()] = episodesForShow.toList()
-            transaction.update(userRef, "watchedEpisodes", watchedEpisodes)
-            isNowWatched
-        }.await().also { isNowWatched ->
-            if (isNowWatched) runCatching { achievementChecker.get().addXp(AchievementDefs.XP_WATCH_EPISODE) }
-        }
+    override suspend fun addToCustomList(list: String, mediaId: Int) = updateCustomList(list) { if (!it.contains(mediaId)) it.add(mediaId) else false }
+    override suspend fun removeFromCustomList(list: String, mediaId: Int) = updateCustomList(list) { it.remove(mediaId) }
+
+    override suspend fun createCustomList(list: String) = withContext(ioDispatcher) {
+        val doc = userDoc() ?: return@withContext
+        db.runTransaction { tx ->
+            val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+            if (!p.customLists.containsKey(list)) tx.set(doc, p.copy(customLists = p.customLists.toMutableMap().apply { put(list, emptyList()) }))
+        }.await()
+        userRepo.get().getUserProfile()
+    }
+
+    override suspend fun deleteCustomList(list: String) = withContext(ioDispatcher) {
+        val doc = userDoc() ?: return@withContext
+        db.runTransaction { tx ->
+            val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+            if (p.customLists.toMutableMap().remove(list) != null) tx.set(doc, p.copy(customLists = p.customLists.toMutableMap().apply { remove(list) }))
+        }.await()
+        userRepo.get().getUserProfile()
+    }
+
+    override suspend fun getCustomLists() = userDoc()?.get()?.await()?.toObject(UserProfile::class.java)?.customLists ?: emptyMap()
+    override fun getCustomListsFlow() = userRepo.get().getUserProfileFlow().map { it?.customLists ?: emptyMap() }.distinctUntilChanged()
+
+    override suspend fun toggleEpisodeWatched(showId: Int, episodeId: Int) = withContext(ioDispatcher) {
+        val doc = userDoc() ?: return@withContext false
+        db.runTransaction { tx ->
+            val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+            val watched = p.watchedEpisodes.toMutableMap()
+            val eps = watched[showId.toString()]?.toMutableSet() ?: mutableSetOf()
+            val added = if (eps.contains(episodeId)) { eps.remove(episodeId); false } else { eps.add(episodeId); true }
+            tx.update(doc, "watchedEpisodes", watched.apply { put(showId.toString(), eps.toList()) })
+            added
+        }.await().also { if (it) runCatching { achievement.get().addXp(AchievementDefs.XP_WATCH_EPISODE) }; userRepo.get().getUserProfile() }
     }
 
     override suspend fun setAllEpisodesWatched(showId: Int, episodeIds: List<Int>) = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
-        val userRef = userDoc(uid)
-        db.runTransaction { transaction ->
-            val snapshot = transaction.get(userRef)
-            val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
-            val watchedEpisodes = profile.watchedEpisodes.toMutableMap()
-
-            if (episodeIds.isEmpty()) {
-                watchedEpisodes.remove(showId.toString())
-            } else {
-                watchedEpisodes[showId.toString()] = episodeIds
-            }
-            transaction.update(userRef, "watchedEpisodes", watchedEpisodes)
-            null
+        val doc = userDoc() ?: return@withContext
+        db.runTransaction { tx ->
+            val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
+            tx.update(doc, "watchedEpisodes", p.watchedEpisodes.toMutableMap().apply { if (episodeIds.isEmpty()) remove(showId.toString()) else put(showId.toString(), episodeIds) })
         }.await()
+        userRepo.get().getUserProfile()
     }
 
-    override suspend fun getWatchedShowsWithSeasonCount() = withContext(ioDispatcher) {
-        interactionDao.getWatchedWithSeasonCount()
-    }
-
-    override suspend fun updateLastKnownSeasons(mediaId: Int, seasons: Int) = withContext(ioDispatcher) {
-        interactionDao.updateLastKnownSeasons(mediaId, seasons)
-    }
+    override suspend fun getWatchedShowsWithSeasonCount() = interactionDao.getWatchedWithSeasonCount()
+    override suspend fun updateLastKnownSeasons(mediaId: Int, seasons: Int) = interactionDao.updateLastKnownSeasons(mediaId, seasons)
 
     override suspend fun syncFavoritesAndWatchedToRoom() = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: return@withContext
+        val doc = userDoc() ?: return@withContext
         try {
-            val (favorites, watched) = coroutineScope {
-                val favJob     = async { userDoc(uid).collection("favorites").get().await().toObjects(MediaContent::class.java) }
-                val watchedJob = async { userDoc(uid).collection("watched").get().await().toObjects(MediaContent::class.java) }
-                favJob.await() to watchedJob.await()
-            }
+            val (fav, wat) = coroutineScope {
+                async { doc.collection("favorites").get().await().toObjects(MediaContent::class.java) } to
+                async { doc.collection("watched").get().await().toObjects(MediaContent::class.java) }
+            }.let { it.first.await() to it.second.await() }
 
-            showDao.replaceCategory(ShowRepository.CAT_LIKED,   favorites.map { it.toEntity(ShowRepository.CAT_LIKED) })
-            showDao.replaceCategory(ShowRepository.CAT_WATCHED, watched.map  { it.toEntity(ShowRepository.CAT_WATCHED) })
+            showDao.replaceCategory("liked", fav.map { it.toEntity("liked") })
+            showDao.replaceCategory("watched", wat.map { it.toEntity("watched") })
 
-            val favoriteIds = favorites.map { it.id }.toSet()
-            val watchedIds  = watched.map  { it.id }.toSet()
-            val allIds      = (favoriteIds + watchedIds).toList()
-            if (allIds.isNotEmpty()) {
-                val existingMap = interactionDao.getByIds(allIds).associateBy { it.mediaId }
-                val toUpsert = allIds.mapNotNull { id ->
-                    val existing = existingMap[id] ?: MediaInteractionEntity(mediaId = id)
-                    if (!existing.syncPending) {
-                        existing.copy(
-                            isLiked   = if (id in favoriteIds) true else existing.isLiked,
-                            isWatched = if (id in watchedIds)  true else existing.isWatched
-                        )
-                    } else null
-                }
-                interactionDao.upsertAll(toUpsert)
+            val fIds = fav.map { it.id }.toSet()
+            val wIds = wat.map { it.id }.toSet()
+            val all = (fIds + wIds).toList()
+            if (all.isNotEmpty()) {
+                val existing = interactionDao.getByIds(all).associateBy { it.mediaId }
+                interactionDao.upsertAll(all.mapNotNull { id ->
+                    val e = existing[id] ?: MediaInteractionEntity(mediaId = id)
+                    if (!e.syncPending) e.copy(isLiked = id in fIds, isWatched = id in wIds) else null
+                })
             }
-        } catch (e: Exception) {
-            Timber.w(e, "Firestore→Room sync failed")
-        }
+        } catch (e: Exception) { Timber.w(e, "Sync failed") }
     }
 }

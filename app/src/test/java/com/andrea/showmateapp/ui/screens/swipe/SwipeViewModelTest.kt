@@ -11,7 +11,11 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -39,6 +43,13 @@ class SwipeViewModelTest {
         achievementChecker
     )
 
+    // Helpers — acceden a uiState.value para mayor legibilidad
+    private val SwipeViewModel.shows get() = uiState.value.shows
+    private val SwipeViewModel.isLoading get() = uiState.value.isLoading
+    private val SwipeViewModel.ratedCount get() = uiState.value.ratedCount
+    private val SwipeViewModel.lastAction get() = uiState.value.lastAction
+    private val SwipeViewModel.errorMessage get() = uiState.value.errorMessage
+
     // ── loadShows ─────────────────────────────────────────────────────────────
 
     @Test
@@ -49,7 +60,7 @@ class SwipeViewModelTest {
         vm.loadShows(forceReload = true)
         advanceUntilIdle()
 
-        assertEquals(sampleShows, vm.shows.value)
+        assertEquals(sampleShows, vm.shows)
     }
 
     @Test
@@ -60,7 +71,7 @@ class SwipeViewModelTest {
         vm.loadShows(forceReload = true)
         advanceUntilIdle()
 
-        assertFalse(vm.isLoading.value)
+        assertFalse(vm.isLoading)
     }
 
     @Test
@@ -71,13 +82,12 @@ class SwipeViewModelTest {
         vm.loadShows(forceReload = true)
         advanceUntilIdle()
 
-        // Now call without force — list should remain the same (no second network call)
-        val before = vm.shows.value
+        val before = vm.shows
         vm.loadShows(forceReload = false)
         advanceUntilIdle()
 
-        assertEquals(before, vm.shows.value)
-        assertFalse(vm.isLoading.value)
+        assertEquals(before, vm.shows)
+        assertFalse(vm.isLoading)
     }
 
     @Test
@@ -88,8 +98,8 @@ class SwipeViewModelTest {
         vm.loadShows(forceReload = true)
         advanceUntilIdle()
 
-        assertNotNull(vm.errorMessage.value)
-        assertTrue(vm.errorMessage.value!!.contains("error", ignoreCase = true))
+        assertNotNull(vm.errorMessage)
+        assertTrue(vm.errorMessage!!.contains("error", ignoreCase = true))
     }
 
     @Test
@@ -100,7 +110,7 @@ class SwipeViewModelTest {
         vm.loadShows(forceReload = true)
         advanceUntilIdle()
 
-        assertFalse(vm.isLoading.value)
+        assertFalse(vm.isLoading)
     }
 
     // ── likeTopShow ───────────────────────────────────────────────────────────
@@ -116,7 +126,7 @@ class SwipeViewModelTest {
         vm.likeTopShow()
         advanceUntilIdle()
 
-        assertEquals(sampleShows.drop(1), vm.shows.value)
+        assertEquals(sampleShows.drop(1), vm.shows)
     }
 
     @Test
@@ -130,11 +140,11 @@ class SwipeViewModelTest {
         vm.likeTopShow()
         advanceUntilIdle()
 
-        assertEquals(1, vm.ratedCount.value)
+        assertEquals(1, vm.ratedCount)
     }
 
     @Test
-    fun `likeTopShow saves removed show as lastRemovedShow`() = runTest {
+    fun `likeTopShow saves removed show as lastAction`() = runTest {
         coEvery { getRecommendationsUseCase.execute() } returns sampleShows
 
         val vm = viewModel()
@@ -144,17 +154,17 @@ class SwipeViewModelTest {
         vm.likeTopShow()
         advanceUntilIdle()
 
-        assertEquals(sampleShows.first(), vm.lastRemovedShow.value)
+        assertEquals(sampleShows.first(), vm.lastAction?.show)
+        assertTrue(vm.lastAction?.isLike == true)
     }
 
     @Test
     fun `likeTopShow on empty list does nothing`() = runTest {
         val vm = viewModel()
-        // shows are empty by default
         vm.likeTopShow()
 
-        assertEquals(0, vm.ratedCount.value)
-        assertNull(vm.lastRemovedShow.value)
+        assertEquals(0, vm.ratedCount)
+        assertNull(vm.lastAction)
     }
 
     // ── skipTopShow ───────────────────────────────────────────────────────────
@@ -170,7 +180,7 @@ class SwipeViewModelTest {
         vm.skipTopShow()
         advanceUntilIdle()
 
-        assertEquals(sampleShows.drop(1), vm.shows.value)
+        assertEquals(sampleShows.drop(1), vm.shows)
     }
 
     @Test
@@ -184,11 +194,11 @@ class SwipeViewModelTest {
         vm.skipTopShow()
         advanceUntilIdle()
 
-        assertEquals(1, vm.ratedCount.value)
+        assertEquals(1, vm.ratedCount)
     }
 
     @Test
-    fun `skipTopShow saves removed show as lastRemovedShow`() = runTest {
+    fun `skipTopShow stores last action as not liked`() = runTest {
         coEvery { getRecommendationsUseCase.execute() } returns sampleShows
 
         val vm = viewModel()
@@ -198,7 +208,8 @@ class SwipeViewModelTest {
         vm.skipTopShow()
         advanceUntilIdle()
 
-        assertEquals(sampleShows.first(), vm.lastRemovedShow.value)
+        assertEquals(sampleShows.first(), vm.lastAction?.show)
+        assertTrue(vm.lastAction?.isLike == false)
     }
 
     // ── undoLastAction ────────────────────────────────────────────────────────
@@ -215,7 +226,7 @@ class SwipeViewModelTest {
         advanceUntilIdle()
         vm.undoLastAction()
 
-        assertEquals(sampleShows.first(), vm.shows.value.first())
+        assertEquals(sampleShows.first(), vm.shows.first())
     }
 
     @Test
@@ -228,14 +239,14 @@ class SwipeViewModelTest {
 
         vm.likeTopShow()
         advanceUntilIdle()
-        assertEquals(1, vm.ratedCount.value)
+        assertEquals(1, vm.ratedCount)
 
         vm.undoLastAction()
-        assertEquals(0, vm.ratedCount.value)
+        assertEquals(0, vm.ratedCount)
     }
 
     @Test
-    fun `undoLastAction clears lastRemovedShow`() = runTest {
+    fun `undoLastAction clears lastAction`() = runTest {
         coEvery { getRecommendationsUseCase.execute() } returns sampleShows
 
         val vm = viewModel()
@@ -244,23 +255,23 @@ class SwipeViewModelTest {
 
         vm.likeTopShow()
         advanceUntilIdle()
-        assertNotNull(vm.lastRemovedShow.value)
+        assertNotNull(vm.lastAction)
 
         vm.undoLastAction()
-        assertNull(vm.lastRemovedShow.value)
+        assertNull(vm.lastAction)
     }
 
     @Test
-    fun `undoLastAction with no removed show does nothing`() = runTest {
+    fun `undoLastAction with no action does nothing`() = runTest {
         val vm = viewModel()
         vm.undoLastAction()
 
-        assertEquals(0, vm.ratedCount.value)
-        assertNull(vm.lastRemovedShow.value)
+        assertEquals(0, vm.ratedCount)
+        assertNull(vm.lastAction)
     }
 
     @Test
-    fun `ratedCount does not go below zero after undo`() = runTest {
+    fun `ratedCount does not go below zero after double undo`() = runTest {
         coEvery { getRecommendationsUseCase.execute() } returns sampleShows
 
         val vm = viewModel()
@@ -270,9 +281,8 @@ class SwipeViewModelTest {
         vm.likeTopShow()
         advanceUntilIdle()
         vm.undoLastAction()
-        // Calling undo again when no show is set should not decrement below 0
-        vm.undoLastAction()
+        vm.undoLastAction() // segunda vez no debe decrementar
 
-        assertTrue(vm.ratedCount.value >= 0)
+        assertTrue(vm.ratedCount >= 0)
     }
 }

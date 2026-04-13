@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,51 +24,51 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.ui.components.premium.MatchBadge
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.components.premium.shimmerBrush
+import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.GenreMapper
 import com.andrea.showmateapp.util.TmdbUtils
-import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 
 @Composable
 fun SwipeScreen(navController: NavController) {
     val viewModel: SwipeViewModel = hiltViewModel()
-    val showsToRate by viewModel.shows.collectAsStateWithLifecycle()
-    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val ratedCount by viewModel.ratedCount.collectAsStateWithLifecycle()
-    val lastAction by viewModel.lastAction.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadShows()
     }
 
     SwipeScreenContent(
-        showsToRate = showsToRate,
-        errorMessage = errorMessage,
-        isLoading = isLoading,
-        ratedCount = ratedCount,
-        lastAction = lastAction,
+        showsToRate = uiState.shows,
+        errorMessage = uiState.errorMessage,
+        isLoading = uiState.isLoading,
+        ratedCount = uiState.ratedCount,
+        lastAction = uiState.lastAction,
         onLikeShow = { viewModel.likeTopShow() },
         onSkipShow = { viewModel.skipTopShow() },
+        onEssentialShow = { viewModel.essentialTopShow() },
         onUndoAction = { viewModel.undoLastAction() },
         onNavigateToHome = {
             navController.navigate(Screen.Main) {
@@ -84,13 +84,15 @@ fun SwipeScreenContent(
     errorMessage: String?,
     isLoading: Boolean,
     ratedCount: Int,
-    lastAction: SwipeViewModel.SwipeAction?,
+    lastAction: SwipeUiState.SwipeAction?,
     onLikeShow: () -> Unit,
     onSkipShow: () -> Unit,
+    onEssentialShow: () -> Unit = {},
     onUndoAction: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
     val maxRatings = 10
+    val haptic = LocalHapticFeedback.current
 
     if (isLoading) {
         SwipeCardSkeleton()
@@ -190,15 +192,16 @@ fun SwipeScreenContent(
                         .weight(1f)
                         .clip(CircleShape)
                         .background(
-                            if (index < ratedCount)
+                            if (index < ratedCount) {
                                 Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryPurple))
-                            else
+                            } else {
                                 Brush.linearGradient(
                                     listOf(
                                         Color.White.copy(alpha = 0.12f),
                                         Color.White.copy(alpha = 0.12f)
                                     )
                                 )
+                            }
                         )
                 )
             }
@@ -250,6 +253,13 @@ fun SwipeScreenContent(
                             media = show,
                             stackIndex = stackIndex,
                             onSwiped = { isLiked ->
+                                haptic.performHapticFeedback(
+                                    if (isLiked) {
+                                        HapticFeedbackType.LongPress
+                                    } else {
+                                        HapticFeedbackType.TextHandleMove
+                                    }
+                                )
                                 if (isLiked) onLikeShow() else onSkipShow()
                             }
                         )
@@ -265,87 +275,115 @@ fun SwipeScreenContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 36.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(68.dp)
-                            .shadow(16.dp, CircleShape, spotColor = HeartRed.copy(alpha = 0.35f))
-                            .clip(CircleShape)
-                            .background(HeartRed.copy(alpha = 0.12f))
-                            .border(1.5.dp, HeartRed.copy(alpha = 0.35f), CircleShape)
-                            .clickable { onSkipShow() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Paso",
-                            tint = HeartRed,
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Paso", color = HeartRed.copy(alpha = 0.75f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val undoActive = lastAction != null
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (undoActive) Color.White.copy(alpha = 0.10f)
-                                else Color.White.copy(alpha = 0.04f)
-                            )
-                            .border(
-                                1.dp,
-                                if (undoActive) Color.White.copy(alpha = 0.20f)
-                                else Color.White.copy(alpha = 0.07f),
-                                CircleShape
-                            )
-                            .clickable(enabled = undoActive) { onUndoAction() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Undo,
-                            contentDescription = "Deshacer",
-                            tint = if (undoActive) Color.White.copy(alpha = 0.80f) else Color.White.copy(alpha = 0.22f),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Deshacer",
-                        color = if (undoActive) TextGray else TextGray.copy(alpha = 0.35f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                // Botón PASO (X)
+                Box(
+                    modifier = Modifier
+                        .size(62.dp)
+                        .shadow(12.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.4f))
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.05f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                        .semantics { role = Role.Button }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSkipShow()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Paso",
+                        tint = HeartRed.copy(alpha = 0.9f),
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(84.dp)
-                            .shadow(28.dp, CircleShape, spotColor = PrimaryPurple.copy(alpha = 0.55f))
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0)))
-                            )
-                            .clickable { onLikeShow() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Favorite,
-                            contentDescription = "Me gusta",
-                            tint = Color.White,
-                            modifier = Modifier.size(38.dp)
+                // Botón DESHACER (pequeño)
+                val undoActive = lastAction != null
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (undoActive) {
+                                Color.White.copy(alpha = 0.08f)
+                            } else {
+                                Color.White.copy(alpha = 0.03f)
+                            }
                         )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Me gusta", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        .border(
+                            1.dp,
+                            if (undoActive) {
+                                Color.White.copy(alpha = 0.15f)
+                            } else {
+                                Color.White.copy(alpha = 0.05f)
+                            },
+                            CircleShape
+                        )
+                        .semantics { role = Role.Button }
+                        .clickable(enabled = undoActive) { onUndoAction() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = "Deshacer",
+                        tint = if (undoActive) Color.White.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.15f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Botón ME GUSTA (Corazón — principal)
+                Box(
+                    modifier = Modifier
+                        .size(78.dp)
+                        .shadow(20.dp, CircleShape, spotColor = PrimaryPurple.copy(alpha = 0.5f))
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(PrimaryPurple, PrimaryMagenta),
+                                start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                end = androidx.compose.ui.geometry.Offset(100f, 100f)
+                            )
+                        )
+                        .semantics { role = Role.Button }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLikeShow()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Favorite,
+                        contentDescription = "Me gusta",
+                        tint = Color.White,
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+
+                // Botón ESENCIAL (Estrella)
+                Box(
+                    modifier = Modifier
+                        .size(62.dp)
+                        .shadow(12.dp, CircleShape, spotColor = StarYellow.copy(alpha = 0.35f))
+                        .clip(CircleShape)
+                        .background(StarYellow.copy(alpha = 0.12f))
+                        .border(1.dp, StarYellow.copy(alpha = 0.35f), CircleShape)
+                        .semantics { role = Role.Button }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onEssentialShow()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = "Esencial",
+                        tint = StarYellow,
+                        modifier = Modifier.size(26.dp)
+                    )
                 }
             }
         }
@@ -382,7 +420,10 @@ fun SuccessState(onNavigateToHome: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(148.dp)
-                    .graphicsLayer { scaleX = ringScale; scaleY = ringScale }
+                    .graphicsLayer {
+                        scaleX = ringScale
+                        scaleY = ringScale
+                    }
                     .alpha(ringAlpha)
                     .clip(CircleShape)
                     .background(
@@ -402,7 +443,9 @@ fun SuccessState(onNavigateToHome: () -> Unit) {
                     )
                     .border(
                         1.5.dp,
-                        Brush.linearGradient(listOf(PrimaryPurpleLight.copy(alpha = 0.6f), PrimaryPurple.copy(alpha = 0.3f))),
+                        Brush.linearGradient(
+                            listOf(PrimaryPurpleLight.copy(alpha = 0.6f), PrimaryPurple.copy(alpha = 0.3f))
+                        ),
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -461,11 +504,7 @@ fun SuccessState(onNavigateToHome: () -> Unit) {
 }
 
 @Composable
-fun SwipeableCard(
-    media: MediaContent,
-    stackIndex: Int,
-    onSwiped: (Boolean) -> Unit
-) {
+fun SwipeableCard(media: MediaContent, stackIndex: Int, onSwiped: (Boolean) -> Unit) {
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val isTopCard = stackIndex == 0
@@ -521,7 +560,11 @@ fun SwipeableCard(
                 }
             }
             .clip(RoundedCornerShape(32.dp))
-            .shadow(if (isTopCard) 24.dp else 0.dp, RoundedCornerShape(32.dp), spotColor = PrimaryPurple.copy(alpha = 0.25f))
+            .shadow(
+                if (isTopCard) 24.dp else 0.dp,
+                RoundedCornerShape(32.dp),
+                spotColor = PrimaryPurple.copy(alpha = 0.25f)
+            )
     ) {
         TmdbImage(
             path = media.posterPath,
@@ -607,7 +650,12 @@ fun SwipeableCard(
                     if (index > 0) {
                         Text("·", color = Color.White.copy(alpha = 0.40f), fontSize = 12.sp)
                     }
-                    Text(part, color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        part,
+                        color = Color.White.copy(alpha = 0.65f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
                 if (media.voteAverage > 0f) {
                     if (metaParts.isNotEmpty()) {

@@ -2,11 +2,13 @@ package com.andrea.showmateapp.domain.usecase
 
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.domain.repository.IInteractionRepository
+import com.andrea.showmateapp.domain.repository.IUserRepository
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 /**
  * Tests adicionales de GetProfileStatsUseCase cubriendo edge cases no presentes en
@@ -14,7 +16,9 @@ import kotlin.math.abs
  */
 class GetProfileStatsUseCaseExtendedTest {
 
-    private val useCase = GetProfileStatsUseCase()
+    private val userRepository: IUserRepository = mockk(relaxed = true)
+    private val interactionRepository: IInteractionRepository = mockk(relaxed = true)
+    private val useCase = GetProfileStatsUseCase(userRepository, interactionRepository)
 
     // ═══════════════════════════════════════════════════════════════════════════
     // totalEpisodes
@@ -25,10 +29,14 @@ class GetProfileStatsUseCaseExtendedTest {
         // Given
         val showA = MediaContent(id = 1, name = "A", episodeRunTime = listOf(45))
         val showB = MediaContent(id = 2, name = "B", episodeRunTime = listOf(30))
-        val profile = UserProfile(watchedEpisodes = mapOf(
-            "1" to listOf(101, 102, 103),  // 3 episodes
-            "2" to listOf(201, 202)         // 2 episodes
-        ))
+        val profile = UserProfile(
+            watchedEpisodes = mapOf(
+                // 3 episodes
+                "1" to listOf(101, 102, 103),
+                // 2 episodes
+                "2" to listOf(201, 202)
+            )
+        )
 
         // When
         val stats = useCase.execute(listOf(showA, showB), profile)
@@ -73,10 +81,14 @@ class GetProfileStatsUseCaseExtendedTest {
         // Given
         val show1 = MediaContent(id = 1, episodeRunTime = listOf(60))
         val show2 = MediaContent(id = 2, episodeRunTime = listOf(30))
-        val profile = UserProfile(watchedEpisodes = mapOf(
-            "1" to listOf(1, 2),  // 2 × 60 = 120 min
-            "2" to listOf(1, 2, 3, 4) // 4 × 30 = 120 min
-        ))
+        val profile = UserProfile(
+            watchedEpisodes = mapOf(
+                // 2 × 60 = 120 min
+                "1" to listOf(1, 2),
+                // 4 × 30 = 120 min
+                "2" to listOf(1, 2, 3, 4)
+            )
+        )
 
         // When
         val stats = useCase.execute(listOf(show1, show2), profile)
@@ -201,10 +213,16 @@ class GetProfileStatsUseCaseExtendedTest {
     @Test
     fun `given more than 5 positive genres, topGenres returns only top 5`() {
         // Given — 6 genres with positive scores
-        val profile = UserProfile(genreScores = mapOf(
-            "18" to 50f, "35" to 40f, "80" to 30f,
-            "99" to 20f, "16" to 10f, "37" to 5f
-        ))
+        val profile = UserProfile(
+            genreScores = mapOf(
+                "18" to 50f,
+                "35" to 40f,
+                "80" to 30f,
+                "99" to 20f,
+                "16" to 10f,
+                "37" to 5f
+            )
+        )
 
         // When
         val stats = useCase.execute(emptyList(), profile)
@@ -216,11 +234,16 @@ class GetProfileStatsUseCaseExtendedTest {
     @Test
     fun `given genres with negative scores, topGenres filters them out`() {
         // Given
-        val profile = UserProfile(genreScores = mapOf(
-            "18" to 30f,    // positive → included
-            "35" to -5f,    // negative → excluded
-            "80" to 0f      // zero → excluded (filter { it.value > 0 })
-        ))
+        val profile = UserProfile(
+            genreScores = mapOf(
+                // positive → included
+                "18" to 30f,
+                // negative → excluded
+                "35" to -5f,
+                // zero → excluded (filter { it.value > 0 })
+                "80" to 0f
+            )
+        )
 
         // When
         val stats = useCase.execute(emptyList(), profile)
@@ -239,8 +262,10 @@ class GetProfileStatsUseCaseExtendedTest {
 
         // Then — first genre should be Comedia (35=30f), then Crime/Thriller (80=20f), then Drama (18=10f)
         val proportions = stats.topGenres.map { it.second }
-        assertTrue("Proportions should be in descending order",
-            proportions.zipWithNext().all { (a, b) -> a >= b })
+        assertTrue(
+            "Proportions should be in descending order",
+            proportions.zipWithNext().all { (a, b) -> a >= b }
+        )
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -276,7 +301,9 @@ class GetProfileStatsUseCaseExtendedTest {
     fun `watchedCount reflects number of shows in list regardless of episode tracking`() {
         // Given — 3 shows; tracking does not affect watchedCount
         val shows = listOf(
-            MediaContent(id = 1), MediaContent(id = 2), MediaContent(id = 3)
+            MediaContent(id = 1),
+            MediaContent(id = 2),
+            MediaContent(id = 3)
         )
         val profile = UserProfile(watchedEpisodes = mapOf("1" to listOf(1, 2)))
 

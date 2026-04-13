@@ -6,23 +6,31 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.network.TmdbApiService
+import com.andrea.showmateapp.data.network.TmdbSearchPagingSource
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
-import com.andrea.showmateapp.R
 import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.UiText
-import kotlinx.coroutines.CancellationException
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 enum class SearchMode(val label: String) {
     TITLE("Título"),
@@ -33,6 +41,7 @@ enum class SearchMode(val label: String) {
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val showRepository: IShowRepository,
+    private val tmdbApiService: TmdbApiService,
     private val getRecommendationsUseCase: GetRecommendationsUseCase,
     private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
@@ -59,6 +68,24 @@ class SearchViewModel @Inject constructor(
 
     private val _searchResults = MutableStateFlow<List<MediaContent>>(emptyList())
     val searchResults: StateFlow<List<MediaContent>> = _searchResults.asStateFlow()
+
+    // Paging 3 — solo activo para búsquedas por título (TITLE mode)
+    @Suppress("ktlint:standard:property-naming")
+    private val _pagingQuery = MutableStateFlow("")
+    val searchPagingData: Flow<PagingData<MediaContent>> = _pagingQuery
+        .flatMapLatest { q ->
+            if (q.isBlank()) {
+                kotlinx.coroutines.flow.flowOf(PagingData.empty())
+            } else {
+                Pager(
+                    config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+                    pagingSourceFactory = {
+                        TmdbSearchPagingSource(tmdbApiService, q, getRecommendationsUseCase)
+                    }
+                ).flow
+            }
+        }
+        .cachedIn(viewModelScope)
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -95,6 +122,11 @@ class SearchViewModel @Inject constructor(
 
     private val _searchMode = MutableStateFlow(SearchMode.TITLE)
     val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
+
+    private val _trendingPeople =
+        MutableStateFlow<List<com.andrea.showmateapp.data.network.PersonSearchResult>>(emptyList())
+    val trendingPeople: StateFlow<List<com.andrea.showmateapp.data.network.PersonSearchResult>> =
+        _trendingPeople.asStateFlow()
 
     private var searchJob: Job? = null
 
@@ -133,6 +165,31 @@ class SearchViewModel @Inject constructor(
 
     fun setSearchMode(mode: SearchMode) {
         _searchMode.value = mode
+        if ((mode == SearchMode.ACTOR || mode == SearchMode.CREATOR) && _trendingPeople.value.isEmpty()) {
+            loadTrendingPeople(mode)
+        }
+        if (mode == SearchMode.TITLE && _trendingShows.value.isEmpty()) {
+            loadTrendingShows()
+        }
+    }
+
+    private fun loadTrendingPeople(mode: SearchMode) {
+        viewModelScope.launch {
+            try {
+                val response = tmdbApiService.getTrendingPeople()
+                _trendingPeople.value = when (mode) {
+                    SearchMode.ACTOR -> response.results.filter {
+                        it.knownForDepartment?.lowercase() == "acting" || it.knownForDepartment == null
+                    }
+                    SearchMode.CREATOR -> response.results.filter {
+                        it.knownForDepartment?.lowercase() in listOf("directing", "writing", "production", "crew")
+                    }
+                    else -> response.results
+                }.take(20)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
     }
 
     private fun loadTrendingShows() {
@@ -143,7 +200,8 @@ class SearchViewModel @Inject constructor(
                 if (popularRes is Resource.Success) {
                     _trendingShows.value = getRecommendationsUseCase.scoreShows(popularRes.data)
                 }
-            } catch (e: Exception) { if (e is CancellationException) throw e;
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = UiText.StringResource(R.string.error_unexpected_data)
             } finally {
                 _isLoading.value = false
@@ -175,14 +233,24 @@ class SearchViewModel @Inject constructor(
         searchJob = viewModelScope.launch {
             if (query.isNotBlank()) delay(500)
 
-            _isLoading.value = true
             _errorMessage.value = null
+
+            if (query.isNotBlank() && _searchMode.value == SearchMode.TITLE) {
+                // Paging 3 se encarga — solo actualiza el trigger y guarda búsqueda reciente
+                _suggestions.value = emptyList()
+                _searchResults.value = emptyList()
+                _pagingQuery.value = query.trim()
+                saveRecentQuery(query)
+                return@launch
+            }
+
+            _isLoading.value = true
             try {
                 if (query.isNotBlank()) {
                     val result = when (_searchMode.value) {
-                        SearchMode.ACTOR   -> showRepository.searchByPerson(query, isCreator = false)
+                        SearchMode.ACTOR -> showRepository.searchByPerson(query, isCreator = false)
                         SearchMode.CREATOR -> showRepository.searchByPerson(query, isCreator = true)
-                        else               -> showRepository.searchShows(query)
+                        else -> showRepository.searchShows(query)
                     }
                     when (result) {
                         is Resource.Success -> {
@@ -191,14 +259,16 @@ class SearchViewModel @Inject constructor(
                             saveRecentQuery(query)
                             if (_searchResults.value.isEmpty()) {
                                 _errorMessage.value = when (_searchMode.value) {
-                                    SearchMode.ACTOR   -> UiText.StringResource(R.string.search_no_results_person, "actor", query)
-                                    SearchMode.CREATOR -> UiText.StringResource(R.string.search_no_results_person, "creador", query)
-                                    else               -> UiText.StringResource(R.string.search_no_results, query)
+                                    SearchMode.ACTOR ->
+                                        UiText.StringResource(R.string.search_no_results_person, "actor", query)
+                                    SearchMode.CREATOR ->
+                                        UiText.StringResource(R.string.search_no_results_person, "creador", query)
+                                    else -> UiText.StringResource(R.string.search_no_results, query)
                                 }
                             }
                         }
                         is Resource.Error -> {
-                            _errorMessage.value = result.message?.let { UiText.DynamicString(it) } 
+                            _errorMessage.value = result.message?.let { UiText.DynamicString(it) }
                                 ?: UiText.StringResource(R.string.error_unknown)
                             _searchResults.value = emptyList()
                         }
@@ -249,14 +319,15 @@ class SearchViewModel @Inject constructor(
         _selectedRating.value = null
         _isFilterActive.value = false
         _searchResults.value = emptyList()
+        _pagingQuery.value = ""
     }
 
     private fun checkFilterStatus() {
         _isFilterActive.value = _selectedGenre.value != null ||
-                              _selectedPlatform.value != null ||
-                              _yearFrom.value > MIN_YEAR ||
-                              _yearTo.value < CURRENT_YEAR ||
-                              _selectedRating.value != null
+            _selectedPlatform.value != null ||
+            _yearFrom.value > MIN_YEAR ||
+            _yearTo.value < CURRENT_YEAR ||
+            _selectedRating.value != null
     }
 
     private suspend fun applyFilters() {
@@ -270,7 +341,7 @@ class SearchViewModel @Inject constructor(
             providers = _selectedPlatform.value,
             watchRegion = if (_selectedPlatform.value != null) "ES" else null
         )
-        
+
         when (result) {
             is Resource.Success -> {
                 _searchResults.value = getRecommendationsUseCase.scoreShows(result.data)

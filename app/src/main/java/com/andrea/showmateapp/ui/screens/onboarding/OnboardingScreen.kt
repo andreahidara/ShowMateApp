@@ -31,18 +31,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.andrea.showmateapp.ui.components.premium.AuthBackground
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun OnboardingScreen(
-    viewModel: OnboardingViewModel = hiltViewModel(),
-    onFinish: () -> Unit
-) {
+fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel(), onFinish: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.isComplete) {
@@ -69,15 +66,17 @@ fun OnboardingScreen(
                     transitionSpec = {
                         val forward = targetState > initialState
                         (slideInHorizontally(tween(380)) { if (forward) it else -it } + fadeIn(tween(280)))
-                            .togetherWith(slideOutHorizontally(tween(280)) { if (forward) -it else it } + fadeOut(tween(200)))
+                            .togetherWith(
+                                slideOutHorizontally(tween(280)) { if (forward) -it else it } + fadeOut(tween(200))
+                            )
                     },
                     label = "onboarding_step"
                 ) { step ->
                     when (step) {
-                        1    -> GenreStep(state, viewModel)
-                        2    -> ShowsStep(state, viewModel)
-                        3    -> PreferencesStep(state, viewModel)
-                        4    -> AnalysisStep(state)
+                        1 -> GenreStep(state, viewModel)
+                        2 -> ShowsStep(state, viewModel)
+                        3 -> PreferencesStep(state, viewModel)
+                        4 -> AnalysisStep(state)
                         else -> PersonalityStep(state, viewModel)
                     }
                 }
@@ -141,24 +140,31 @@ private fun OnboardingHeader(step: Int, onBack: () -> Unit) {
 @Composable
 private fun OnboardingButton(state: OnboardingUiState, viewModel: OnboardingViewModel) {
     val enabled = when (state.step) {
-        1    -> state.selectedGenres.size in 3..5
-        2    -> true // optional
-        3    -> state.episodeLengthPref != null && state.statusPref != null && state.dubbedPref != null
-        5    -> true
+        1 -> state.selectedGenres.size in 3..5
+        2 -> true // optional
+        3 -> state.episodeLengthPref != null && state.statusPref != null && state.dubbedPref != null
+        5 -> true
         else -> false
     }
     val label = when (state.step) {
-        1    -> if (state.selectedGenres.size < 3) "Elige al menos 3 géneros" else "Continuar →"
-        2    -> if (state.watchedShowIds.isEmpty()) "Saltar este paso →" else "Continuar (${state.watchedShowIds.size} vistas) →"
-        3    -> if (!enabled) "Responde todas las preguntas" else "Analizar mis gustos →"
+        1 -> if (state.selectedGenres.size < 3) "Elige al menos 3 géneros" else "Continuar →"
+        2 -> if (state.watchedShowIds.isEmpty()) {
+            "Saltar este paso →"
+        } else {
+            "Continuar (${state.watchedShowIds.size} vistas) →"
+        }
+        3 -> if (!enabled) "Responde todas las preguntas" else "Analizar mis gustos →"
         else -> "¡Empezar ShowMate!"
     }
 
     Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
         Button(
             onClick = {
-                if (state.step == 5) viewModel.completeOnboarding()
-                else viewModel.advance()
+                if (state.step == 5) {
+                    viewModel.completeOnboarding()
+                } else {
+                    viewModel.advance()
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -308,8 +314,8 @@ private fun GenreCard(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color.Black.copy(alpha = if (isSelected) 0.3f else 0.5f),
-                            Color.Black.copy(alpha = if (isSelected) 0.65f else 0.8f)
+                            Color.Black.copy(alpha = if (isSelected) 0.0f else 0.08f),
+                            Color.Black.copy(alpha = if (isSelected) 0.35f else 0.52f)
                         )
                     )
                 )
@@ -457,7 +463,7 @@ private fun ShowPosterCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.55f))
+                    .background(Color.Black.copy(alpha = 0.18f))
             )
         }
 
@@ -804,8 +810,9 @@ private fun PersonalityStep(state: OnboardingUiState, viewModel: OnboardingViewM
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatChip(emoji = "🎬", label = "$genres géneros")
                 if (watched > 0) StatChip(emoji = "👁️", label = "$watched vistas")
-                if (state.lovedShowIds.isNotEmpty())
+                if (state.lovedShowIds.isNotEmpty()) {
                     StatChip(emoji = "❤️", label = "${state.lovedShowIds.size} favoritas")
+                }
             }
         }
 
@@ -827,4 +834,3 @@ private fun StatChip(emoji: String, label: String) {
         Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
-

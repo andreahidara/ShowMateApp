@@ -1,9 +1,19 @@
 <resources>
     <string name="app_name">ShowMateApp</string>
+    <string name="widget_description">Muestra tu próxima serie en la lista de seguimiento</string>
+    <string name="actor_filmography">Filmografía</string>
+    <string name="actor_born">Fecha de nacimiento</string>
+    <string name="shared_lists_title">Listas compartidas</string>
+    <string name="now_watching">Viendo ahora</string>
+    <string name="settings_export_json">Exportar mis datos (JSON)</string>
+    <string name="settings_export_csv">Exportar mis datos (CSV)</string>
+    <string name="settings_data_privacy">Datos y privacidad</string>
     <string name="showmate">ShowMate</string>
     <string name="sign_in">Iniciar Sesión</string>
     <string name="create_account">Crear Cuenta</string>
     <string name="trending_now">Tendencias de Ahora</string>
+    <string name="nav_search">Buscar</string>
+    <string name="nav_friends">Amigos</string>
 
     <string name="detail_synopsis">Sinopsis</string>
     <string name="detail_no_synopsis">Sin sinopsis disponible.</string>
@@ -22,6 +32,7 @@
     <string name="error_empty_fields">Completa todos los campos</string>
     <string name="error_unknown">Ha ocurrido un error inesperado</string>
     <string name="error_no_connection">Sin conexión a internet</string>
+    <string name="offline_cached_content">Mostrando contenido guardado · Sin conexión</string>
     <string name="error_save_review_failed">Error al guardar la reseña</string>
     <string name="error_delete_review_failed">Error al eliminar la reseña</string>
     <string name="error_update_failed">Error al actualizar</string>
@@ -96,9 +107,11 @@
     <string name="detail_top">Top</string>
     <string name="detail_watchlist">Lista</string>
     <string name="detail_season_short">T%1$d</string>
+    <string name="detail_mark_all">Marcar todo</string>
+    <string name="detail_unmark_all">Desmarcar todo</string>
     <string name="detail_review_saved_label">Reseña guardada</string>
     <string name="detail_official_trailer">TRÁILER OFICIAL</string>
-    
+
     <!-- Core UI Actions -->
     <string name="ok">Entendido</string>
     <string name="understood">Entendido</string>
@@ -162,14 +175,16 @@
 
     <!-- Error messages -->
     <string name="error_invalid_email">Email no válido</string>
+    <string name="error_invalid_email_format">Formato de correo inválido</string>
     <string name="error_password_length">La contraseña debe tener al menos 8 caracteres</string>
     <string name="error_password_uppercase">La contraseña debe tener al menos una mayúscula</string>
     <string name="error_password_digit">La contraseña debe tener al menos un número</string>
     <string name="error_passwords_dont_match">Las contraseñas no coinciden</string>
     <string name="error_signup_failed">Error al crear la cuenta</string>
+    <string name="error_google_signin">No se pudo iniciar sesión con Google</string>
 
     <!-- Google Sign-In — replace with your web client ID from Firebase Console -->
-    <string name="google_web_client_id">TU_WEB_CLIENT_ID_AQUI</string>
+    <string name="google_web_client_id">992885817745-3qrbpnce23kttdet8gehrn7teu7tvo2b.apps.googleusercontent.com</string>
 
     <!-- GDPR Consent -->
     <string name="consent_title">Antes de continuar</string>
@@ -178,6 +193,28 @@
 
     <!-- Generic actions -->
     <string name="action_close">Cerrar</string>
+
+    <!-- Notifications — SeasonCheckWorker -->
+    <string name="notif_season_title">🎬 ¡Nueva temporada de %1$s!</string>
+    <string name="notif_season_content">Temporada %1$d disponible</string>
+    <string name="notif_season_big_text">La temporada %1$d de %2$s ya está disponible. ¡Es el momento de ponerte al día!</string>
+    <string name="notif_season_big_title">¡Nueva temporada de %1$s!</string>
+    <string name="notif_season_summary">ShowMate</string>
+    <string name="notif_season_action">Ver ahora</string>
+
+    <!-- Notifications — FriendActivityWorker -->
+    <string name="notif_friend_title">Tu amigo %1$s acaba de terminar %2$s</string>
+    <string name="notif_friend_content">Coincidís en un %1$d%% \u2014 \u00bfla ves t\u00fa tambi\u00e9n?</string>
+    <string name="notif_friend_big_text">Tu amigo %1$s acaba de terminar \u201c%2$s\u201d y vuestra compatibilidad es del %3$d\u202f%%. ¡Puede ser tu próxima serie!</string>
+    <string name="notif_friend_action">Ver detalles</string>
+
+    <!-- Notifications — HiddenGemWorker -->
+    <string name="notif_gem_title">\u2728 Joya oculta del día: %1$s</string>
+    <string name="notif_gem_content">\u2b50 %1$.1f  \u00b7  %2$d votos</string>
+    <string name="notif_gem_big_text">\u2b50 %1$.1f \u00b7 solo %2$d votos\n\n%3$s</string>
+    <string name="notif_gem_big_title">\u2728 %1$s</string>
+    <string name="notif_gem_summary">Joya oculta · ShowMate</string>
+    <string name="notif_gem_action">Ver detalles</string>
 
     <!-- Profile dialogs -->
     <string name="profile_logout">Cerrar Sesión</string>

@@ -11,14 +11,14 @@ class GetCollaborativeBoostUseCase @Inject constructor(
     private val userRepository: IUserRepository
 ) {
     companion object {
-        private const val MIN_SIMILARITY       = 0.15f
-        private const val MAX_BOOST            = 1.20f
-        private const val MAX_SIMILAR_USERS    = 30L
+        private const val MIN_SIMILARITY = 0.15f
+        private const val MAX_BOOST = 1.20f
+        private const val MAX_SIMILAR_USERS = 30L
         private const val MAX_SHOWS_PER_RESULT = 50
 
         private const val SIGNAL_ESSENTIAL = 1.00f
-        private const val SIGNAL_LIKED     = 0.80f
-        private const val SIGNAL_WATCHED   = 0.40f
+        private const val SIGNAL_LIKED = 0.80f
+        private const val SIGNAL_WATCHED = 0.40f
     }
 
     suspend fun execute(myProfile: UserProfile): Map<Int, Float> {
@@ -27,9 +27,9 @@ class GetCollaborativeBoostUseCase @Inject constructor(
             if (similarUsers.isEmpty()) return emptyMap()
 
             val myRatingVec = buildRatingVector(myProfile)
-            val myLiked     = myProfile.likedMediaIds.toHashSet()
+            val myLiked = myProfile.likedMediaIds.toHashSet()
             val myEssential = myProfile.essentialMediaIds.toHashSet()
-            val myWatched   = (myRatingVec.keys - myLiked - myEssential).toHashSet()
+            val myWatched = (myRatingVec.keys - myLiked - myEssential).toHashSet()
 
             val neighbors: List<Pair<UserProfile, Float>> = similarUsers
                 .mapNotNull { user ->
@@ -42,7 +42,7 @@ class GetCollaborativeBoostUseCase @Inject constructor(
             if (neighbors.isEmpty()) return emptyMap()
 
             val alreadySeen = myProfile.dislikedMediaIds.toHashSet() +
-                              myLiked + myEssential + myWatched
+                myLiked + myEssential + myWatched
 
             val showAccum = mutableMapOf<Int, Pair<Float, Float>>()
 
@@ -66,7 +66,6 @@ class GetCollaborativeBoostUseCase @Inject constructor(
                 .sortedByDescending { it.value }
                 .take(MAX_SHOWS_PER_RESULT)
                 .associate { it.key to it.value }
-
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Timber.e(e, "Error in collaborative boost")

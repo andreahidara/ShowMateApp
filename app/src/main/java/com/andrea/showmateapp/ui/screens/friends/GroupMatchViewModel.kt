@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.friends
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.GroupFilters
@@ -15,6 +16,7 @@ import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -26,10 +28,10 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 enum class GroupPhase { LOADING, LOBBY, VOTING, MATCH_FOUND, NO_MATCH }
 
+@Immutable
 data class GroupMatchUiState(
     val phase: GroupPhase = GroupPhase.LOADING,
     val session: GroupSession? = null,
@@ -49,12 +51,14 @@ data class GroupMatchUiState(
     val members: List<String> = emptyList()
 ) {
     val currentCandidate: MediaContent? get() = candidates.getOrNull(currentIndex)
-    val isVotingDone: Boolean           get() = currentIndex >= candidates.size && candidates.isNotEmpty()
-    val votingProgress: Float           get() = if (candidates.isEmpty()) 0f
-                                                else (currentIndex.toFloat() / candidates.size).coerceIn(0f, 1f)
+    val isVotingDone: Boolean get() = currentIndex >= candidates.size && candidates.isNotEmpty()
+    val votingProgress: Float get() = if (candidates.isEmpty()) {
+        0f
+    } else {
+        (currentIndex.toFloat() / candidates.size).coerceIn(0f, 1f)
+    }
 
-    fun memberVoteCount(email: String): Int =
-        allVotes[email]?.let { v -> v.yes.size + v.no.size + v.maybe.size } ?: 0
+    fun memberVoteCount(email: String): Int = allVotes[email]?.let { v -> v.yes.size + v.no.size + v.maybe.size } ?: 0
 }
 
 @HiltViewModel
@@ -70,7 +74,7 @@ class GroupMatchViewModel @Inject constructor(
     val uiState: StateFlow<GroupMatchUiState> = _uiState.asStateFlow()
 
     private var sessionId: String? = null
-    private var myEmail: String?   = null
+    private var myEmail: String? = null
 
     fun loadGroupMatches(memberEmails: List<String>) {
         if (_uiState.value.phase != GroupPhase.LOADING) return
@@ -100,10 +104,13 @@ class GroupMatchViewModel @Inject constructor(
             groupSessionRepository.observeSession(id).collectLatest { session ->
                 if (session == null) return@collectLatest
                 val phase = when (session.status) {
-                    GroupSession.STATUS_LOBBY    -> GroupPhase.LOBBY
-                    GroupSession.STATUS_VOTING   -> GroupPhase.VOTING
-                    GroupSession.STATUS_FINISHED -> if (session.matchedMediaId != 0)
-                        GroupPhase.MATCH_FOUND else GroupPhase.NO_MATCH
+                    GroupSession.STATUS_LOBBY -> GroupPhase.LOBBY
+                    GroupSession.STATUS_VOTING -> GroupPhase.VOTING
+                    GroupSession.STATUS_FINISHED -> if (session.matchedMediaId != 0) {
+                        GroupPhase.MATCH_FOUND
+                    } else {
+                        GroupPhase.NO_MATCH
+                    }
                     else -> _uiState.value.phase
                 }
                 _uiState.update { it.copy(session = session, phase = phase) }
@@ -119,9 +126,9 @@ class GroupMatchViewModel @Inject constructor(
                         ?: fetchSingle(session.matchedMediaId)
                     _uiState.update {
                         it.copy(
-                            matchedMedia          = matched,
-                            phase                 = GroupPhase.MATCH_FOUND,
-                            showMatchCelebration  = true
+                            matchedMedia = matched,
+                            phase = GroupPhase.MATCH_FOUND,
+                            showMatchCelebration = true
                         )
                     }
                     viewModelScope.launch {
@@ -145,9 +152,7 @@ class GroupMatchViewModel @Inject constructor(
         }
     }
 
-    private suspend fun computeAndSaveCandidates(
-        memberEmails: List<String>, filters: GroupFilters
-    ) {
+    private suspend fun computeAndSaveCandidates(memberEmails: List<String>, filters: GroupFilters) {
         _uiState.update { it.copy(isComputingCandidates = true) }
         try {
             val allProfiles = coroutineScope {
@@ -156,30 +161,35 @@ class GroupMatchViewModel @Inject constructor(
                 }.awaitAll().filterNotNull() + listOfNotNull(userRepository.getUserProfile())
             }
 
-            val scoreMap = mutableMapOf<Int, Int>()
+            val allSeenIds = allProfiles.flatMap { it.likedMediaIds + it.essentialMediaIds }.toSet()
+            val groupGenreScores = mutableMapOf<String, Float>()
             allProfiles.forEach { profile ->
-                (profile.likedMediaIds + profile.essentialMediaIds).toSet()
-                    .forEach { id -> scoreMap[id] = (scoreMap[id] ?: 0) + 1 }
+                profile.genreScores.forEach { (genre, score) ->
+                    groupGenreScores[genre] = (groupGenreScores[genre] ?: 0f) + score
+                }
             }
-
-            val topIds = scoreMap.entries
+            val topGenres = groupGenreScores.entries
                 .sortedByDescending { it.value }
-                .map { it.key }
-                .take(30)
+                .take(3)
+                .joinToString(",") { it.key }
 
-            val shows = showRepository.getShowDetailsInParallel(topIds)
-            val filtered = shows.filter { show ->
-                if (filters.maxEpisodeDuration > 0) {
-                    val rt = show.episodeRunTime?.firstOrNull() ?: 0
-                    if (rt in 1..Int.MAX_VALUE && rt > filters.maxEpisodeDuration) return@filter false
+            val discoveryResults = showRepository.getDetailedRecommendations(topGenres)
+            val filteredCandidates = discoveryResults
+                .filter { it.id !in allSeenIds }
+                .filter { show ->
+                    if (filters.maxEpisodeDuration > 0) {
+                        val rt = show.episodeRunTime?.firstOrNull() ?: 0
+                        if (rt in 1..Int.MAX_VALUE && rt > filters.maxEpisodeDuration) return@filter false
+                    }
+                    if (filters.excludedGenreIds.isNotEmpty()) {
+                        if (show.safeGenreIds.any { it in filters.excludedGenreIds }) return@filter false
+                    }
+                    true
                 }
-                if (filters.excludedGenreIds.isNotEmpty()) {
-                    if (show.safeGenreIds.any { it in filters.excludedGenreIds }) return@filter false
-                }
-                true
-            }.take(20)
+                .distinctBy { it.id }
+                .take(20)
 
-            sessionId?.let { groupSessionRepository.updateCandidates(it, filtered.map { s -> s.id }) }
+            sessionId?.let { groupSessionRepository.updateCandidates(it, filteredCandidates.map { s -> s.id }) }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             _uiState.update { it.copy(errorMessage = "Error cargando candidatos") }
@@ -212,12 +222,16 @@ class GroupMatchViewModel @Inject constructor(
         }
     }
 
-    fun voteYes()   = castVote(VoteType.YES)
-    fun voteNo()    = castVote(VoteType.NO)
+    fun voteYes() = castVote(VoteType.YES)
+    fun voteNo() = castVote(VoteType.NO)
     fun voteMaybe() = castVote(VoteType.MAYBE)
+    fun voteSuperLike() {
+        if (_uiState.value.myVotes.superLikeId != 0) return
+        castVote(VoteType.SUPER_LIKE)
+    }
 
     private fun castVote(type: VoteType) {
-        val email     = myEmail ?: return
+        val email = myEmail ?: return
         val candidate = _uiState.value.currentCandidate ?: return
 
         viewModelScope.launch {
@@ -227,9 +241,10 @@ class GroupMatchViewModel @Inject constructor(
         }
 
         val newVotes = when (type) {
-            VoteType.YES   -> _uiState.value.myVotes.copy(yes   = _uiState.value.myVotes.yes   + candidate.id)
-            VoteType.NO    -> _uiState.value.myVotes.copy(no    = _uiState.value.myVotes.no    + candidate.id)
+            VoteType.YES -> _uiState.value.myVotes.copy(yes = _uiState.value.myVotes.yes + candidate.id)
+            VoteType.NO -> _uiState.value.myVotes.copy(no = _uiState.value.myVotes.no + candidate.id)
             VoteType.MAYBE -> _uiState.value.myVotes.copy(maybe = _uiState.value.myVotes.maybe + candidate.id)
+            VoteType.SUPER_LIKE -> _uiState.value.myVotes.copy(superLikeId = candidate.id)
         }
         _uiState.update { it.copy(myVotes = newVotes, currentIndex = it.currentIndex + 1) }
 
@@ -241,7 +256,7 @@ class GroupMatchViewModel @Inject constructor(
     }
 
     fun useVeto() {
-        val email     = myEmail ?: return
+        val email = myEmail ?: return
         val candidate = _uiState.value.currentCandidate ?: return
         if (_uiState.value.myVetoUsed) return
 
@@ -253,38 +268,59 @@ class GroupMatchViewModel @Inject constructor(
 
     private fun checkForMatch(allVotes: Map<String, MemberVoteDoc>) {
         if (_uiState.value.phase == GroupPhase.MATCH_FOUND) return
-        val session    = _uiState.value.session ?: return
+        val session = _uiState.value.session ?: return
         if (session.status != GroupSession.STATUS_VOTING) return
         val candidates = _uiState.value.candidates
         if (candidates.isEmpty()) return
 
         val vetoed = session.vetoes.values.filter { it != 0 }.toSet()
 
+        val superLikeCounts = mutableMapOf<Int, Int>()
+        allVotes.values.forEach { v ->
+            if (v.superLikeId != 0) {
+                superLikeCounts[v.superLikeId] = (superLikeCounts[v.superLikeId] ?: 0) + 1
+            }
+        }
+
+        val instantMatchId = superLikeCounts.entries.find { it.value >= 2 }?.key
+
+        if (instantMatchId != null && instantMatchId !in vetoed) {
+            val matched = candidates.firstOrNull { it.id == instantMatchId }
+            if (matched != null) {
+                executeMatch(matched)
+                return
+            }
+        }
+
         for (candidate in candidates) {
             if (candidate.id in vetoed) continue
             val allPositive = session.memberEmails.all { email ->
                 val v = allVotes[email]
-                v != null && (candidate.id in v.yes || candidate.id in v.maybe)
+                v != null && (candidate.id in v.yes || candidate.id in v.maybe || candidate.id == v.superLikeId)
             }
             if (allPositive) {
-                viewModelScope.launch {
-                    sessionId?.let { id ->
-                        runCatching { groupSessionRepository.setMatch(id, candidate.id) }
-                    }
-                }
-                _uiState.update {
-                    it.copy(
-                        matchedMedia         = candidate,
-                        phase                = GroupPhase.MATCH_FOUND,
-                        showMatchCelebration = true
-                    )
-                }
+                executeMatch(candidate)
                 return
             }
         }
     }
 
-    fun showNightTitleDialog()  = _uiState.update { it.copy(showNightTitleDialog = true) }
+    private fun executeMatch(candidate: MediaContent) {
+        viewModelScope.launch {
+            sessionId?.let { id ->
+                runCatching { groupSessionRepository.setMatch(id, candidate.id) }
+            }
+        }
+        _uiState.update {
+            it.copy(
+                matchedMedia = candidate,
+                phase = GroupPhase.MATCH_FOUND,
+                showMatchCelebration = true
+            )
+        }
+    }
+
+    fun showNightTitleDialog() = _uiState.update { it.copy(showNightTitleDialog = true) }
     fun dismissNightTitleDialog() = _uiState.update { it.copy(showNightTitleDialog = false) }
 
     fun saveNightTitle(title: String) {
@@ -294,9 +330,9 @@ class GroupMatchViewModel @Inject constructor(
         }
     }
 
-    fun showFilters()   = _uiState.update { it.copy(showFiltersSheet = true) }
-    fun hideFilters()   = _uiState.update { it.copy(showFiltersSheet = false) }
-    fun dismissError()  = _uiState.update { it.copy(errorMessage = null) }
+    fun showFilters() = _uiState.update { it.copy(showFiltersSheet = true) }
+    fun hideFilters() = _uiState.update { it.copy(showFiltersSheet = false) }
+    fun dismissError() = _uiState.update { it.copy(errorMessage = null) }
     fun dismissCelebration() = _uiState.update { it.copy(showMatchCelebration = false) }
 
     fun isHost(): Boolean = myEmail != null && myEmail == _uiState.value.session?.hostEmail

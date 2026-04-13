@@ -1,22 +1,25 @@
 package com.andrea.showmateapp.ui.screens.stats
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetViewerPersonalityUseCase
 import com.andrea.showmateapp.domain.usecase.GetWrappedStatsUseCase
 import com.andrea.showmateapp.util.GenreMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import javax.inject.Inject
 
+@Immutable
 data class StatsUiState(
     val isLoading: Boolean = true,
     val currentStreak: Int = 0,
@@ -40,28 +43,42 @@ class StatsViewModel @Inject constructor(
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
 
     init {
-        loadStats()
+        observeProfile()
     }
 
-    private fun loadStats() {
+    private fun observeProfile() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            userRepository.getUserProfileFlow().collect { profile ->
+                if (profile != null) {
+                    processProfileData(profile)
+                }
+            }
+        }
+    }
+
+    private fun processProfileData(profile: UserProfile) {
+        viewModelScope.launch {
             try {
-                val profile = userRepository.getUserProfile()
-                val history = profile?.viewingHistory ?: emptyList()
+                val history = profile.viewingHistory
 
                 data class Entry(val date: LocalDate, val showId: String, val count: Int)
                 val formatter = DateTimeFormatter.ISO_LOCAL_DATE
                 val entries = history.mapNotNull { raw ->
                     val parts = raw.split(":")
-                    if (parts.size >= 3) runCatching {
-                        Entry(LocalDate.parse(parts[0], formatter), parts[1], parts[2].toInt())
-                    }.getOrNull() else null
+                    if (parts.size >= 3) {
+                        runCatching {
+                            Entry(LocalDate.parse(parts[0], formatter), parts[1], parts[2].toInt())
+                        }.getOrNull()
+                    } else {
+                        null
+                    }
                 }
 
                 val episodesPerDay = entries.groupBy { it.date }
                     .mapValues { (_, es) -> es.sumOf { it.count } }
-                val total = episodesPerDay.values.sum()
+
+                val total = profile.watchedEpisodes.values.sumOf { it.size }
+
                 val dailyRecord = episodesPerDay.values.maxOrNull() ?: 0
 
                 val today = LocalDate.now()
@@ -87,18 +104,19 @@ class StatsViewModel @Inject constructor(
                     .groupBy { it.date.format(DateTimeFormatter.ofPattern("yyyy-MM")) }
                     .mapValues { (_, es) -> es.sumOf { it.count } }
 
-                val watchedByGenre = profile?.genreScores?.entries
-                    ?.sortedByDescending { it.value }
-                    ?.take(6)
-                    ?.map { GenreMapper.getGenreName(it.key) to it.value.toInt() }
-                    ?: emptyList()
+                val watchedByGenre = profile.genreScores.entries
+                    .sortedByDescending { it.value }
+                    .take(6)
+                    .map { GenreMapper.getGenreName(it.key) to it.value.toInt() }
 
                 val currentMonth = today.format(DateTimeFormatter.ofPattern("yyyy-MM"))
                 val topGenresByMonth = if (watchedByGenre.isNotEmpty()) {
                     mapOf(currentMonth to watchedByGenre)
-                } else emptyMap()
+                } else {
+                    emptyMap()
+                }
 
-                val personalityProfile = profile?.let { getViewerPersonalityUseCase.execute(it) }
+                val personalityProfile = getViewerPersonalityUseCase.execute(profile)
 
                 _uiState.update {
                     it.copy(
@@ -113,13 +131,11 @@ class StatsViewModel @Inject constructor(
                     )
                 }
 
-                if (profile != null) {
-                    try {
-                        val wrapped = getWrappedStatsUseCase.execute(profile)
-                        _uiState.update { it.copy(wrappedStats = wrapped) }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                    }
+                try {
+                    val wrapped = getWrappedStatsUseCase.execute(profile)
+                    _uiState.update { it.copy(wrappedStats = wrapped) }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

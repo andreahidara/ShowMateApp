@@ -12,13 +12,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.TravelExplore
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -27,15 +28,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.network.MediaContent
@@ -43,7 +47,6 @@ import com.andrea.showmateapp.ui.components.premium.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private val discoverGenreNames = mapOf(
     10759 to "Acción", 16 to "Animación", 35 to "Comedia", 80 to "Crimen",
@@ -63,6 +66,24 @@ fun DiscoverScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val onLoadMoreTopGenre = remember(viewModel) { { viewModel.loadMoreTopGenre() } }
     val onLoadMoreSecondGenre = remember(viewModel) { { viewModel.loadMoreSecondGenre() } }
+
+    // Refresh when screen becomes visible again (tab switch or app foreground)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        var isFirstResume = true
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (isFirstResume) {
+                    isFirstResume = false
+                    return@LifecycleEventObserver
+                }
+                if (!viewModel.uiState.value.isLoading) viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     DiscoverScreenContent(
         state = state,
         sharedTransitionScope = sharedTransitionScope,
@@ -70,6 +91,7 @@ fun DiscoverScreen(
         onMediaClick = { media, tag -> navigateToDetail(globalNavController, media, tag) },
         onRetry = { viewModel.retry() },
         onRefresh = { viewModel.refresh() },
+        isFromCache = state.isFromCache,
         onLoadMoreTopGenre = onLoadMoreTopGenre,
         onLoadMoreSecondGenre = onLoadMoreSecondGenre
     )
@@ -85,6 +107,7 @@ fun DiscoverScreenContent(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     onRefresh: () -> Unit = {},
+    isFromCache: Boolean = false,
     onLoadMoreTopGenre: (() -> Unit)? = null,
     onLoadMoreSecondGenre: (() -> Unit)? = null
 ) {
@@ -104,6 +127,34 @@ fun DiscoverScreenContent(
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 item { DiscoverHeader() }
+
+                if (isFromCache) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF2A2A2A))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.WifiOff,
+                                contentDescription = null,
+                                tint = Color(0xFFFFC107),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.offline_cached_content),
+                                color = Color(0xFFFFC107),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
 
                 item {
                     state.heroShow?.let {
@@ -439,8 +490,17 @@ private fun DiscoverHeader() {
     }
 }
 
+private val dividerIcons = mapOf(
+    "Para ti ahora" to Icons.Default.AutoAwesome,
+    "Tus géneros favoritos" to Icons.Default.Favorite,
+    "Explora algo nuevo" to Icons.Default.TravelExplore,
+    "Porque viste y te gustó" to Icons.Default.PlayArrow,
+    "Valorados y populares" to Icons.Default.Star
+)
+
 @Composable
 private fun DiscoverCategoryDivider(label: String) {
+    val icon = dividerIcons[label]
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -459,13 +519,26 @@ private fun DiscoverCategoryDivider(label: String) {
                     )
                 )
         )
-        Text(
-            text = label.uppercase(),
-            color = Color.White.copy(alpha = 0.3f),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.5.sp
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.28f),
+                    modifier = Modifier.size(10.dp)
+                )
+            }
+            Text(
+                text = label.uppercase(),
+                color = Color.White.copy(alpha = 0.30f),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp
+            )
+        }
         Box(
             modifier = Modifier
                 .height(1.dp)
@@ -489,23 +562,28 @@ fun DiscoverHeroSection(
 ) {
     val tag = "discover_hero"
     val genreNames = remember(media.id) {
-        (media.genres?.map { it.name }?.takeIf { it.isNotEmpty() }
-            ?: media.safeGenreIds.mapNotNull { discoverGenreNames[it] }).take(3)
+        (
+            media.genres?.map { it.name }?.takeIf { it.isNotEmpty() }
+                ?: media.safeGenreIds.mapNotNull { discoverGenreNames[it] }
+            ).take(3)
     }
 
     val glowTransition = rememberInfiniteTransition(label = "heroGlow")
     val badgeGlow by glowTransition.animateFloat(
-        initialValue = 0.4f, targetValue = 0.8f,
+        initialValue = 0.4f,
+        targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
-            tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse
-        ), label = "badge"
+            tween(1800, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "badge"
     )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(540.dp)
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .height(500.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(28.dp))
             .clickable { onClick(media) }
     ) {
@@ -516,10 +594,16 @@ fun DiscoverHeroSection(
                 size = TmdbUtils.ImageSize.W1280,
                 modifier = Modifier
                     .fillMaxSize()
-                    .sharedElement(
-                        state = rememberSharedContentState(key = "image-${media.id}-$tag"),
-                        animatedVisibilityScope = animatedVisibilityScope
-                    )
+                    .let {
+                        if (LocalInspectionMode.current) {
+                            it
+                        } else {
+                            it.sharedElement(
+                                state = rememberSharedContentState(key = "image-${media.id}-$tag"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                        }
+                    }
             )
         }
 
@@ -538,49 +622,21 @@ fun DiscoverHeroSection(
                 )
         )
 
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(14.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            PrimaryPurple.copy(alpha = badgeGlow),
-                            PrimaryMagenta.copy(alpha = badgeGlow * 0.8f)
-                        )
-                    )
-                )
-                .border(
-                    1.dp,
-                    Color.White.copy(alpha = 0.25f),
-                    RoundedCornerShape(20.dp)
-                )
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Icon(
-                Icons.Default.AutoAwesome,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(12.dp)
-            )
-            Text(
-                text = "IA PICK",
-                color = Color.White,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 11.sp,
-                letterSpacing = 1.sp
-            )
-        }
-
-        if (media.affinityScore > 0f || media.voteAverage > 0f) {
+        if (media.affinityScore > 0f) {
             MatchBadge(
-                score = if (media.affinityScore > 0f) media.affinityScore else media.voteAverage,
-                isAffinity = media.affinityScore > 0f,
+                score = media.affinityScore,
+                isAffinity = true,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .padding(14.dp)
+            )
+        }
+        if (media.voteAverage > 0f) {
+            MatchBadge(
+                score = media.voteAverage,
+                isAffinity = false,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
                     .padding(14.dp)
             )
         }
@@ -671,18 +727,24 @@ fun DiscoverHeroSection(
 
             Button(
                 onClick = { onClick(media) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                shape = RoundedCornerShape(14.dp),
-                contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                shape = RoundedCornerShape(50.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryMagenta)),
+                        RoundedCornerShape(50.dp)
+                    )
             ) {
                 Icon(
                     Icons.Default.PlayArrow,
                     contentDescription = null,
-                    tint = Color.Black,
+                    tint = Color.White,
                     modifier = Modifier.size(18.dp)
                 )
-                Spacer(Modifier.width(6.dp))
-                Text("Ver detalles", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                Spacer(Modifier.width(5.dp))
+                Text("Ver ahora", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
             }
         }
     }

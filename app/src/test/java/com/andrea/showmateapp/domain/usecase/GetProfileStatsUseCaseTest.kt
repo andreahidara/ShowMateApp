@@ -2,14 +2,19 @@ package com.andrea.showmateapp.domain.usecase
 
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.domain.repository.IInteractionRepository
+import com.andrea.showmateapp.domain.repository.IUserRepository
+import io.mockk.mockk
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class GetProfileStatsUseCaseTest {
 
-    private val useCase = GetProfileStatsUseCase()
+    private val userRepository: IUserRepository = mockk(relaxed = true)
+    private val interactionRepository: IInteractionRepository = mockk(relaxed = true)
+    private val useCase = GetProfileStatsUseCase(userRepository, interactionRepository)
 
     @Test
     fun `returns zero stats for empty watched list and null profile`() {
@@ -48,7 +53,9 @@ class GetProfileStatsUseCaseTest {
     @Test
     fun `watchedCount equals the number of shows in the list`() {
         val shows = listOf(
-            MediaContent(id = 1), MediaContent(id = 2), MediaContent(id = 3)
+            MediaContent(id = 1),
+            MediaContent(id = 2),
+            MediaContent(id = 3)
         )
         val stats = useCase.execute(shows, null)
         assertEquals(3, stats.watchedCount)

@@ -8,12 +8,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class ReviewRepository @Inject constructor(
@@ -41,11 +41,11 @@ class ReviewRepository @Inject constructor(
         try {
             reviews.document(reviewId).update(
                 mapOf(
-                    "rating"       to rating,
-                    "text"         to text,
-                    "hasSpoiler"   to hasSpoiler,
+                    "rating" to rating,
+                    "text" to text,
+                    "hasSpoiler" to hasSpoiler,
                     "seasonNumber" to seasonNumber,
-                    "updatedAt"    to System.currentTimeMillis()
+                    "updatedAt" to System.currentTimeMillis()
                 )
             ).await()
         } catch (e: Exception) {
@@ -55,27 +55,31 @@ class ReviewRepository @Inject constructor(
     }
 
     override suspend fun deleteReview(reviewId: String) = withContext(ioDispatcher) {
-        try { reviews.document(reviewId).delete().await() }
-        catch (e: Exception) { if (e is CancellationException) throw e }
+        try {
+            reviews.document(reviewId).delete().await()
+        } catch (
+            e: Exception
+        ) {
+            if (e is CancellationException) throw e
+        }
         Unit
     }
 
-    override suspend fun getMyReview(mediaId: Int, seasonNumber: Int): Review? =
-        withContext(ioDispatcher) {
-            val uid = auth.currentUser?.uid ?: return@withContext null
-            try {
-                reviews
-                    .whereEqualTo("userId", uid)
-                    .whereEqualTo("mediaId", mediaId)
-                    .whereEqualTo("seasonNumber", seasonNumber)
-                    .limit(1)
-                    .get().await()
-                    .documents.firstOrNull()?.toObject(Review::class.java)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
+    override suspend fun getMyReview(mediaId: Int, seasonNumber: Int): Review? = withContext(ioDispatcher) {
+        val uid = auth.currentUser?.uid ?: return@withContext null
+        try {
+            reviews
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("mediaId", mediaId)
+                .whereEqualTo("seasonNumber", seasonNumber)
+                .limit(1)
+                .get().await()
+                .documents.firstOrNull()?.toObject(Review::class.java)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
+    }
 
     override suspend fun getPublicReviews(
         mediaId: Int,
@@ -108,9 +112,9 @@ class ReviewRepository @Inject constructor(
                 .filter { it.reportCount < REPORT_HIDE_THRESHOLD }
 
             ReviewPage(
-                reviews      = reviewList,
+                reviews = reviewList,
                 lastCursorId = pageDocs.lastOrNull()?.id,
-                hasMore      = hasMore
+                hasMore = hasMore
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -118,36 +122,33 @@ class ReviewRepository @Inject constructor(
         }
     }
 
-    override suspend fun getFriendReviews(
-        mediaId: Int,
-        seasonNumber: Int,
-        friendEmails: List<String>
-    ): List<Review> = withContext(ioDispatcher) {
-        if (friendEmails.isEmpty()) return@withContext emptyList()
-        try {
-            val chunks = friendEmails.distinct().chunked(30)
-            chunks.flatMap { chunk ->
-                reviews
-                    .whereEqualTo("mediaId", mediaId)
-                    .whereEqualTo("seasonNumber", seasonNumber)
-                    .whereIn("userEmail", chunk)
-                    .get().await()
-                    .toObjects(Review::class.java)
-            }.sortedByDescending { it.createdAt }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
+    override suspend fun getFriendReviews(mediaId: Int, seasonNumber: Int, friendEmails: List<String>): List<Review> =
+        withContext(ioDispatcher) {
+            if (friendEmails.isEmpty()) return@withContext emptyList()
+            try {
+                val chunks = friendEmails.distinct().chunked(30)
+                chunks.flatMap { chunk ->
+                    reviews
+                        .whereEqualTo("mediaId", mediaId)
+                        .whereEqualTo("seasonNumber", seasonNumber)
+                        .whereIn("userEmail", chunk)
+                        .get().await()
+                        .toObjects(Review::class.java)
+                }.sortedByDescending { it.createdAt }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                emptyList()
+            }
         }
-    }
 
     override suspend fun toggleLike(reviewId: String): Boolean = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext false
         try {
             var nowLiked = false
             db.runTransaction { tx ->
-                val ref  = reviews.document(reviewId)
-                val doc  = tx.get(ref)
-                val rv   = doc.toObject(Review::class.java) ?: return@runTransaction
+                val ref = reviews.document(reviewId)
+                val doc = tx.get(ref)
+                val rv = doc.toObject(Review::class.java) ?: return@runTransaction
                 val liked = rv.likedByIds.toMutableList()
                 if (uid in liked) {
                     liked.remove(uid)

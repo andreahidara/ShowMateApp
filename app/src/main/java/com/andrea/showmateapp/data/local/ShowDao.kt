@@ -4,7 +4,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.andrea.showmateapp.data.model.MediaEntity
+import com.andrea.showmateapp.data.model.SeasonEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -12,6 +14,9 @@ interface ShowDao {
 
     @Query("SELECT * FROM media_content WHERE category = :category")
     suspend fun getShowsByCategory(category: String): List<MediaEntity>
+
+    @Query("SELECT * FROM media_content WHERE category = :category AND id NOT IN (:excludedIds)")
+    suspend fun getShowsByCategoryExcluding(category: String, excludedIds: List<Int>): List<MediaEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertShows(shows: List<MediaEntity>)
@@ -40,15 +45,15 @@ interface ShowDao {
     @Query("DELETE FROM media_content WHERE category IN ('liked', 'watched')")
     suspend fun clearUserData()
 
-    @androidx.room.Transaction
+    @Transaction
     suspend fun replaceCategory(category: String, shows: List<MediaEntity>) {
         deleteShowsByCategory(category)
         insertShows(shows)
     }
 
-    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
-    suspend fun insertSeason(season: com.andrea.showmateapp.data.model.SeasonEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSeason(season: SeasonEntity)
 
-    @androidx.room.Query("SELECT * FROM seasons WHERE showId = :showId AND seasonNumber = :seasonNumber")
-    suspend fun getSeason(showId: Int, seasonNumber: Int): com.andrea.showmateapp.data.model.SeasonEntity?
+    @Query("SELECT * FROM seasons WHERE showId = :showId AND seasonNumber = :seasonNumber")
+    suspend fun getSeason(showId: Int, seasonNumber: Int): SeasonEntity?
 }

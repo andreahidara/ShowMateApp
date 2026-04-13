@@ -34,9 +34,9 @@ class InactivityRecsWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        const val NOTIFICATION_ID   = 2001
+        const val NOTIFICATION_ID = 2001
         private const val INACTIVITY_THRESHOLD_DAYS = 3L
-        private const val MAX_RECS  = 3
+        private const val MAX_RECS = 3
     }
 
     override suspend fun doWork(): Result {
@@ -48,7 +48,7 @@ class InactivityRecsWorker @AssistedInject constructor(
             val daysSinceWatch = daysSinceLastWatch(profile.viewingHistory)
             if (daysSinceWatch < INACTIVITY_THRESHOLD_DAYS) return Result.success()
 
-            val watchedIds  = interactionRepository.getWatchedMediaIds()
+            val watchedIds = interactionRepository.getWatchedMediaIds()
             val dislikedIds = profile.dislikedMediaIds.toSet()
             val excludedIds = watchedIds + dislikedIds
 
@@ -87,12 +87,14 @@ class InactivityRecsWorker @AssistedInject constructor(
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pi = PendingIntent.getActivity(
-            context, NOTIFICATION_ID, intent,
+            context,
+            NOTIFICATION_ID,
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val shortList = shows.joinToString("  \u00b7  ") { it.name }
-        val bigText   = "Aqu\u00ed tienes 3 recomendaciones r\u00e1pidas para esta noche:\n\n" +
+        val bigText = "Aqu\u00ed tienes 3 recomendaciones r\u00e1pidas para esta noche:\n\n" +
             shows.mapIndexed { i, s -> "${i + 1}. ${s.name} (\u2605\u202f${s.voteAverage})" }
                 .joinToString("\n")
 

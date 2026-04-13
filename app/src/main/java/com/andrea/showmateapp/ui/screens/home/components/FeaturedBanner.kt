@@ -3,6 +3,7 @@ package com.andrea.showmateapp.ui.screens.home.components
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,15 +17,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.ui.components.premium.MatchBadge
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
+import com.andrea.showmateapp.ui.theme.PrimaryMagenta
+import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.util.TmdbUtils
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -60,19 +64,25 @@ fun FeaturedBanner(
                 .clip(RoundedCornerShape(28.dp))
                 .clickable { onClick(media) }
         ) {
-            with(sharedTransitionScope) {
-                TmdbImage(
-                    path = media.backdropPath ?: media.posterPath,
-                    contentDescription = "Featured: ${media.name}",
-                    size = TmdbUtils.ImageSize.W1280,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .sharedElement(
-                            state = rememberSharedContentState(key = "image-${media.id}-$tag"),
-                            animatedVisibilityScope = animatedVisibilityScope
-                        )
-                )
-            }
+            TmdbImage(
+                path = media.backdropPath ?: media.posterPath,
+                contentDescription = "Featured: ${media.name}",
+                size = TmdbUtils.ImageSize.W1280,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (LocalInspectionMode.current) {
+                            Modifier
+                        } else {
+                            with(sharedTransitionScope) {
+                                Modifier.sharedElement(
+                                    state = rememberSharedContentState(key = "image-${media.id}-$tag"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            }
+                        }
+                    )
+            )
 
             Box(
                 modifier = Modifier
@@ -140,6 +150,18 @@ fun FeaturedBanner(
                     overflow = TextOverflow.Ellipsis
                 )
 
+                if (media.overview.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = media.overview,
+                        color = Color.White.copy(alpha = 0.60f),
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
 
                 if (shows.size > 1) {
@@ -184,18 +206,30 @@ fun FeaturedBanner(
 
                 Button(
                     onClick = { onClick(media) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    shape = RoundedCornerShape(50.dp),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryMagenta)),
+                            RoundedCornerShape(50.dp)
+                        )
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = null,
-                        tint = Color.Black,
-                        modifier = Modifier.size(18.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Ver ahora", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Ver ahora",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp,
+                        letterSpacing = (-0.2).sp
+                    )
                 }
             }
         }

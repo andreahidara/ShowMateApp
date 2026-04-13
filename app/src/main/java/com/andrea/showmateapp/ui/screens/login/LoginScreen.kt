@@ -6,10 +6,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -22,37 +22,31 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.premium.AuthBackground
 import com.andrea.showmateapp.ui.components.premium.PrimaryButton
 import com.andrea.showmateapp.ui.components.premium.PrimaryTextField
 import com.andrea.showmateapp.ui.navigation.Screen
-import androidx.compose.ui.text.TextStyle
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.TextGray
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 @Composable
-fun LoginScreen(
-    navController: NavController,
-    viewModel: LoginViewModel = hiltViewModel()
-) {
+fun LoginScreen(navController: NavController, viewModel: LoginViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -78,7 +72,11 @@ fun LoginScreen(
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
-            val destination = if (state.isNewGoogleUser) Screen.Onboarding else Screen.Main
+            val destination = if (state.isNewGoogleUser || !state.isOnboardingCompleted) {
+                Screen.Onboarding
+            } else {
+                Screen.Main
+            }
             navController.navigate(destination) {
                 popUpTo(Screen.Login) { inclusive = true }
             }
@@ -115,7 +113,11 @@ fun LoginScreenContent(
 
     if (showForgotDialog) {
         AlertDialog(
-            onDismissRequest = { showForgotDialog = false; onDismissResetDialog(); forgotEmail = "" },
+            onDismissRequest = {
+                showForgotDialog = false
+                onDismissResetDialog()
+                forgotEmail = ""
+            },
             containerColor = Color(0xFF1A1A2E),
             title = {
                 Text("Recuperar contraseña", color = Color.White, fontWeight = FontWeight.Bold)
@@ -172,14 +174,22 @@ fun LoginScreenContent(
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
                     ) { Text("Enviar", fontWeight = FontWeight.Bold) }
                 } else {
-                    TextButton(onClick = { showForgotDialog = false; onDismissResetDialog(); forgotEmail = "" }) {
+                    TextButton(onClick = {
+                        showForgotDialog = false
+                        onDismissResetDialog()
+                        forgotEmail = ""
+                    }) {
                         Text("Cerrar", color = PrimaryPurpleLight)
                     }
                 }
             },
             dismissButton = {
                 if (!state.resetEmailSent) {
-                    TextButton(onClick = { showForgotDialog = false; onDismissResetDialog(); forgotEmail = "" }) {
+                    TextButton(onClick = {
+                        showForgotDialog = false
+                        onDismissResetDialog()
+                        forgotEmail = ""
+                    }) {
                         Text("Cancelar", color = TextGray)
                     }
                 }
@@ -260,12 +270,20 @@ fun LoginScreenContent(
                         onValueChange = onPasswordChanged,
                         label = "Contraseña",
                         leadingIcon = Icons.Default.Lock,
-                        visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (state.isPasswordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
                         trailingIcon = {
                             IconButton(onClick = onTogglePasswordVisibility) {
                                 Icon(
                                     painter = painterResource(
-                                        id = if (state.isPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
+                                        id = if (state.isPasswordVisible) {
+                                            R.drawable.ic_visibility
+                                        } else {
+                                            R.drawable.ic_visibility_off
+                                        }
                                     ),
                                     contentDescription = null,
                                     tint = Color.White.copy(alpha = 0.5f),
@@ -357,8 +375,11 @@ fun LoginScreenContent(
                             .background(Color.White.copy(alpha = 0.06f))
                             .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                             .then(
-                                if (state.isGoogleLoading) Modifier
-                                else Modifier.clickable { onGoogleSignIn() }
+                                if (state.isGoogleLoading) {
+                                    Modifier
+                                } else {
+                                    Modifier.clickable { onGoogleSignIn() }
+                                }
                             ),
                         contentAlignment = Alignment.Center
                     ) {

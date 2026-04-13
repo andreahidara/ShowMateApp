@@ -9,12 +9,12 @@ import com.andrea.showmateapp.domain.repository.IGroupSessionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class NightEntry(
     val session: GroupSession,
@@ -28,7 +28,7 @@ class GroupNightsViewModel @Inject constructor(
     private val showRepository: ShowRepository
 ) : ViewModel() {
 
-    private val _entries   = MutableStateFlow<List<NightEntry>>(emptyList())
+    private val _entries = MutableStateFlow<List<NightEntry>>(emptyList())
     val entries: StateFlow<List<NightEntry>> = _entries.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
@@ -45,7 +45,9 @@ class GroupNightsViewModel @Inject constructor(
                 _entries.value = sessions.map { session ->
                     val media = if (session.matchedMediaId != 0) {
                         (showRepository.getShowDetails(session.matchedMediaId) as? Resource.Success)?.data
-                    } else null
+                    } else {
+                        null
+                    }
                     NightEntry(session, media)
                 }
             } catch (e: CancellationException) {

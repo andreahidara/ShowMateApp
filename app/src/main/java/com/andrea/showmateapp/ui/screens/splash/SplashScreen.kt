@@ -12,23 +12,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.premium.AuthBackground
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 fun SplashScreen(
     onNavigateToMain: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onNavigateToOnboarding: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
     val logoAlpha = remember { Animatable(0f) }
@@ -67,30 +68,37 @@ fun SplashScreen(
         label = "logoBreath"
     )
     val dot1Alpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f, targetValue = 1f,
+        initialValue = 0.25f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(550, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
             initialStartOffset = StartOffset(0)
-        ), label = "d1"
+        ),
+        label = "d1"
     )
     val dot2Alpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f, targetValue = 1f,
+        initialValue = 0.25f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(550, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
             initialStartOffset = StartOffset(183)
-        ), label = "d2"
+        ),
+        label = "d2"
     )
     val dot3Alpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f, targetValue = 1f,
+        initialValue = 0.25f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(550, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
             initialStartOffset = StartOffset(366)
-        ), label = "d3"
+        ),
+        label = "d3"
     )
 
+    // ── Animaciones de entrada (sin navegación) ──────────────────────────
     LaunchedEffect(Unit) {
         launch { glowAlpha.animateTo(0.55f, tween(1400, easing = LinearOutSlowInEasing)) }
         launch { logoAlpha.animateTo(1f, tween(900, easing = LinearOutSlowInEasing)) }
@@ -106,12 +114,17 @@ fun SplashScreen(
         delay(220)
         launch { subtitleAlpha.animateTo(0.75f, tween(600, easing = LinearOutSlowInEasing)) }
         launch { bottomAlpha.animateTo(1f, tween(800, easing = LinearOutSlowInEasing)) }
-        delay(2500)
-        try {
-            if (viewModel.isLoggedIn()) onNavigateToMain() else onNavigateToLogin()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            onNavigateToLogin()
+    }
+
+    // ── Navegación: espera a que el VM decida + splash mínimo de 1.5s ────
+    val authDecision by viewModel.authDecision.collectAsStateWithLifecycle()
+    LaunchedEffect(authDecision) {
+        val destination = authDecision ?: return@LaunchedEffect
+        delay(1500L) // Duración mínima del splash siempre garantizada
+        when (destination) {
+            SplashDestination.HOME -> onNavigateToMain()
+            SplashDestination.ONBOARDING -> onNavigateToOnboarding()
+            SplashDestination.LOGIN -> onNavigateToLogin()
         }
     }
 
@@ -145,10 +158,10 @@ fun SplashScreen(
                 modifier = Modifier.offset(y = (-20).dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.logo),
+                    painter = painterResource(id = R.drawable.ic_star_logo),
                     contentDescription = "Logo ShowMate",
                     modifier = Modifier
-                        .size(164.dp)
+                        .size(120.dp)
                         .scale(logoScale.value * logoBreath)
                         .alpha(logoAlpha.value)
                 )
@@ -156,9 +169,9 @@ fun SplashScreen(
                 Spacer(Modifier.height(32.dp))
 
                 Text(
-                    text = stringResource(R.string.showmate),
+                    text = "ShowMate",
                     style = TextStyle(
-                        brush = Brush.linearGradient(listOf(PrimaryPurple, PrimaryMagenta))
+                        brush = Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryMagenta))
                     ),
                     fontSize = 50.sp,
                     fontWeight = FontWeight.Black,

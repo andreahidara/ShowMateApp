@@ -23,18 +23,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.theme.AccentBlue
 import com.andrea.showmateapp.ui.theme.StarYellow
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.util.TmdbUtils
-import com.andrea.showmateapp.R
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -51,7 +52,7 @@ fun ThisWeekSection(
     isLoadingMore: Boolean = false
 ) {
     if (allShows.isEmpty()) return
-    val platforms = remember { listOf("Netflix", "Prime", "Disney+", "Max", "Paramount+") }
+    val platforms = remember { listOf("Netflix", "Prime", "Disney+", "Max") }
     val displayedShows = if (selectedPlatform != null) {
         platformShows[selectedPlatform] ?: emptyList()
     } else {
@@ -99,16 +100,22 @@ fun ThisWeekSection(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            if (isSelected) AccentBlue
-                            else Color.White.copy(alpha = 0.07f)
+                            if (isSelected) {
+                                AccentBlue
+                            } else {
+                                Color.White.copy(alpha = 0.07f)
+                            }
                         )
                         .then(
-                            if (isSelected) Modifier
-                            else Modifier.border(
-                                width = 1.dp,
-                                color = Color.White.copy(alpha = 0.12f),
-                                shape = RoundedCornerShape(20.dp)
-                            )
+                            if (isSelected) {
+                                Modifier
+                            } else {
+                                Modifier.border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                            }
                         )
                         .clickable { onPlatformSelected(platform) }
                         .padding(horizontal = 14.dp, vertical = 6.dp)
@@ -149,8 +156,9 @@ fun ThisWeekSection(
             val thisWeekListState = rememberLazyListState()
             val shouldLoadMore by remember {
                 derivedStateOf {
-                    if (selectedPlatform != null) false
-                    else {
+                    if (selectedPlatform != null) {
+                        false
+                    } else {
                         val last = thisWeekListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
                         val total = thisWeekListState.layoutInfo.totalItemsCount
                         total > 0 && last >= total - 3
@@ -175,7 +183,7 @@ fun ThisWeekSection(
                 if (isLoadingMore && selectedPlatform == null) {
                     item {
                         Box(
-                            modifier = Modifier.width(160.dp).height(90.dp),
+                            modifier = Modifier.width(176.dp).height(104.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
@@ -201,25 +209,31 @@ fun ThisWeekCard(
 ) {
     Box(
         modifier = Modifier
-            .width(220.dp)
-            .height(130.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .width(176.dp)
+            .height(104.dp)
+            .clip(RoundedCornerShape(14.dp))
             .background(SurfaceDark)
             .clickable { onClick() }
     ) {
-        with(sharedTransitionScope) {
-            TmdbImage(
-                path = media.backdropPath ?: media.posterPath,
-                contentDescription = media.name,
-                size = TmdbUtils.ImageSize.W500,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .sharedElement(
-                        state = rememberSharedContentState(key = "image-${media.id}-thisweek"),
-                        animatedVisibilityScope = animatedVisibilityScope
-                    )
-            )
-        }
+        TmdbImage(
+            path = media.backdropPath ?: media.posterPath,
+            contentDescription = media.name,
+            size = TmdbUtils.ImageSize.W500,
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (LocalInspectionMode.current) {
+                        Modifier
+                    } else {
+                        with(sharedTransitionScope) {
+                            Modifier.sharedElement(
+                                state = rememberSharedContentState(key = "image-${media.id}-thisweek"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                        }
+                    }
+                )
+        )
 
         Box(
             modifier = Modifier

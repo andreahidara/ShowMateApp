@@ -1,95 +1,93 @@
 package com.andrea.showmateapp.ui.components.premium
 
+import androidx.compose.animation.*
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import coil.request.ImageRequest
-import com.andrea.showmateapp.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.ui.draw.scale
-import kotlinx.coroutines.delay
-import coil.compose.AsyncImage
+import androidx.compose.ui.zIndex
 import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.ReasonType
 import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.zIndex
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.ui.draw.shadow
-import androidx.compose.animation.*
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import com.andrea.showmateapp.ui.theme.*
+import kotlinx.coroutines.delay
+import timber.log.Timber
 
 object ShowMateSpacing {
-    val xxs  =  4.dp
-    val xs   =  8.dp
-    val s    = 12.dp
-    val m    = 16.dp
-    val l    = 20.dp
-    val xl   = 24.dp
-    val xxl  = 32.dp
+    val xxs = 4.dp
+    val xs = 8.dp
+    val s = 12.dp
+    val m = 16.dp
+    val l = 20.dp
+    val xl = 24.dp
+    val xxl = 32.dp
     val xxxl = 48.dp
 }
 
 object ShowMateMotion {
     val pressSpring: SpringSpec<Float> = spring(
         dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness    = Spring.StiffnessMedium
+        stiffness = Spring.StiffnessMedium
     )
     val tabSpring: SpringSpec<Dp> = spring(
         dampingRatio = Spring.DampingRatioLowBouncy,
-        stiffness    = Spring.StiffnessLow
+        stiffness = Spring.StiffnessLow
     )
     val colorTween: TweenSpec<Color> = tween(durationMillis = 180)
 }
 
 object ShowMateElevation {
-    val card   = 2.dp
+    val card = 2.dp
     val raised = 4.dp
-    val sheet  = 8.dp
+    val sheet = 8.dp
     val dialog = 12.dp
 }
 
@@ -108,31 +106,43 @@ fun TmdbImage(
     error: Int = R.drawable.ic_logo_placeholder,
     crossfade: Boolean = true
 ) {
-    val context = LocalContext.current
     val url = remember(path, size) { TmdbUtils.buildImageUrl(path, size) }
 
-    val request = remember(url) {
-        ImageRequest.Builder(context)
-            .data(url)
-            .crossfade(if (crossfade) 300 else 0)
-            .memoryCacheKey(url)
-            .diskCacheKey(url)
-            .build()
+    if (url == null) {
+        Box(modifier = modifier.background(SurfaceDark))
+        return
     }
 
     SubcomposeAsyncImage(
-        model = request,
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(url)
+            .crossfade(if (crossfade) 250 else 0)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .listener(
+                onError = { _, result ->
+                    Timber.e("TmdbImage error url=$url: ${result.throwable}")
+                }
+            )
+            .build(),
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = contentScale,
         loading = {
             Box(
                 modifier = Modifier
-                    .matchParentSize()
+                    .fillMaxSize()
                     .background(shimmerBrush())
             )
         },
-        error = { AsyncImage(model = error, contentDescription = null, modifier = Modifier.matchParentSize()) }
+        error = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(SurfaceDark)
+            )
+        },
+        success = { SubcomposeAsyncImageContent() }
     )
 }
 
@@ -144,7 +154,7 @@ fun ShowCard(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: (MediaContent, String) -> Unit,
     modifier: Modifier = Modifier,
-    width: Dp = 120.dp,
+    width: Dp = 110.dp,
     showTitle: Boolean = true,
     tag: String = "list"
 ) {
@@ -156,7 +166,7 @@ fun ShowCard(
         val glowTransition = rememberInfiniteTransition(label = "glow")
         val glowPulse by glowTransition.animateFloat(
             initialValue = 0.25f,
-            targetValue  = 0.65f,
+            targetValue = 0.65f,
             animationSpec = infiniteRepeatable(
                 tween(1800, easing = FastOutSlowInEasing),
                 RepeatMode.Reverse
@@ -164,7 +174,9 @@ fun ShowCard(
             label = "glowPulse"
         )
         glowPulse
-    } else 0f
+    } else {
+        0f
+    }
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -177,39 +189,53 @@ fun ShowCard(
     Column(
         modifier = modifier
             .then(if (width != Dp.Unspecified) Modifier.width(width) else Modifier)
-            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .clickable(
                 interactionSource = interactionSource,
-                indication = null,        // handled by pressScale above
-                onClickLabel = media.name // accessibility: screen reader announces the show name
+                // handled by pressScale above
+                indication = null,
+                // accessibility: screen reader announces the show name
+                onClickLabel = media.name
             ) { onClick(media, tag) }
     ) {
         Box(
             modifier = Modifier
-                .aspectRatio(2f / 3f)
+                .aspectRatio(2f / 2.8f)
                 .fillMaxWidth()
                 .shadow(
                     elevation = if (isHighScore) 8.dp else 0.dp,
                     shape = RoundedCornerShape(16.dp),
-                    spotColor = if (media.affinityScore >= 0.8f) MatchGreen.copy(alpha = glowAlpha)
-                               else GoldAccent.copy(alpha = glowAlpha)
+                    spotColor = if (media.affinityScore >= 0.8f) {
+                        MatchGreen.copy(alpha = glowAlpha)
+                    } else {
+                        GoldAccent.copy(alpha = glowAlpha)
+                    }
                 )
                 .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceDark)
         ) {
-            with(sharedTransitionScope) {
-                TmdbImage(
-                    path = media.posterPath,
-                    contentDescription = media.name,
-                    size = TmdbUtils.ImageSize.W185,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .sharedElement(
-                            state = rememberSharedContentState(key = sharedElementKey),
-                            animatedVisibilityScope = animatedVisibilityScope
-                        )
-                )
-            }
+            TmdbImage(
+                path = media.posterPath,
+                contentDescription = media.name,
+                size = TmdbUtils.ImageSize.W185,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (LocalInspectionMode.current) {
+                            Modifier
+                        } else {
+                            with(sharedTransitionScope) {
+                                Modifier.sharedElement(
+                                    state = rememberSharedContentState(key = sharedElementKey),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            }
+                        }
+                    )
+            )
 
             Box(
                 modifier = Modifier
@@ -225,28 +251,19 @@ fun ShowCard(
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                 )
-            } else if (media.voteAverage > 0f) {
+            }
+            if (media.voteAverage > 0f) {
                 MatchBadge(
                     score = media.voteAverage,
                     isAffinity = false,
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(Alignment.TopStart)
                         .padding(8.dp)
                 )
             }
 
-            val topReason = media.reasons.firstOrNull()
-            if (topReason != null) {
-                ReasonPill(
-                    reason = topReason,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(6.dp)
-                        .fillMaxWidth()
-                )
-            }
         }
-        
+
         if (showTitle) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -258,73 +275,57 @@ fun ShowCard(
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )
-            if (media.voteAverage > 0f) {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = "${"%.1f".format(media.voteAverage)} ★",
-                    color = StarYellow.copy(alpha = 0.85f),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
         }
     }
 }
 
 @Composable
-fun MatchBadge(
-    score: Float,
-    isAffinity: Boolean,
-    modifier: Modifier = Modifier
-) {
+fun MatchBadge(score: Float, isAffinity: Boolean, modifier: Modifier = Modifier) {
     val percentage = (score * 10).toInt().coerceIn(0, 100)
     val displayValue = remember(score, isAffinity) {
-        if (isAffinity) "$percentage% Match" else "${"%.1f".format(score)} ★"
+        if (isAffinity) "$percentage%" else "${"%.1f".format(score)}★"
     }
     val matchColor = when {
         isAffinity && percentage >= 80 -> MatchGreen
         isAffinity && percentage >= 50 -> MatchYellow
-        !isAffinity && score >= 7.5    -> GoldAccent
-        else                            -> Color.White.copy(alpha = 0.7f)
+        !isAffinity && score >= 7.5 -> GoldAccent
+        else -> Color.White.copy(alpha = 0.7f)
     }
 
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.Black.copy(alpha = 0.8f))
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.Black.copy(alpha = 0.85f))
             .border(
                 width = 1.dp,
-                color = matchColor.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(8.dp)
+                color = matchColor.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(6.dp)
             )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 6.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = displayValue,
             color = matchColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 0.sp
+            fontSize = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.2).sp
         )
     }
 }
 
 @Composable
-fun ReasonPill(
-    reason: RecommendationReason,
-    modifier: Modifier = Modifier
-) {
+fun ReasonPill(reason: RecommendationReason, modifier: Modifier = Modifier) {
     val pillColor = when (reason.type) {
-        ReasonType.GENRE         -> PillGenre
-        ReasonType.ACTOR         -> PillActor
-        ReasonType.NARRATIVE     -> PillNarrative
-        ReasonType.CREATOR       -> PillCreator
-        ReasonType.HIDDEN_GEM    -> PillHiddenGem
+        ReasonType.GENRE -> PillGenre
+        ReasonType.ACTOR -> PillActor
+        ReasonType.NARRATIVE -> PillNarrative
+        ReasonType.CREATOR -> PillCreator
+        ReasonType.HIDDEN_GEM -> PillHiddenGem
         ReasonType.COLLABORATIVE -> PillCollab
-        ReasonType.BINGE         -> PillBinge
-        ReasonType.COMPLETENESS  -> PillCompleteness
-        ReasonType.TRENDING      -> PillTrending
+        ReasonType.BINGE -> PillBinge
+        ReasonType.COMPLETENESS -> PillCompleteness
+        ReasonType.TRENDING -> PillTrending
     }
     Row(
         modifier = modifier
@@ -343,11 +344,13 @@ fun ReasonPill(
         Text(
             text = reason.description,
             color = Color.White.copy(alpha = 0.92f),
-            fontSize = 10.sp,
+            fontSize = 9.5.sp,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            softWrap = false,
-            letterSpacing = 0.sp
+            maxLines = 2,
+            softWrap = true,
+            lineHeight = 11.sp,
+            letterSpacing = 0.sp,
+            modifier = Modifier.weight(1f, fill = false)
         )
     }
 }
@@ -390,7 +393,7 @@ fun ShowSection(
                     text = title,
                     color = Color.White,
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Bold
                 )
             }
             if (onSeeAll != null) {
@@ -422,8 +425,9 @@ fun ShowSection(
         }
         val shouldLoadMore by remember {
             derivedStateOf {
-                if (onLoadMore == null) false
-                else {
+                if (onLoadMore == null) {
+                    false
+                } else {
                     val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
                     val total = listState.layoutInfo.totalItemsCount
                     total > 0 && lastVisible >= total - 3
@@ -453,8 +457,8 @@ fun ShowSection(
                 item {
                     Box(
                         modifier = Modifier
-                            .width(120.dp)
-                            .aspectRatio(2f / 3f),
+                            .width(110.dp)
+                            .aspectRatio(2f / 2.8f),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
@@ -508,11 +512,7 @@ fun PulseLoader(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ErrorView(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun ErrorView(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -522,7 +522,8 @@ fun ErrorView(
     ) {
         Icon(
             imageVector = Icons.Default.Warning,
-            contentDescription = null, // decorative; headline below conveys the meaning
+            // decorative; headline below conveys the meaning
+            contentDescription = null,
             tint = PrimaryPurple.copy(alpha = 0.8f),
             modifier = Modifier.size(64.dp)
         )
@@ -577,11 +578,7 @@ fun shimmerBrush(): Brush {
 }
 
 @Composable
-fun ShowSectionSkeleton(
-    title: String,
-    modifier: Modifier = Modifier,
-    cardCount: Int = 5
-) {
+fun ShowSectionSkeleton(title: String, modifier: Modifier = Modifier, cardCount: Int = 5) {
     val shimmer = shimmerBrush()
     Column(modifier = modifier) {
         Row(
@@ -610,10 +607,10 @@ fun ShowSectionSkeleton(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(cardCount) {
-                Column(modifier = Modifier.width(120.dp)) {
+                Column(modifier = Modifier.width(110.dp)) {
                     Box(
                         modifier = Modifier
-                            .aspectRatio(2f / 3f)
+                            .aspectRatio(2f / 2.8f)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .background(shimmer)
@@ -677,7 +674,7 @@ fun <T> PremiumTabRow(
     unselectedContentColor: Color = TextGray
 ) {
     val selectedIndex = tabs.indexOf(selectedTab)
-    
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -687,13 +684,13 @@ fun <T> PremiumTabRow(
     ) {
         val density = androidx.compose.ui.platform.LocalDensity.current
         var tabWidths by remember { mutableStateOf(List(tabs.size) { 0.dp }) }
-        
+
         val indicatorOffset by animateDpAsState(
             targetValue = tabWidths.take(selectedIndex).fold(0.dp) { acc, d -> acc + d },
             animationSpec = ShowMateMotion.tabSpring,
             label = "indicatorOffset"
         )
-        
+
         val currentTabWidth = tabWidths.getOrElse(selectedIndex) { 0.dp }
 
         if (tabWidths.all { it > 0.dp }) {
@@ -722,7 +719,7 @@ fun <T> PremiumTabRow(
                     targetValue = if (isSelected) selectedContentColor else unselectedContentColor,
                     label = "tabContentColor"
                 )
-                
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -795,7 +792,7 @@ fun GlassHeader(
                     )
                 }
             }
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
@@ -805,7 +802,7 @@ fun GlassHeader(
                     letterSpacing = (-0.5).sp
                 )
             }
-            
+
             trailingContent()
         }
     }

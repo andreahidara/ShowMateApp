@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.profile.friends
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,35 +15,38 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import coil.request.ImageRequest
-import androidx.compose.foundation.background
-import androidx.compose.ui.graphics.Brush
 import com.andrea.showmateapp.ui.components.premium.CardSurface
-import com.andrea.showmateapp.ui.components.premium.outlinedTextFieldColors
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
-import androidx.compose.ui.text.style.TextAlign
+import com.andrea.showmateapp.ui.components.premium.outlinedTextFieldColors
 import com.andrea.showmateapp.ui.theme.AccentBlue
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.StarYellow
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendCompareScreen(
     navController: NavController,
+    initialFriendEmail: String = "",
     viewModel: FriendCompareViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(initialFriendEmail) {
+        if (initialFriendEmail.isNotBlank()) {
+            viewModel.initWithEmail(initialFriendEmail)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -111,7 +115,14 @@ fun FriendCompareScreen(
                             modifier = Modifier.fillMaxWidth(),
                             colors = outlinedTextFieldColors(),
                             isError = uiState.error != null,
-                            supportingText = uiState.error?.let { { Text(it, color = MaterialTheme.colorScheme.error) } }
+                            supportingText = uiState.error?.let {
+                                {
+                                    Text(
+                                        it,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                         )
 
                         Button(
@@ -122,7 +133,11 @@ fun FriendCompareScreen(
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             if (uiState.isLoading) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
                             } else {
                                 Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -161,7 +176,8 @@ fun FriendCompareScreen(
                                     fontSize = 16.sp
                                 )
                                 Text(
-                                    "Parece que tú y tu amigo tenéis gustos muy diferentes, o el email no está registrado.",
+                                    "Parece que tú y tu amigo tenéis gustos muy diferentes, " +
+                                        "o el email no está registrado.",
                                     color = TextGray,
                                     fontSize = 13.sp,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -172,7 +188,8 @@ fun FriendCompareScreen(
                 } else {
                     item {
                         Text(
-                            "${uiState.commonShows.size} ${if (uiState.commonShows.size == 1) "serie" else "series"} en común",
+                            "${uiState.commonShows.size} " +
+                                "${if (uiState.commonShows.size == 1) "serie" else "series"} en común",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -184,14 +201,14 @@ fun FriendCompareScreen(
                                 modifier = Modifier.padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                    TmdbImage(
-                                        path = show.posterPath,
-                                        contentDescription = show.name,
-                                        size = TmdbUtils.ImageSize.W185,
-                                        modifier = Modifier
-                                            .size(width = 60.dp, height = 85.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                    )
+                                TmdbImage(
+                                    path = show.posterPath,
+                                    contentDescription = show.name,
+                                    size = TmdbUtils.ImageSize.W185,
+                                    modifier = Modifier
+                                        .size(width = 60.dp, height = 85.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
@@ -238,13 +255,13 @@ private fun CompatibilityScoreCard(score: Int, friendEmail: String) {
         score >= 75 -> Color(0xFF4CAF50)
         score >= 50 -> AccentBlue
         score >= 25 -> Color(0xFFFFC107)
-        else        -> TextGray
+        else -> TextGray
     }
     val scoreLabel = when {
         score >= 75 -> "¡Almas gemelas del streaming!"
         score >= 50 -> "Muy buen match de gustos"
         score >= 25 -> "Tenéis algo en común"
-        else        -> "Gustos muy diferentes"
+        else -> "Gustos muy diferentes"
     }
 
     CardSurface(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {

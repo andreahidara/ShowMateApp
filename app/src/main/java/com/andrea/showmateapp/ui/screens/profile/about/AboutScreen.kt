@@ -42,13 +42,18 @@ import com.andrea.showmateapp.ui.theme.TextGray
 fun AboutScreen(navController: NavController) {
     val infiniteTransition = rememberInfiniteTransition(label = "aboutGlow")
     val orb1Alpha by infiniteTransition.animateFloat(
-        initialValue = 0.18f, targetValue = 0.40f,
+        initialValue = 0.18f,
+        targetValue = 0.40f,
         animationSpec = infiniteRepeatable(tween(3200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "orb1"
     )
     val orb2Alpha by infiniteTransition.animateFloat(
-        initialValue = 0.12f, targetValue = 0.28f,
-        animationSpec = infiniteRepeatable(tween(2600, easing = FastOutSlowInEasing, delayMillis = 900), RepeatMode.Reverse),
+        initialValue = 0.12f,
+        targetValue = 0.28f,
+        animationSpec = infiniteRepeatable(
+            tween(2600, easing = FastOutSlowInEasing, delayMillis = 900),
+            RepeatMode.Reverse
+        ),
         label = "orb2"
     )
     Scaffold(
@@ -66,7 +71,6 @@ fun AboutScreen(navController: NavController) {
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-
             Box(
                 modifier = Modifier
                     .size(380.dp)
@@ -135,15 +139,40 @@ fun AboutScreen(navController: NavController) {
                     icon = Icons.Default.AutoAwesome,
                     iconTint = Color(0xFFFFB300)
                 ) {
-                    FeatureRow(Icons.Default.Recommend, Color(0xFF7C4DFF), "Recomendaciones personalizadas", "Algoritmo híbrido con afinidad personal + valoración bayesiana global")
+                    FeatureRow(
+                        Icons.Default.Recommend,
+                        Color(0xFF7C4DFF),
+                        "Recomendaciones personalizadas",
+                        "Algoritmo híbrido con afinidad personal + valoración bayesiana global"
+                    )
                     Spacer(Modifier.height(10.dp))
-                    FeatureRow(Icons.Default.People, Color(0xFF2196F3), "Sistema social", "Compara gustos con amigos, Group Match y noches de película")
+                    FeatureRow(
+                        Icons.Default.People,
+                        Color(0xFF2196F3),
+                        "Sistema social",
+                        "Compara gustos con amigos, Group Match y noches de película"
+                    )
                     Spacer(Modifier.height(10.dp))
-                    FeatureRow(Icons.Default.EmojiEvents, Color(0xFFFFB300), "Gamificación", "Logros, niveles de XP y racha de visualización")
+                    FeatureRow(
+                        Icons.Default.EmojiEvents,
+                        Color(0xFFFFB300),
+                        "Gamificación",
+                        "Logros, niveles de XP y racha de visualización"
+                    )
                     Spacer(Modifier.height(10.dp))
-                    FeatureRow(Icons.Default.BarChart, Color(0xFF4CAF50), "Estadísticas Wrapped", "Resumen anual con géneros, horas y perfil de espectador")
+                    FeatureRow(
+                        Icons.Default.BarChart,
+                        Color(0xFF4CAF50),
+                        "Estadísticas Wrapped",
+                        "Resumen anual con géneros, horas y perfil de espectador"
+                    )
                     Spacer(Modifier.height(10.dp))
-                    FeatureRow(Icons.Default.Psychology, Color(0xFFE91E63), "Perfil psicológico", "8 arquetipos de espectador detectados automáticamente")
+                    FeatureRow(
+                        Icons.Default.Psychology,
+                        Color(0xFFE91E63),
+                        "Perfil psicológico",
+                        "8 arquetipos de espectador detectados automáticamente"
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -153,7 +182,9 @@ fun AboutScreen(navController: NavController) {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            Brush.linearGradient(listOf(PrimaryPurple.copy(alpha = 0.20f), PrimaryPurpleDark.copy(alpha = 0.10f)))
+                            Brush.linearGradient(
+                                listOf(PrimaryPurple.copy(alpha = 0.20f), PrimaryPurpleDark.copy(alpha = 0.10f))
+                            )
                         )
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -165,17 +196,29 @@ fun AboutScreen(navController: NavController) {
                                     .background(PrimaryPurple.copy(alpha = 0.20f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.School, contentDescription = null, tint = PrimaryPurpleLight, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.School,
+                                    contentDescription = null,
+                                    tint = PrimaryPurpleLight,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                             Spacer(Modifier.width(10.dp))
                             Column {
-                                Text("Trabajo de Fin de Grado", color = PrimaryPurpleLight, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(
+                                    "Trabajo de Fin de Grado",
+                                    color = PrimaryPurpleLight,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
                                 Text("Ingeniería Informática", color = TextGray, fontSize = 12.sp)
                             }
                         }
                         HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                         Text(
-                            "ShowMate es una aplicación de descubrimiento de series desarrollada como TFG. Combina un sistema de recomendación híbrido, funciones sociales, gamificación y análisis estadístico para ofrecer una experiencia personalizada.",
+                            "ShowMate es una aplicación de descubrimiento de series desarrollada como TFG. " +
+                                "Combina un sistema de recomendación híbrido, funciones sociales, gamificación " +
+                                "y análisis estadístico para ofrecer una experiencia personalizada.",
                             color = Color.White.copy(alpha = 0.85f),
                             fontSize = 13.sp,
                             lineHeight = 20.sp
@@ -189,7 +232,11 @@ fun AboutScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                AboutSectionCard(title = "Algoritmo de Recomendación", icon = Icons.Default.Insights, iconTint = PrimaryPurpleLight) {
+                AboutSectionCard(
+                    title = "Algoritmo de Recomendación",
+                    icon = Icons.Default.Insights,
+                    iconTint = PrimaryPurpleLight
+                ) {
                     Text(
                         "Fórmula híbrida: 70% afinidad personal + 30% valoración global bayesiana",
                         color = TextGray,
@@ -197,19 +244,49 @@ fun AboutScreen(navController: NavController) {
                         lineHeight = 20.sp
                     )
                     Spacer(Modifier.height(14.dp))
-                    AlgorithmWeightRow("Géneros", "37%", "Favoritos con decaimiento temporal exponencial (semivida 90 días)", Color(0xFF7C4DFF))
+                    AlgorithmWeightRow(
+                        "Géneros",
+                        "37%",
+                        "Favoritos con decaimiento temporal exponencial (semivida 90 días)",
+                        Color(0xFF7C4DFF)
+                    )
                     Spacer(Modifier.height(8.dp))
-                    AlgorithmWeightRow("Keywords", "22%", "Temas, ambientaciones y elementos temáticos de cada serie", Color(0xFF00BCD4))
+                    AlgorithmWeightRow(
+                        "Keywords",
+                        "22%",
+                        "Temas, ambientaciones y elementos temáticos de cada serie",
+                        Color(0xFF00BCD4)
+                    )
                     Spacer(Modifier.height(8.dp))
-                    AlgorithmWeightRow("Estilo narrativo", "19%", "11 clusters detectados automáticamente a partir de keywords TMDB", Color(0xFFFFB300))
+                    AlgorithmWeightRow(
+                        "Estilo narrativo",
+                        "19%",
+                        "11 clusters detectados automáticamente a partir de keywords TMDB",
+                        Color(0xFFFFB300)
+                    )
                     Spacer(Modifier.height(8.dp))
-                    AlgorithmWeightRow("Actores", "12%", "Reparto con el que el usuario ha interactuado positivamente", Color(0xFF4CAF50))
+                    AlgorithmWeightRow(
+                        "Actores",
+                        "12%",
+                        "Reparto con el que el usuario ha interactuado positivamente",
+                        Color(0xFF4CAF50)
+                    )
                     Spacer(Modifier.height(8.dp))
-                    AlgorithmWeightRow("Creadores", "10%", "Showrunners y directores de series mejor valoradas", Color(0xFFE91E63))
+                    AlgorithmWeightRow(
+                        "Creadores",
+                        "10%",
+                        "Showrunners y directores de series mejor valoradas",
+                        Color(0xFFE91E63)
+                    )
                     Spacer(Modifier.height(14.dp))
                     HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                     Spacer(Modifier.height(12.dp))
-                    Text("Características avanzadas", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(
+                        "Características avanzadas",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
+                    )
                     Spacer(Modifier.height(8.dp))
                     BulletPoint("Valoración bayesiana: penaliza series con pocas votaciones")
                     BulletPoint("Filtrado colaborativo: boost por popularidad entre usuarios similares")
@@ -241,7 +318,12 @@ fun AboutScreen(navController: NavController) {
                         .padding(16.dp)
                 ) {
                     Row(verticalAlignment = Alignment.Top) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = TextGray.copy(alpha = 0.6f), modifier = Modifier.size(14.dp).padding(top = 1.dp))
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = TextGray.copy(alpha = 0.6f),
+                            modifier = Modifier.size(14.dp).padding(top = 1.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Este producto utiliza la API de TMDB pero no está avalado ni certificado por TMDB.",

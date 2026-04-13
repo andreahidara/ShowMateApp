@@ -1,14 +1,13 @@
 package com.andrea.showmateapp.data.model
 
+import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import com.andrea.showmateapp.data.network.MediaContent
 
-import androidx.compose.runtime.Immutable
-
 @Entity(
-    tableName = "media_content", 
+    tableName = "media_content",
     primaryKeys = ["id", "category"],
     indices = [Index(value = ["category"])]
 )

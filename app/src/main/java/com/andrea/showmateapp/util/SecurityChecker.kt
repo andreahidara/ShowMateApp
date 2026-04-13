@@ -10,17 +10,17 @@ object SecurityChecker {
     fun isEmulator(): Boolean {
         val fp = Build.FINGERPRINT
         return fp.startsWith("generic") ||
-                fp.startsWith("unknown") ||
-                fp.contains("vbox") ||
-                fp.contains("test-keys") ||
-                Build.MODEL.contains("google_sdk", ignoreCase = true) ||
-                Build.MODEL.contains("Emulator", ignoreCase = true) ||
-                Build.MODEL.contains("Android SDK built for x86", ignoreCase = true) ||
-                Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
-                (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
-                Build.PRODUCT == "google_sdk" ||
-                Build.HARDWARE == "goldfish" ||
-                Build.HARDWARE == "ranchu"
+            fp.startsWith("unknown") ||
+            fp.contains("vbox") ||
+            fp.contains("test-keys") ||
+            Build.MODEL.contains("google_sdk", ignoreCase = true) ||
+            Build.MODEL.contains("Emulator", ignoreCase = true) ||
+            Build.MODEL.contains("Android SDK built for x86", ignoreCase = true) ||
+            Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
+            (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+            Build.PRODUCT == "google_sdk" ||
+            Build.HARDWARE == "goldfish" ||
+            Build.HARDWARE == "ranchu"
     }
 
     fun isDeviceCompromised(): Boolean = isRooted() || isEmulator()

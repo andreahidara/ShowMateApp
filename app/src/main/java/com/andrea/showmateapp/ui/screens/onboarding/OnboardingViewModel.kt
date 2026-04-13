@@ -3,9 +3,12 @@ package com.andrea.showmateapp.ui.screens.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.repository.ShowRepository
+import com.andrea.showmateapp.domain.repository.ISocialRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.Resource
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -13,12 +16,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import kotlinx.coroutines.tasks.await
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val userRepository: IUserRepository,
-    private val showRepository: ShowRepository
+    private val showRepository: ShowRepository,
+    private val socialRepository: ISocialRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -31,20 +35,34 @@ class OnboardingViewModel @Inject constructor(
     private fun loadGenrePosters() {
         viewModelScope.launch {
             val genres = _uiState.value.availableGenres.keys.toList()
+
+            // Fetch several candidates per genre in parallel
             val deferred = genres.map { genreId ->
                 async {
                     val result = showRepository.discoverShows(
                         genreId = genreId,
                         sortBy = "popularity.desc"
                     )
-                    val posterPath = when (result) {
-                        is Resource.Success -> result.data.firstOrNull()?.posterPath
-                        else -> null
+                    val candidates = when (result) {
+                        is Resource.Success -> result.data
+                            .filter { !it.posterPath.isNullOrBlank() }
+                            .map { it.posterPath!! }
+                        else -> emptyList()
                     }
-                    genreId to posterPath
+                    genreId to candidates
                 }
             }
-            val posters = deferred.awaitAll().toMap()
+            val candidatesPerGenre = deferred.awaitAll()
+
+            // Assign unique posters greedily (no two genres share the same image)
+            val usedPosters = mutableSetOf<String>()
+            val posters = mutableMapOf<String, String?>()
+            for ((genreId, candidates) in candidatesPerGenre) {
+                val unique = candidates.firstOrNull { it !in usedPosters }
+                posters[genreId] = unique
+                if (unique != null) usedPosters.add(unique)
+            }
+
             _uiState.update { it.copy(genrePosters = posters) }
         }
     }
@@ -96,14 +114,11 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    fun setEpisodeLengthPref(pref: EpisodeLengthPref) =
-        _uiState.update { it.copy(episodeLengthPref = pref) }
+    fun setEpisodeLengthPref(pref: EpisodeLengthPref) = _uiState.update { it.copy(episodeLengthPref = pref) }
 
-    fun setStatusPref(pref: StatusPref) =
-        _uiState.update { it.copy(statusPref = pref) }
+    fun setStatusPref(pref: StatusPref) = _uiState.update { it.copy(statusPref = pref) }
 
-    fun setDubbedPref(pref: DubbedPref) =
-        _uiState.update { it.copy(dubbedPref = pref) }
+    fun setDubbedPref(pref: DubbedPref) = _uiState.update { it.copy(dubbedPref = pref) }
 
     fun advance() {
         val state = _uiState.value
@@ -142,12 +157,12 @@ class OnboardingViewModel @Inject constructor(
 
         return when {
             genres.contains("80") || genres.contains("9648") -> OnboardingPersonalityType.DETECTIVE
-            genres.contains("10765")                         -> OnboardingPersonalityType.VISIONARY
-            genres.contains("35")                            -> OnboardingPersonalityType.OPTIMIST
-            genres.contains("18")                            -> OnboardingPersonalityType.EMPATH
-            genres.contains("10759")                         -> OnboardingPersonalityType.ADRENALINE
-            genres.contains("99")                            -> OnboardingPersonalityType.CURIOUS
-            else                                             -> OnboardingPersonalityType.ECLECTIC
+            genres.contains("10765") -> OnboardingPersonalityType.VISIONARY
+            genres.contains("35") -> OnboardingPersonalityType.OPTIMIST
+            genres.contains("18") -> OnboardingPersonalityType.EMPATH
+            genres.contains("10759") -> OnboardingPersonalityType.ADRENALINE
+            genres.contains("99") -> OnboardingPersonalityType.CURIOUS
+            else -> OnboardingPersonalityType.ECLECTIC
         }
     }
 
@@ -155,26 +170,33 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val state = _uiState.value
+
             userRepository.saveOnboardingInterests(
                 genres = state.selectedGenres.toList(),
                 watchedShowIds = state.watchedShowIds.toList(),
                 lovedShowIds = state.lovedShowIds.toList(),
                 preferShortEpisodes = when (state.episodeLengthPref) {
                     EpisodeLengthPref.SHORT -> true
-                    EpisodeLengthPref.LONG  -> false
-                    else                    -> null
+                    EpisodeLengthPref.LONG -> false
+                    else -> null
                 },
                 preferFinishedShows = when (state.statusPref) {
                     StatusPref.FINISHED -> true
-                    StatusPref.ONGOING  -> false
-                    else                -> null
+                    StatusPref.ONGOING -> false
+                    else -> null
                 },
                 preferDubbed = when (state.dubbedPref) {
                     DubbedPref.DUBBED -> true
-                    DubbedPref.VO     -> false
-                    else              -> null
+                    DubbedPref.VO -> false
+                    else -> null
                 }
             )
+
+            runCatching {
+                val token = FirebaseMessaging.getInstance().token.await()
+                socialRepository.saveDeviceToken(token)
+            }
+
             _uiState.update { it.copy(isLoading = false, isComplete = true) }
         }
     }

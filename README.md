@@ -25,14 +25,14 @@ ShowMate resuelve la **sobrecarga de elección** en las plataformas de streaming
 - **Onboarding con selección de géneros** — establece tu perfil desde el primer uso
 - **Swipe de calibración** — desliza tarjetas para afinar el algoritmo al instante
 - **Recomendaciones personalizadas** — pantalla Home y sección Discover con tu match %
+- **Sección Up Next** — seguimiento de series y episodios que estás viendo
 - **Recomendaciones explicables (XAI)** — el sistema te muestra por qué te recomienda cada título
-- **Búsqueda avanzada** — filtra por género, año y puntuación mínima
-- **Detalle completo** — sinopsis, reparto, temporadas y géneros desde TMDB
-- **Sistema de valoración** — puntúa de 1 a 5 estrellas con impacto inmediato en el algoritmo
-- **Favoritos y series vistas** — gestión completa integrada en el algoritmo
-- **Perfil con estadísticas** — horas vistas, favoritos totales y géneros top
-- **Reinicio de gustos** — vuelve a empezar desde cero cuando quieras
-- **Modo offline** — funciona sin conexión gracias a la caché local de Room
+- **Red Social P2P (Friends)** — feed en tiempo real de lo que ven tus amigos y cálculo de compatibilidad 'Match'
+- **Dashboard Estadístico Nativo** — visualiza tus estadísticas con gráficas renderizadas puramente en `Canvas` (cero dependencias externas)
+- **Búsqueda y Filtros** — búsqueda ágil con chips dinámicos
+- **Detalle completo con Shared Transitions** — animaciones fluidas Material 3 desde la portada hasta el detalle de la serie
+- **Tráileres integrados** — reproductor de YouTube in-app
+- **Gestión Offline First** — funciona sin conexión gracias a RoomDatabase acoplada a Single Source of Truth
 
 ---
 
@@ -58,24 +58,26 @@ Los pesos se actualizan con cada interacción:
 | Marcar como vista | +3 pts |
 | Valorar (1–5 estrellas) | adaptativo |
 
-Los títulos ya vistos o rechazados **nunca vuelven a aparecer** en las recomendaciones.
+Los títulos ya vistos o rechazados **nunca vuelven a aparecer** en las recomendaciones gracias al filtrado excluyente en la capa de datos. Además, el motor incluye **Machine Learning ligero** identificando Patrones Temporales (si el usuario es *Binge-Watcher* o *Espectador Casual*).
 
 ---
 
 ## 🏗️ Arquitectura
 
-ShowMate sigue **MVVM + Clean Architecture** con tres capas bien separadas:
+ShowMate sigue **MVI (Model-View-Intent) + Clean Architecture** con tres capas bien separadas:
 
 ```
 📦 ShowMateApp
  ┣ 📂 data/          → Repositories · TMDB API (Retrofit) · Room · Firebase
  ┣ 📂 domain/        → Use Cases (algoritmo de recomendación, estadísticas, intereses)
- ┗ 📂 ui/            → Pantallas Compose + ViewModels (StateFlow<UiState>)
+ ┗ 📂 ui/            → Pantallas Compose + ViewModels (MVI: State, Events, Effects)
 ```
 
-- Una única `Activity` con `NavHost` y transiciones de elementos compartidos (`SharedTransitionLayout`)
-- Rutas type-safe mediante `@Serializable` data objects (kotlinx.serialization)
-- Inyección de dependencias con **Hilt** en todas las capas
+- Interfaz 100% declarativa dividida en micro-funciones `@Composable` (State Hoisting)
+- Navegación moderna con animaciones experimentales de **SharedTransitionScope**
+- Red de datos segura: Interceptores de red (`HttpLoggingInterceptor`) restringidos solo a compilaciones `DEBUG` para proteger las credenciales en Producción.
+- Carga de UI concurrente (*Concurrent Fetching*) a través de **Coroutines async/awaitAll()** para no bloquear el Hilo Principal.
+- **Single Source of Truth**: Room hace de caché local para que la UI jamás espere pasivamente a la red.
 
 ---
 
@@ -91,10 +93,9 @@ ShowMate sigue **MVVM + Clean Architecture** con tres capas bien separadas:
 | **Room 2.6** | Caché local para modo offline |
 | **Retrofit 2 + OkHttp** | Consumo de la API de TMDB |
 | **Hilt 2.52** | Inyección de dependencias |
-| **Coil 2.7** | Carga asíncrona de imágenes |
+| **Coil 2.7** | Carga asíncrona de imágenes fluidas |
 | **Navigation Compose 2.8** | Navegación type-safe |
-| **WorkManager 2.9** | Tareas en background |
-| **Coroutines + Flow** | Operaciones asíncronas |
+| **Coroutines + Flow** | Operaciones asíncronas concurrentes |
 | **Mockito** | Tests unitarios |
 
 ---
@@ -120,8 +121,10 @@ cd ShowMateApp
 Crea el archivo `secret.properties` en la raíz del proyecto:
 
 ```properties
-TMDB_API_TOKEN=Bearer <tu_token_aqui>
+TMDB_API_TOKEN=<tu_token_aqui>
 ```
+
+> **Nota:** Introduce solo el "API Read Access Token" largo. El sistema añadirá automáticamente el prefijo "Bearer".
 
 > `secret.properties` está en `.gitignore` y nunca se sube al repositorio.
 

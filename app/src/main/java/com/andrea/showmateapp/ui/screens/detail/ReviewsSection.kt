@@ -30,12 +30,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.andrea.showmateapp.data.model.Review
 import com.andrea.showmateapp.ui.components.premium.shimmerBrush
 import com.andrea.showmateapp.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun SocialReviewsSection(
@@ -50,9 +50,9 @@ fun SocialReviewsSection(
 
     if (state.showWriteSheet) {
         WriteReviewSheet(
-            state   = state,
+            state = state,
             seasons = state.availableSeasons,
-            onTextChange   = viewModel::onWriteTextChange,
+            onTextChange = viewModel::onWriteTextChange,
             onRatingChange = viewModel::onWriteRatingChange,
             onSpoilerToggle = viewModel::onSpoilerToggle,
             onSubmit = viewModel::submitReview,
@@ -61,10 +61,9 @@ fun SocialReviewsSection(
     }
 
     Column(modifier = modifier) {
-
         if (state.availableSeasons.size > 1) {
             SeasonFilterRow(
-                seasons  = state.availableSeasons,
+                seasons = state.availableSeasons,
                 selected = state.selectedSeason,
                 onSelect = viewModel::selectSeason
             )
@@ -72,16 +71,16 @@ fun SocialReviewsSection(
         }
 
         MyReviewCard(
-            review         = state.myReview,
-            writeRating    = state.writeRating,
-            onOpenSheet    = viewModel::openWriteSheet,
-            onDelete       = viewModel::deleteMyReview
+            review = state.myReview,
+            writeRating = state.writeRating,
+            onOpenSheet = viewModel::openWriteSheet,
+            onDelete = viewModel::deleteMyReview
         )
 
         AnimatedVisibility(
             visible = state.friendReviews.isNotEmpty(),
-            enter   = fadeIn() + expandVertically(),
-            exit    = fadeOut() + shrinkVertically()
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
         ) {
             Column {
                 Spacer(Modifier.height(28.dp))
@@ -89,12 +88,12 @@ fun SocialReviewsSection(
                 Spacer(Modifier.height(12.dp))
                 state.friendReviews.forEach { review ->
                     ReviewCard(
-                        review       = review,
-                        myUserId     = state.myUserId,
-                        isReported   = review.id in state.reportedReviewIds,
-                        isFriend     = true,
-                        onLike       = { viewModel.toggleLike(review.id) },
-                        onReport     = { viewModel.reportReview(review.id) }
+                        review = review,
+                        myUserId = state.myUserId,
+                        isReported = review.id in state.reportedReviewIds,
+                        isFriend = true,
+                        onLike = { viewModel.toggleLike(review.id) },
+                        onReport = { viewModel.reportReview(review.id) }
                     )
                     Spacer(Modifier.height(10.dp))
                 }
@@ -115,12 +114,12 @@ fun SocialReviewsSection(
         } else {
             state.publicReviews.forEach { review ->
                 ReviewCard(
-                    review     = review,
-                    myUserId   = state.myUserId,
+                    review = review,
+                    myUserId = state.myUserId,
                     isReported = review.id in state.reportedReviewIds,
-                    isFriend   = false,
-                    onLike     = { viewModel.toggleLike(review.id) },
-                    onReport   = { viewModel.reportReview(review.id) }
+                    isFriend = false,
+                    onLike = { viewModel.toggleLike(review.id) },
+                    onReport = { viewModel.reportReview(review.id) }
                 )
                 Spacer(Modifier.height(10.dp))
             }
@@ -131,14 +130,14 @@ fun SocialReviewsSection(
                     if (state.isLoadingMore) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(28.dp),
-                            color    = PrimaryPurple,
+                            color = PrimaryPurple,
                             strokeWidth = 2.dp
                         )
                     } else {
                         OutlinedButton(
                             onClick = viewModel::loadMorePublic,
-                            shape   = RoundedCornerShape(12.dp),
-                            border  = ButtonDefaults.outlinedButtonBorder
+                            shape = RoundedCornerShape(12.dp),
+                            border = ButtonDefaults.outlinedButtonBorder
                         ) {
                             Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
@@ -158,20 +157,17 @@ fun SocialReviewsSection(
 }
 
 @Composable
-private fun SeasonFilterRow(
-    seasons: List<Int>,
-    selected: Int,
-    onSelect: (Int) -> Unit
-) {
+private fun SeasonFilterRow(seasons: List<Int>, selected: Int, onSelect: (Int) -> Unit) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding        = PaddingValues(horizontal = 0.dp)
+        contentPadding = PaddingValues(horizontal = 0.dp)
     ) {
         itemsIndexed(seasons) { _, season ->
             val isSelected = season == selected
             val bgColor by animateColorAsState(
                 if (isSelected) PrimaryPurple else Color.White.copy(alpha = 0.06f),
-                tween(200), label = "seaBg"
+                tween(200),
+                label = "seaBg"
             )
             Box(
                 modifier = Modifier
@@ -186,9 +182,9 @@ private fun SeasonFilterRow(
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text       = if (season == 0) "Toda la serie" else "Temporada $season",
-                    color      = if (isSelected) Color.White else TextGray,
-                    fontSize   = 12.sp,
+                    text = if (season == 0) "Toda la serie" else "Temporada $season",
+                    color = if (isSelected) Color.White else TextGray,
+                    fontSize = 12.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )
             }
@@ -197,12 +193,7 @@ private fun SeasonFilterRow(
 }
 
 @Composable
-private fun MyReviewCard(
-    review: Review?,
-    writeRating: Int,
-    onOpenSheet: () -> Unit,
-    onDelete: () -> Unit
-) {
+private fun MyReviewCard(review: Review?, writeRating: Int, onOpenSheet: () -> Unit, onDelete: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,21 +205,21 @@ private fun MyReviewCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "Tu reseña",
-                color      = Color.White,
-                fontSize   = 14.sp,
+                color = Color.White,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                modifier   = Modifier.weight(1f)
+                modifier = Modifier.weight(1f)
             )
             if (review != null) {
                 IconButton(
-                    onClick  = onDelete,
+                    onClick = onDelete,
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         Icons.Default.DeleteOutline,
                         contentDescription = "Eliminar reseña",
-                        tint               = ErrorRed.copy(alpha = 0.7f),
-                        modifier           = Modifier.size(18.dp)
+                        tint = ErrorRed.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -240,8 +231,8 @@ private fun MyReviewCard(
             if (review.text.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text     = review.text,
-                    color    = TextGray,
+                    text = review.text,
+                    color = TextGray,
                     fontSize = 13.sp,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
@@ -250,7 +241,7 @@ private fun MyReviewCard(
             }
             Spacer(Modifier.height(10.dp))
             TextButton(
-                onClick  = onOpenSheet,
+                onClick = onOpenSheet,
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
@@ -264,10 +255,10 @@ private fun MyReviewCard(
                 Spacer(Modifier.height(8.dp))
             }
             Button(
-                onClick  = onOpenSheet,
+                onClick = onOpenSheet,
                 modifier = Modifier.fillMaxWidth().height(44.dp),
-                shape    = RoundedCornerShape(12.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
             ) {
                 Icon(Icons.Default.Create, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
@@ -293,9 +284,15 @@ private fun ReviewCard(
     if (showReportDialog) {
         AlertDialog(
             onDismissRequest = { showReportDialog = false },
-            containerColor   = SurfaceDark,
-            title  = { Text("Reportar reseña", color = Color.White, fontWeight = FontWeight.Bold) },
-            text   = { Text("¿Quieres reportar esta reseña por contenido inapropiado?", color = TextGray, fontSize = 14.sp) },
+            containerColor = SurfaceDark,
+            title = { Text("Reportar reseña", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "¿Quieres reportar esta reseña por contenido inapropiado?",
+                    color = TextGray,
+                    fontSize = 14.sp
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     onReport()
@@ -324,20 +321,23 @@ private fun ReviewCard(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AvatarCircle(
-                initial   = review.username.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                isFriend  = isFriend
+                initial = review.username.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                isFriend = isFriend
             )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Text(
                         review.username,
-                        color      = if (isFriend) PrimaryPurpleLight else Color.White,
-                        fontSize   = 13.sp,
+                        color = if (isFriend) PrimaryPurpleLight else Color.White,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines   = 1,
-                        overflow   = TextOverflow.Ellipsis,
-                        modifier   = Modifier.weight(1f, fill = false)
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     if (isFriend) {
                         Box(
@@ -352,14 +352,14 @@ private fun ReviewCard(
                     if (review.seasonNumber > 0) {
                         Text(
                             "T${review.seasonNumber}",
-                            color    = TextGray,
+                            color = TextGray,
                             fontSize = 10.sp
                         )
                     }
                 }
                 Text(
                     formatDate(review.createdAt),
-                    color    = TextGray.copy(alpha = 0.7f),
+                    color = TextGray.copy(alpha = 0.7f),
                     fontSize = 11.sp
                 )
             }
@@ -381,7 +381,7 @@ private fun ReviewCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
-                        verticalAlignment     = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(Icons.Default.VisibilityOff, null, tint = TextGray, modifier = Modifier.size(14.dp))
@@ -395,9 +395,9 @@ private fun ReviewCard(
                     label = "spoiler"
                 ) {
                     Text(
-                        text       = review.text,
-                        color      = if (review.hasSpoiler) Color.White.copy(alpha = 0.85f) else TextGray,
-                        fontSize   = 13.sp,
+                        text = review.text,
+                        color = if (review.hasSpoiler) Color.White.copy(alpha = 0.85f) else TextGray,
+                        fontSize = 13.sp,
                         lineHeight = 19.sp
                     )
                 }
@@ -406,12 +406,12 @@ private fun ReviewCard(
 
         Spacer(Modifier.height(10.dp))
         Row(
-            modifier              = Modifier.fillMaxWidth(),
-            verticalAlignment     = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier          = Modifier
+                modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (isLiked) HeartRed.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.04f))
                     .clickable(enabled = myUserId != null && review.userId != myUserId) { onLike() }
@@ -422,12 +422,12 @@ private fun ReviewCard(
                 Icon(
                     if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Like",
-                    tint     = if (isLiked) HeartRed else TextGray,
+                    tint = if (isLiked) HeartRed else TextGray,
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
-                    text     = if (review.likeCount > 0) "${review.likeCount}" else "Me gusta",
-                    color    = if (isLiked) HeartRed else TextGray,
+                    text = if (review.likeCount > 0) "${review.likeCount}" else "Me gusta",
+                    color = if (isLiked) HeartRed else TextGray,
                     fontSize = 12.sp,
                     fontWeight = if (isLiked) FontWeight.Bold else FontWeight.Normal
                 )
@@ -435,13 +435,13 @@ private fun ReviewCard(
 
             if (review.userId != myUserId) {
                 IconButton(
-                    onClick  = { if (!isReported) showReportDialog = true },
+                    onClick = { if (!isReported) showReportDialog = true },
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
                         if (isReported) Icons.Default.Flag else Icons.Default.OutlinedFlag,
                         contentDescription = "Reportar",
-                        tint     = if (isReported) ErrorRed.copy(alpha = 0.5f) else TextGray.copy(alpha = 0.5f),
+                        tint = if (isReported) ErrorRed.copy(alpha = 0.5f) else TextGray.copy(alpha = 0.5f),
                         modifier = Modifier.size(14.dp)
                     )
                 }
@@ -463,8 +463,8 @@ private fun WriteReviewSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor   = SurfaceDark,
-        sheetState       = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        containerColor = SurfaceDark,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(
             modifier = Modifier
@@ -475,8 +475,8 @@ private fun WriteReviewSheet(
         ) {
             Text(
                 if (state.myReview != null) "Editar reseña" else "Escribir reseña",
-                color      = Color.White,
-                fontSize   = 18.sp,
+                color = Color.White,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Black
             )
 
@@ -484,7 +484,7 @@ private fun WriteReviewSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Sobre", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     SeasonFilterRow(
-                        seasons  = seasons,
+                        seasons = seasons,
                         selected = state.selectedSeason,
                         onSelect = { /* season selection from sheet reflects the parent filter */ }
                     )
@@ -494,7 +494,7 @@ private fun WriteReviewSheet(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Puntuación", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 InteractiveStarRating(
-                    current  = state.writeRating,
+                    current = state.writeRating,
                     onSelect = onRatingChange
                 )
             }
@@ -502,28 +502,28 @@ private fun WriteReviewSheet(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Tu reseña", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value         = state.writeText,
+                    value = state.writeText,
                     onValueChange = onTextChange,
-                    placeholder   = { Text("¿Qué te ha parecido?", color = TextGray.copy(alpha = 0.6f)) },
-                    modifier      = Modifier
+                    placeholder = { Text("¿Qué te ha parecido?", color = TextGray.copy(alpha = 0.6f)) },
+                    modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 100.dp, max = 200.dp),
-                    maxLines      = 8,
-                    colors        = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = PrimaryPurple,
+                    maxLines = 8,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryPurple,
                         unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
-                        focusedTextColor     = Color.White,
-                        unfocusedTextColor   = Color.White,
-                        cursorColor          = PrimaryPurple
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = PrimaryPurple
                     )
                 )
                 Row(
-                    modifier              = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         "${state.writeText.length}/500",
-                        color    = TextGray.copy(alpha = 0.5f),
+                        color = TextGray.copy(alpha = 0.5f),
                         fontSize = 11.sp
                     )
                     if (state.writeText.length > 500) {
@@ -533,7 +533,7 @@ private fun WriteReviewSheet(
             }
 
             Row(
-                modifier          = Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.White.copy(alpha = 0.04f))
@@ -544,36 +544,36 @@ private fun WriteReviewSheet(
                 Icon(
                     if (state.writeSpoiler) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                     contentDescription = null,
-                    tint     = if (state.writeSpoiler) StarYellow else TextGray,
+                    tint = if (state.writeSpoiler) StarYellow else TextGray,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "Contiene spoilers",
-                        color      = Color.White,
-                        fontSize   = 14.sp,
+                        color = Color.White,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         "Otros verán una advertencia antes de leer",
-                        color    = TextGray,
+                        color = TextGray,
                         fontSize = 12.sp
                     )
                 }
                 Switch(
-                    checked         = state.writeSpoiler,
+                    checked = state.writeSpoiler,
                     onCheckedChange = { onSpoilerToggle() },
-                    colors          = SwitchDefaults.colors(
-                        checkedThumbColor  = StarYellow,
-                        checkedTrackColor  = StarYellow.copy(alpha = 0.35f)
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = StarYellow,
+                        checkedTrackColor = StarYellow.copy(alpha = 0.35f)
                     )
                 )
             }
 
             AnimatedVisibility(visible = state.offensiveWarning) {
                 Row(
-                    modifier          = Modifier
+                    modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(ErrorRed.copy(alpha = 0.1f))
@@ -584,27 +584,27 @@ private fun WriteReviewSheet(
                     Icon(Icons.Default.Warning, null, tint = ErrorRed, modifier = Modifier.size(16.dp))
                     Text(
                         "Tu reseña contiene palabras inapropiadas. Por favor, modifícala antes de publicar.",
-                        color    = ErrorRed,
+                        color = ErrorRed,
                         fontSize = 12.sp,
                         lineHeight = 17.sp
                     )
                 }
             }
 
-            val canSubmit = (state.writeText.isNotBlank() || state.writeRating > 0)
-                && state.writeText.length <= 500 && !state.isSaving
+            val canSubmit = (state.writeText.isNotBlank() || state.writeRating > 0) &&
+                state.writeText.length <= 500 && !state.isSaving
 
             Button(
-                onClick  = onSubmit,
-                enabled  = canSubmit,
+                onClick = onSubmit,
+                enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape    = RoundedCornerShape(14.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
             ) {
                 if (state.isSaving) {
                     CircularProgressIndicator(
-                        modifier    = Modifier.size(18.dp),
-                        color       = Color.White,
+                        modifier = Modifier.size(18.dp),
+                        color = Color.White,
                         strokeWidth = 2.dp
                     )
                 } else {
@@ -622,7 +622,7 @@ private fun StarDisplay(rating: Int, size: androidx.compose.ui.unit.Dp) {
             Icon(
                 if (i < rating) Icons.Default.Star else Icons.Default.StarBorder,
                 contentDescription = null,
-                tint     = StarYellow,
+                tint = StarYellow,
                 modifier = Modifier.size(size)
             )
         }
@@ -637,7 +637,7 @@ private fun InteractiveStarRating(current: Int, onSelect: (Int) -> Unit) {
             Icon(
                 if (star <= current) Icons.Default.Star else Icons.Default.StarBorder,
                 contentDescription = "$star estrellas",
-                tint     = if (star <= current) StarYellow else TextGray,
+                tint = if (star <= current) StarYellow else TextGray,
                 modifier = Modifier
                     .size(32.dp)
                     .clickable { onSelect(star) }
@@ -647,7 +647,7 @@ private fun InteractiveStarRating(current: Int, onSelect: (Int) -> Unit) {
             Spacer(Modifier.width(8.dp))
             Text(
                 listOf("", "Muy malo", "Malo", "Regular", "Bueno", "¡Excelente!")[current],
-                color    = StarYellow,
+                color = StarYellow,
                 fontSize = 13.sp,
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
@@ -664,13 +664,17 @@ private fun AvatarCircle(initial: String, isFriend: Boolean) {
                 if (isFriend) PrimaryPurple.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.1f),
                 CircleShape
             )
-            .border(1.dp, if (isFriend) PrimaryPurple.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.1f), CircleShape),
+            .border(
+                1.dp,
+                if (isFriend) PrimaryPurple.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.1f),
+                CircleShape
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
             initial,
-            color      = if (isFriend) PrimaryPurpleLight else Color.White,
-            fontSize   = 14.sp,
+            color = if (isFriend) PrimaryPurpleLight else Color.White,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -679,7 +683,7 @@ private fun AvatarCircle(initial: String, isFriend: Boolean) {
 @Composable
 private fun SectionLabel(text: String, emoji: String) {
     Row(
-        verticalAlignment     = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(emoji, fontSize = 16.sp)
@@ -690,7 +694,7 @@ private fun SectionLabel(text: String, emoji: String) {
 @Composable
 private fun EmptyReviews() {
     Box(
-        modifier         = Modifier
+        modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White.copy(alpha = 0.03f))
@@ -728,6 +732,8 @@ private fun PublicReviewSkeleton() {
     }
 }
 
-private fun formatDate(epochMillis: Long): String =
-    if (epochMillis == 0L) ""
-    else SimpleDateFormat("d MMM yyyy", Locale("es", "ES")).format(Date(epochMillis))
+private fun formatDate(epochMillis: Long): String = if (epochMillis == 0L) {
+    ""
+} else {
+    SimpleDateFormat("d MMM yyyy", Locale("es", "ES")).format(Date(epochMillis))
+}

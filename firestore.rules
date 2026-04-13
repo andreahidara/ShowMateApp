@@ -106,9 +106,10 @@ service cloud.firestore {
       allow create: if isOwner(uid) && isValidNewProfile(uid);
 
       // UPDATE: el owner puede actualizar su propio perfil.
-      // Se bloquean campos inmutables (userId, email) y se validan
-      // longitudes de strings y rangos numéricos.
-      allow update: if isOwner(uid) && isValidProfileUpdate(uid);
+      // También se permite que un tercero añada/elimine al usuario actual de su lista de amigos
+      // (necesario para la reciprocidad en transacciones sin Cloud Functions).
+      allow update: if (isOwner(uid) && isValidProfileUpdate(uid))
+                    || (isAuth() && isValidFriendUpdate(uid));
 
       allow delete: if isOwner(uid);
 
@@ -119,32 +120,129 @@ service cloud.firestore {
             && isStr(d.email, 200)
             && d.xp == 0                    // XP inicial = 0
             && d.completedGroupMatches == 0 // contador inicial
-            && d.keys().hasAll(['userId', 'username', 'email', 'xp']);
+            && d.friendIds.size() == 0      // lista de amigos vacía
+            && d.keys().hasAll(['userId', 'username', 'email', 'xp', 'friendIds']);
       }
 
       function isValidProfileUpdate(uid) {
         let d = incoming();
+        let e = existing();
         // userId y email son INMUTABLES tras la creación
         return d.userId == uid
-            && d.email == existing().email
+            && d.email == e.email
             // Si se envía username, validar longitud
             && (!d.keys().hasAny(['username'])   || isStr(d.username, 50))
             && (!d.keys().hasAny(['fcmToken'])   || isStr(d.fcmToken, 500))
             // XP solo sube (previene trampas) y tiene un máximo razonable
             && (!d.keys().hasAny(['xp'])
-                || (d.xp is int && d.xp >= existing().xp && d.xp <= 10000000))
+                || (d.xp is int && d.xp >= e.xp && d.xp <= 10000000))
             // completedGroupMatches solo sube
             && (!d.keys().hasAny(['completedGroupMatches'])
                 || (d.completedGroupMatches is int
-                    && d.completedGroupMatches >= existing().completedGroupMatches
+                    && d.completedGroupMatches >= e.completedGroupMatches
                     && d.completedGroupMatches <= 100000))
+            // friendIds: el owner puede gestionarlo libremente (validado por tipos)
+            && (!d.keys().hasAny(['friendIds']) || d.friendIds is list)
             // preferencias de onboarding: null o bool
             && (!d.keys().hasAny(['preferShortEpisodes'])
                 || d.preferShortEpisodes == null || d.preferShortEpisodes is bool)
             && (!d.keys().hasAny(['preferFinishedShows'])
                 || d.preferFinishedShows == null || d.preferFinishedShows is bool)
             && (!d.keys().hasAny(['preferDubbed'])
-                || d.preferDubbed == null || d.preferDubbed is bool);
+                || d.preferDubbed == null || d.preferDubbed is bool)
+            && (!d.keys().hasAny(['onboardingCompleted'])
+                || d.onboardingCompleted is bool)
+            // Permitir actualizaciones de los mapas de algoritmos y listas
+            && (!d.keys().hasAny(['genreScores']) || d.genreScores is map)
+            && (!d.keys().hasAny(['preferredKeywords']) || d.preferredKeywords is map)
+            && (!d.keys().hasAny(['preferredActors']) || d.preferredActors is map)
+            && (!d.keys().hasAny(['narrativeStyleScores']) || d.narrativeStyleScores is map)
+            && (!d.keys().hasAny(['preferredCreators']) || d.preferredCreators is map)
+            && (!d.keys().hasAny(['genreScoreDates']) || d.genreScoreDates is map)
+            && (!d.keys().hasAny(['keywordScoreDates']) || d.keywordScoreDates is map)
+            && (!d.keys().hasAny(['actorScoreDates']) || d.actorScoreDates is map)
+            && (!d.keys().hasAny(['narrativeStyleDates']) || d.narrativeStyleDates is map)
+            && (!d.keys().hasAny(['creatorScoreDates']) || d.creatorScoreDates is map)
+            && (!d.keys().hasAny(['likedMediaIds']) || d.likedMediaIds is list)
+            && (!d.keys().hasAny(['essentialMediaIds']) || d.essentialMediaIds is list)
+            && (!d.keys().hasAny(['dislikedMediaIds']) || d.dislikedMediaIds is list)
+            && (!d.keys().hasAny(['ratings']) || d.ratings is map)
+            && (!d.keys().hasAny(['unlockedAchievementIds']) || d.unlockedAchievementIds is list)
+            && (!d.keys().hasAny(['watchedEpisodes']) || d.watchedEpisodes is map)
+            && (!d.keys().hasAny(['mediaReviews']) || d.mediaReviews is map)
+            && (!d.keys().hasAny(['customLists']) || d.customLists is map)
+            && (!d.keys().hasAny(['viewingHistory']) || d.viewingHistory is list);
+      }
+
+      function isValidFriendUpdate(uid) {
+        let d = incoming();
+        let e = existing();
+        let changed = d.diff(e).affectedKeys();
+        // Defensivo: perfiles antiguos pueden no tener el campo friendIds
+        let hasFriendIds = e.keys().hasAll(['friendIds']);
+        let oldSize = hasFriendIds ? e.friendIds.size() : 0;
+        return changed.hasOnly(['friendIds'])
+            && d.friendIds is list
+            && (
+              // Caso A: El usuario actual se añade a sí mismo a la lista del otro
+              (d.friendIds.size() == oldSize + 1
+               && (hasFriendIds ? d.friendIds.hasAll(e.friendIds) : true)
+               && d.friendIds.hasAll([request.auth.uid]))
+              ||
+              // Caso B: El usuario actual se elimina a sí mismo de la lista del otro
+              (hasFriendIds
+               && d.friendIds.size() == oldSize - 1
+               && e.friendIds.hasAll(d.friendIds)
+               && e.friendIds.hasAll([request.auth.uid]))
+            );
+      }
+
+      // ── users/{uid}/watched ──────────────────────────────────────────────
+      match /watched/{mediaId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /watched {
+        allow list: if isOwner(uid);
+      }
+
+      // ── users/{uid}/favorites ────────────────────────────────────────────
+      match /favorites/{mediaId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /favorites {
+        allow list: if isOwner(uid);
+      }
+
+      // ── users/{uid}/essentials ───────────────────────────────────────────
+      match /essentials/{mediaId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /essentials {
+        allow list: if isOwner(uid);
+      }
+
+      // ── users/{uid}/watchlist ────────────────────────────────────────────
+      match /watchlist/{mediaId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /watchlist {
+        allow list: if isOwner(uid);
+      }
+
+      // ── users/{uid}/ratings ──────────────────────────────────────────────
+      match /ratings/{mediaId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /ratings {
+        allow list: if isOwner(uid);
+      }
+
+      // ── users/{uid}/customLists ──────────────────────────────────────────
+      match /customLists/{listId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /customLists {
+        allow list: if isOwner(uid);
       }
 
       // ── users/{uid}/activity/{eventId} ────────────────────────────────────

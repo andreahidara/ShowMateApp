@@ -4,6 +4,7 @@ import com.andrea.showmateapp.data.model.ActivityEvent
 import com.andrea.showmateapp.data.model.FriendInfo
 import com.andrea.showmateapp.data.model.FriendRequest
 import com.andrea.showmateapp.data.model.UserProfile
+import kotlinx.coroutines.flow.Flow
 
 interface ISocialRepository {
     fun getCurrentUid(): String?
@@ -22,6 +23,8 @@ interface ISocialRepository {
     suspend fun getPendingRequestCount(): Int
 
     suspend fun getFriendActivityFeed(friendUids: List<String>, limit: Int = 50): List<ActivityEvent>
+    fun observeFriendActivityFeed(friendUids: List<String>): Flow<List<ActivityEvent>>
+    suspend fun getFriendProfile(friendUid: String): UserProfile?
 
     suspend fun postActivityEvent(
         type: String,

@@ -2,72 +2,81 @@ package com.andrea.showmateapp.data.repository
 
 import com.andrea.showmateapp.data.local.ShowDao
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.di.IoDispatcher
+import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class UserRepository @Inject constructor(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val showDao: ShowDao,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : IUserRepository {
     private val usersCollection = db.collection("users")
     private fun userDoc(uid: String) = usersCollection.document(uid)
 
-    private val cacheMutex = Mutex()
-    private var _profileCache: UserProfile? = null
-    private var _profileCacheTime: Long = 0L
-    private var _profileCacheFetched: Boolean = false
-    private companion object { private const val PROFILE_CACHE_TTL = 120_000L }
-
-    private suspend fun invalidateProfileCache() = cacheMutex.withLock {
-        _profileCache = null
-        _profileCacheFetched = false
-    }
-
     override suspend fun getUserProfile(): UserProfile? = withContext(ioDispatcher) {
-        cacheMutex.withLock {
-            if (_profileCacheFetched && System.currentTimeMillis() - _profileCacheTime < PROFILE_CACHE_TTL) {
-                return@withLock _profileCache
-            }
-            val uid = auth.currentUser?.uid ?: return@withLock null
-            try {
-                val snapshot = userDoc(uid).get().await()
-                snapshot.toObject(UserProfile::class.java).also {
-                    _profileCache = it
-                    _profileCacheTime = System.currentTimeMillis()
-                    _profileCacheFetched = true
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
+        val uid = auth.currentUser?.uid ?: return@withContext null
+        try {
+            val snapshot = userDoc(uid).get().await()
+            snapshot.toObject(UserProfile::class.java)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
+
+    override fun getUserProfileFlow(): Flow<UserProfile?> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+
+        val listener = userDoc(uid).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val profile = snapshot?.toObject(UserProfile::class.java)
+            trySend(profile)
+        }
+
+        awaitClose { listener.remove() }
+    }.distinctUntilChanged()
 
     override fun getCurrentUserEmail(): String? = auth.currentUser?.email
 
     override suspend fun initUserProfile(username: String) = withContext(ioDispatcher) {
-        val uid   = auth.currentUser?.uid ?: return@withContext
+        val uid = auth.currentUser?.uid ?: return@withContext
         val email = auth.currentUser?.email ?: ""
         userDoc(uid)
             .set(
-                mapOf("userId" to uid, "username" to username, "email" to email),
+                mapOf(
+                    "userId" to uid,
+                    "username" to username,
+                    "email" to email,
+                    "xp" to 0,
+                    "completedGroupMatches" to 0,
+                    "friendIds" to emptyList<String>()
+                ),
                 SetOptions.merge()
             ).await()
     }
@@ -106,11 +115,12 @@ class UserRepository @Inject constructor(
                     ratings = newRatings,
                     preferShortEpisodes = preferShortEpisodes,
                     preferFinishedShows = preferFinishedShows,
-                    preferDubbed = preferDubbed
+                    preferDubbed = preferDubbed,
+                    onboardingCompleted = true
                 )
             )
         }.await()
-        invalidateProfileCache()
+        getUserProfile()
     }
 
     override suspend fun updateProfile(username: String) = withContext(ioDispatcher) {
@@ -118,7 +128,7 @@ class UserRepository @Inject constructor(
         userDoc(uid)
             .set(mapOf("username" to username), SetOptions.merge())
             .await()
-        invalidateProfileCache()
+        getUserProfile()
     }
 
     override suspend fun getSimilarUsers(limit: Long): List<UserProfile> = withContext(ioDispatcher) {
@@ -167,12 +177,12 @@ class UserRepository @Inject constructor(
     override suspend fun compareWithFriend(friendEmail: String): List<Int> = withContext(ioDispatcher) {
         try {
             val (myProfile, friendProfile) = coroutineScope {
-                val mine   = async { getUserProfile() }
+                val mine = async { getUserProfile() }
                 val friend = async { getFriendProfile(friendEmail) }
                 mine.await() to friend.await()
             }
             if (myProfile == null || friendProfile == null) return@withContext emptyList()
-            val myLiked     = myProfile.likedMediaIds.toSet()
+            val myLiked = myProfile.likedMediaIds.toSet()
             val friendLiked = friendProfile.likedMediaIds.toSet()
             (myLiked intersect friendLiked).toList()
         } catch (e: Exception) {
@@ -184,7 +194,7 @@ class UserRepository @Inject constructor(
     override suspend fun recordViewingSession(showId: Int, episodeCount: Int) = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
         val userRef = userDoc(uid)
-        val today   = java.time.LocalDate.now().toString()
+        val today = java.time.LocalDate.now().toString()
         db.runTransaction { transaction ->
             val snapshot = transaction.get(userRef)
             val profile = snapshot.toObject(UserProfile::class.java)
@@ -205,7 +215,7 @@ class UserRepository @Inject constructor(
             transaction.update(userRef, "viewingHistory", history)
             null
         }.await()
-        invalidateProfileCache()
+        getUserProfile()
     }
 
     override suspend fun resetAlgorithmData() = withContext(ioDispatcher) {
@@ -216,36 +226,66 @@ class UserRepository @Inject constructor(
             val snapshot = transaction.get(userRef)
             val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
 
-            transaction.set(userRef, profile.copy(
-                genreScores          = emptyMap(),
-                genreScoreDates      = emptyMap(),
-                preferredKeywords    = emptyMap(),
-                keywordScoreDates    = emptyMap(),
-                preferredActors      = emptyMap(),
-                actorScoreDates      = emptyMap(),
-                narrativeStyleScores = emptyMap(),
-                narrativeStyleDates  = emptyMap(),
-                preferredCreators    = emptyMap(),
-                creatorScoreDates    = emptyMap(),
-                likedMediaIds        = emptyList(),
-                essentialMediaIds    = emptyList(),
-                dislikedMediaIds     = emptyList(),
-                ratings              = emptyMap(),
-                watchedEpisodes      = emptyMap()
-            ))
+            transaction.set(
+                userRef,
+                profile.copy(
+                    genreScores = emptyMap(),
+                    genreScoreDates = emptyMap(),
+                    preferredKeywords = emptyMap(),
+                    keywordScoreDates = emptyMap(),
+                    preferredActors = emptyMap(),
+                    actorScoreDates = emptyMap(),
+                    narrativeStyleScores = emptyMap(),
+                    narrativeStyleDates = emptyMap(),
+                    preferredCreators = emptyMap(),
+                    creatorScoreDates = emptyMap(),
+                    likedMediaIds = emptyList(),
+                    essentialMediaIds = emptyList(),
+                    dislikedMediaIds = emptyList(),
+                    ratings = emptyMap(),
+                    watchedEpisodes = emptyMap()
+                )
+            )
         }.await()
-        invalidateProfileCache()
+        getUserProfile()
     }
 
     override suspend fun clearUserCache() = withContext(ioDispatcher) {
         showDao.clearUserData()
-        invalidateProfileCache()
     }
 
     override suspend fun updateProfilePhoto(url: String) = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
         userDoc(uid).set(mapOf("photoUrl" to url), SetOptions.merge()).await()
-        invalidateProfileCache()
+        getUserProfile()
+    }
+
+    override suspend fun restoreBackup(partial: UserProfile) = withContext(ioDispatcher) {
+        val uid = auth.currentUser?.uid ?: return@withContext
+        val userRef = userDoc(uid)
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(userRef)
+            val existing = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
+            transaction.set(
+                userRef,
+                existing.copy(
+                    likedMediaIds = (existing.likedMediaIds + partial.likedMediaIds).distinct(),
+                    essentialMediaIds = (existing.essentialMediaIds + partial.essentialMediaIds).distinct(),
+                    dislikedMediaIds = (existing.dislikedMediaIds + partial.dislikedMediaIds).distinct(),
+                    ratings = existing.ratings + partial.ratings,
+                    customLists = existing.customLists + partial.customLists,
+                    genreScores = mergeScoreMaps(existing.genreScores, partial.genreScores),
+                    watchedEpisodes = existing.watchedEpisodes + partial.watchedEpisodes,
+                    xp = maxOf(existing.xp, partial.xp)
+                )
+            )
+        }.await()
+    }
+
+    private fun mergeScoreMaps(a: Map<String, Float>, b: Map<String, Float>): Map<String, Float> {
+        val result = a.toMutableMap()
+        b.forEach { (k, v) -> result[k] = maxOf(result[k] ?: 0f, v) }
+        return result
     }
 
     override suspend fun deleteAccount() = withContext(ioDispatcher) {
@@ -257,7 +297,6 @@ class UserRepository @Inject constructor(
             Timber.e(e, "Error deleting Firestore document")
         }
         showDao.clearUserData()
-        invalidateProfileCache()
         auth.currentUser?.delete()?.await()
     }
 }

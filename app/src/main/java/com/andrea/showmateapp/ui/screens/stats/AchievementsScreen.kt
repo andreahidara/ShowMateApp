@@ -22,55 +22,85 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.data.model.Achievement
 import com.andrea.showmateapp.data.model.AchievementCategory
 import com.andrea.showmateapp.domain.repository.IAchievementRepository
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.ui.theme.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AchievementsScreen(
-    navController: NavController,
-    viewModel: AchievementsViewModel = hiltViewModel()
-) {
+fun AchievementsScreen(navController: NavController, viewModel: AchievementsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedCategory by remember { mutableStateOf<AchievementCategory?>(null) }
     val filteredAchievements = remember(uiState.achievements, selectedCategory) {
-        if (selectedCategory == null) uiState.achievements
-        else uiState.achievements.filter { it.category == selectedCategory }
+        if (selectedCategory == null) {
+            uiState.achievements
+        } else {
+            uiState.achievements.filter { it.category == selectedCategory }
+        }
     }
     val achievementRows = remember(filteredAchievements) { filteredAchievements.chunked(2) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Logros & Clasificación", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
+            // Gradient header
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Logros",
+                            style = TextStyle(
+                                brush = Brush.linearGradient(listOf(GoldAccent, Color(0xFFFFB300)))
+                            ),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-1.5).sp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 2.dp)
+                                .width(34.dp)
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(Brush.linearGradient(listOf(GoldAccent, Color(0xFFFFB300))))
+                        )
+                    }
+                }
+            }
+
             item { XpBanner(xp = uiState.xp) }
 
             item {
@@ -133,7 +163,12 @@ private fun XpBanner(xp: Int) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
-                    Text("Nivel ${level.level}", color = PrimaryPurple, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Nivel ${level.level}",
+                        color = PrimaryPurple,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                     Text(level.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
                 Column(horizontalAlignment = Alignment.End) {
@@ -165,10 +200,7 @@ private fun XpBanner(xp: Int) {
 }
 
 @Composable
-private fun CategoryFilterRow(
-    selected: AchievementCategory?,
-    onSelect: (AchievementCategory) -> Unit
-) {
+private fun CategoryFilterRow(selected: AchievementCategory?, onSelect: (AchievementCategory) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(AchievementCategory.entries, key = { it.name }) { cat ->
             val active = selected == cat
@@ -178,11 +210,26 @@ private fun CategoryFilterRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(bg)
-                    .then(if (!active) Modifier.border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp)) else Modifier)
+                    .then(
+                        if (!active) {
+                            Modifier.border(
+                                1.dp,
+                                Color.White.copy(alpha = 0.08f),
+                                RoundedCornerShape(20.dp)
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
                     .clickable { onSelect(cat) }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Text("${cat.emoji} ${cat.label}", color = textColor, fontSize = 13.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
+                Text(
+                    "${cat.emoji} ${cat.label}",
+                    color = textColor,
+                    fontSize = 13.sp,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Normal
+                )
             }
         }
     }
@@ -198,8 +245,11 @@ private fun AchievementCard(achievement: Achievement, modifier: Modifier = Modif
             .clip(RoundedCornerShape(16.dp))
             .background(SurfaceVariantDark)
             .then(
-                if (unlocked) Modifier.border(1.dp, PrimaryPurple.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-                else Modifier
+                if (unlocked) {
+                    Modifier.border(1.dp, PrimaryPurple.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                } else {
+                    Modifier
+                }
             )
             .padding(14.dp)
     ) {
@@ -213,8 +263,11 @@ private fun AchievementCard(achievement: Achievement, modifier: Modifier = Modif
                     .size(52.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        if (unlocked) PrimaryPurple.copy(alpha = 0.18f)
-                        else Color.White.copy(alpha = 0.04f)
+                        if (unlocked) {
+                            PrimaryPurple.copy(alpha = 0.18f)
+                        } else {
+                            Color.White.copy(alpha = 0.04f)
+                        }
                     )
                     .then(if (!unlocked) Modifier.blur(2.dp) else Modifier),
                 contentAlignment = Alignment.Center
@@ -248,7 +301,12 @@ private fun AchievementCard(achievement: Achievement, modifier: Modifier = Modif
                         .background(StarYellow.copy(alpha = 0.12f))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
-                    Text("+${achievement.xpReward} XP", color = StarYellow, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "+${achievement.xpReward} XP",
+                        color = StarYellow,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             } else {
                 Text("+${achievement.xpReward} XP", color = TextGray.copy(alpha = 0.4f), fontSize = 11.sp)
@@ -258,10 +316,7 @@ private fun AchievementCard(achievement: Achievement, modifier: Modifier = Modif
 }
 
 @Composable
-private fun LeaderboardSection(
-    entries: List<IAchievementRepository.LeaderboardEntry>,
-    myXp: Int
-) {
+private fun LeaderboardSection(entries: List<IAchievementRepository.LeaderboardEntry>, myXp: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -292,7 +347,13 @@ private fun LeaderboardSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Tú", color = PrimaryPurple, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp))
+                Text(
+                    "Tú",
+                    color = PrimaryPurple,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(22.dp)
+                )
                 Box(
                     Modifier.size(36.dp).clip(CircleShape).background(PrimaryPurple.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center
@@ -306,7 +367,12 @@ private fun LeaderboardSection(
 
 @Composable
 private fun LeaderboardRow(position: Int, entry: IAchievementRepository.LeaderboardEntry) {
-    val medal = when (position) { 1 -> "🥇"; 2 -> "🥈"; 3 -> "🥉"; else -> null }
+    val medal = when (position) {
+        1 -> "🥇"
+        2 -> "🥈"
+        3 -> "🥉"
+        else -> null
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -321,7 +387,12 @@ private fun LeaderboardRow(position: Int, entry: IAchievementRepository.Leaderbo
             Modifier.size(36.dp).clip(CircleShape).background(PrimaryPurple.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(entry.username.firstOrNull()?.uppercaseChar()?.toString() ?: "?", color = PrimaryPurple, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(
+                entry.username.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                color = PrimaryPurple,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
+            )
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(entry.username, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -332,5 +403,6 @@ private fun LeaderboardRow(position: Int, entry: IAchievementRepository.Leaderbo
 }
 
 private fun Modifier.graphicsLayerAlpha(alpha: Float): Modifier = this.then(
-    Modifier // no-op wrapper; actual alpha is handled per-widget above
+    // no-op wrapper; actual alpha is handled per-widget above
+    Modifier
 )

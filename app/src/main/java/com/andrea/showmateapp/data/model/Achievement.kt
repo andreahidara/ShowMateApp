@@ -1,5 +1,8 @@
 package com.andrea.showmateapp.data.model
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class Achievement(
     val id: String,
     val category: AchievementCategory,
@@ -13,9 +16,9 @@ data class Achievement(
 }
 
 enum class AchievementCategory(val label: String, val emoji: String) {
-    EXPLORER("Explorador",   "🧭"),
-    MARATHON("Maratonero",   "⚡"),
-    CRITIC("Crítico",        "✍️"),
-    SOCIAL("Social",         "👥"),
-    DISCOVERER("Descubridor","🔍")
+    EXPLORER("Explorador", "🧭"),
+    MARATHON("Maratonero", "⚡"),
+    CRITIC("Crítico", "✍️"),
+    SOCIAL("Social", "👥"),
+    DISCOVERER("Descubridor", "🔍")
 }

@@ -53,9 +53,13 @@ class GetWrappedStatsUseCase @Inject constructor(
         data class HistoryEntry(val date: LocalDate, val showId: Int, val count: Int)
         val entries: List<HistoryEntry> = profile.viewingHistory.mapNotNull { raw ->
             val parts = raw.split(":")
-            if (parts.size >= 3) runCatching {
-                HistoryEntry(LocalDate.parse(parts[0], fmt), parts[1].toInt(), parts[2].toInt())
-            }.getOrNull() else null
+            if (parts.size >= 3) {
+                runCatching {
+                    HistoryEntry(LocalDate.parse(parts[0], fmt), parts[1].toInt(), parts[2].toInt())
+                }.getOrNull()
+            } else {
+                null
+            }
         }
 
         val monthFmt = DateTimeFormatter.ofPattern("MM/yy")
@@ -65,10 +69,12 @@ class GetWrappedStatsUseCase @Inject constructor(
         val monthlyActivity = byMonthKey.entries
             .sortedBy { it.key }
             .takeLast(12)
-            .map { it.key.let { k ->
-                val d = LocalDate.parse("$k-01", DateTimeFormatter.ISO_LOCAL_DATE)
-                d.format(monthFmt)
-            } to it.value }
+            .map {
+                it.key.let { k ->
+                    val d = LocalDate.parse("$k-01", DateTimeFormatter.ISO_LOCAL_DATE)
+                    d.format(monthFmt)
+                } to it.value
+            }
 
         val mostActiveKey = byMonthKey.entries.maxByOrNull { it.value }?.key
         val mostActiveMonthLabel = mostActiveKey?.let {
@@ -94,7 +100,9 @@ class GetWrappedStatsUseCase @Inject constructor(
                 showRepository.getShowDetailsInParallel(topIds)
                     .associate { it.id to (it.name.ifBlank { "Serie #${it.id}" }) }
             }.getOrDefault(emptyMap())
-        } else emptyMap()
+        } else {
+            emptyMap()
+        }
 
         val topRewatched = sessionsByShow.take(3).map { (id, count) ->
             RewatchedShow(id, showNameMap[id] ?: "Serie #$id", count)
@@ -114,8 +122,11 @@ class GetWrappedStatsUseCase @Inject constructor(
             .sortedByDescending { it.value }.take(5).map { it.key to it.value }
 
         val totalEpisodesFromHistory = entries.sumOf { it.count }
-        val totalEpisodes = if (totalEpisodesFromHistory > 0) totalEpisodesFromHistory
-        else profile.watchedEpisodes.values.sumOf { it.size }
+        val totalEpisodes = if (totalEpisodesFromHistory > 0) {
+            totalEpisodesFromHistory
+        } else {
+            profile.watchedEpisodes.values.sumOf { it.size }
+        }
         val totalHours = totalEpisodes * AVG_EPISODE_MINUTES / 60f
 
         val topGenreName = profile.genreScores.entries.maxByOrNull { it.value }
@@ -144,11 +155,7 @@ class GetWrappedStatsUseCase @Inject constructor(
         )
     }
 
-    private fun determineViewerType(
-        profile: UserProfile,
-        totalSessions: Int,
-        reviewCount: Int
-    ): ViewerPersonalityType {
+    private fun determineViewerType(profile: UserProfile, totalSessions: Int, reviewCount: Int): ViewerPersonalityType {
         val sortedGenres = profile.genreScores.entries
             .filter { it.value > 0 }
             .sortedByDescending { it.value }

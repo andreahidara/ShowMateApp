@@ -30,8 +30,7 @@ object DataStoreModule {
 
     @Provides
     @Singleton
-    fun provideSearchDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
-        context.searchDataStore
+    fun provideSearchDataStore(@ApplicationContext context: Context): DataStore<Preferences> = context.searchDataStore
 
     @SecurityDataStore
     @Provides
@@ -44,5 +43,4 @@ object DataStoreModule {
     @Singleton
     fun provideAppPrefsDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         context.appPrefsDataStore
-
 }

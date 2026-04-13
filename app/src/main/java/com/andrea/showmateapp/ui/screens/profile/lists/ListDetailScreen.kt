@@ -44,10 +44,7 @@ import com.andrea.showmateapp.util.TmdbUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListDetailScreen(
-    navController: NavController,
-    viewModel: ListDetailViewModel = hiltViewModel()
-) {
+fun ListDetailScreen(navController: NavController, viewModel: ListDetailViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     var editMode by remember { mutableStateOf(false) }
@@ -59,7 +56,12 @@ fun ListDetailScreen(
             containerColor = Color(0xFF1A1A2E),
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = HeartRed, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = HeartRed,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text("Quitar de la lista", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -100,8 +102,11 @@ fun ListDetailScreen(
                         )
                         if (!uiState.isLoading) {
                             Text(
-                                text = if (uiState.shows.isEmpty()) "Vacía" else
-                                    "${uiState.shows.size} ${if (uiState.shows.size == 1) "serie" else "series"}",
+                                text = if (uiState.shows.isEmpty()) {
+                                    "Vacía"
+                                } else {
+                                    "${uiState.shows.size} ${if (uiState.shows.size == 1) "serie" else "series"}"
+                                },
                                 color = TextGray,
                                 fontSize = 12.sp
                             )
@@ -168,8 +173,11 @@ fun ListDetailScreen(
                             show = show,
                             editMode = editMode,
                             onClick = {
-                                if (editMode) showToRemove = show
-                                else navController.navigate(Screen.Detail(show.id))
+                                if (editMode) {
+                                    showToRemove = show
+                                } else {
+                                    navController.navigate(Screen.Detail(show.id))
+                                }
                             },
                             onRemove = { showToRemove = show }
                         )
@@ -181,20 +189,18 @@ fun ListDetailScreen(
 }
 
 @Composable
-private fun ListDetailShowCard(
-    show: MediaContent,
-    editMode: Boolean,
-    onClick: () -> Unit,
-    onRemove: () -> Unit
-) {
+private fun ListDetailShowCard(show: MediaContent, editMode: Boolean, onClick: () -> Unit, onRemove: () -> Unit) {
     Box(
         modifier = Modifier
             .aspectRatio(2f / 3f)
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .then(
-                if (editMode) Modifier.border(2.dp, PrimaryPurple.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                else Modifier
+                if (editMode) {
+                    Modifier.border(2.dp, PrimaryPurple.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                } else {
+                    Modifier
+                }
             )
     ) {
         TmdbImage(
@@ -270,10 +276,7 @@ private fun ListDetailShowCard(
 }
 
 @Composable
-private fun ListDetailEmptyState(
-    modifier: Modifier = Modifier,
-    listName: String
-) {
+private fun ListDetailEmptyState(modifier: Modifier = Modifier, listName: String) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -296,7 +299,13 @@ private fun ListDetailEmptyState(
             )
         }
         Spacer(Modifier.height(20.dp))
-        Text("«$listName» está vacía", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(
+            "«$listName» está vacía",
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(8.dp))
         Text(
             "Añade series desde la pantalla de detalle\npulsando el botón de listas",
@@ -313,9 +322,19 @@ private fun ListDetailEmptyState(
                 .padding(horizontal = 20.dp, vertical = 10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Movie, contentDescription = null, tint = PrimaryPurpleLight, modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = PrimaryPurpleLight,
+                    modifier = Modifier.size(16.dp)
+                )
                 Spacer(Modifier.width(8.dp))
-                Text("Explora series para añadir", color = PrimaryPurpleLight, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Explora series para añadir",
+                    color = PrimaryPurpleLight,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }

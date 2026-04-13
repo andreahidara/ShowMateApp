@@ -4,7 +4,12 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.andrea.showmateapp.data.network.SeasonResponse
 
-@Entity(tableName = "seasons")
+@Entity(
+    tableName = "seasons",
+    indices = [
+        androidx.room.Index(value = ["showId", "seasonNumber"], unique = true)
+    ]
+)
 data class SeasonEntity(
     @PrimaryKey val id: Int,
     val showId: Int,

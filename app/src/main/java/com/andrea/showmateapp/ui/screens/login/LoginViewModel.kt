@@ -3,17 +3,17 @@ package com.andrea.showmateapp.ui.screens.login
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
+import com.andrea.showmateapp.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import com.andrea.showmateapp.util.UiText
-import com.andrea.showmateapp.R
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -65,7 +65,11 @@ class LoginViewModel @Inject constructor(
                     }
                     _uiState.update { it.copy(isGoogleLoading = false, isSuccess = true, isNewGoogleUser = isNewUser) }
                 }
-                .onFailure { e -> _uiState.update { it.copy(isGoogleLoading = false, error = UiText.DynamicString(e.message ?: "Error con Google")) } }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(isGoogleLoading = false, error = UiText.StringResource(R.string.error_google_signin))
+                    }
+                }
         }
     }
 
@@ -78,7 +82,7 @@ class LoginViewModel @Inject constructor(
         }
 
         if (!Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
-            _uiState.update { it.copy(error = UiText.DynamicString("Formato de correo inválido")) }
+            _uiState.update { it.copy(error = UiText.StringResource(R.string.error_invalid_email_format)) }
             return
         }
 
@@ -87,13 +91,22 @@ class LoginViewModel @Inject constructor(
 
             authRepository.login(state.email, state.password)
                 .onSuccess {
-                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                    val profile = userRepository.getUserProfile()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isSuccess = true,
+                            isOnboardingCompleted = profile?.onboardingCompleted == true
+                        )
+                    }
                 }
                 .onFailure { throwable ->
-                    _uiState.update { it.copy(
-                        isLoading = false,
-                        error = UiText.DynamicString(throwable.message ?: "Error desconocido")
-                    ) }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = UiText.DynamicString(throwable.message ?: "Error desconocido")
+                        )
+                    }
                 }
         }
     }

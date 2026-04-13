@@ -23,8 +23,11 @@ interface IInteractionRepository {
     suspend fun getEssentials(): List<MediaContent>
     suspend fun getWatchedMediaIds(): Set<Int>
     fun getWatchedMediaIdsFlow(): Flow<Set<Int>>
+    suspend fun getExcludedMediaIds(): Set<Int>
+    fun getExcludedMediaIdsFlow(): Flow<Set<Int>>
     suspend fun getLocalInteractionState(mediaId: Int): MediaInteractionEntity?
     suspend fun toggleWatched(media: MediaContent, setWatched: Boolean): Boolean
+    suspend fun toggleDislike(media: MediaContent, setDisliked: Boolean): Boolean
     suspend fun toggleFavorite(media: MediaContent, setLiked: Boolean): Boolean
     suspend fun toggleEssential(media: MediaContent, setEssential: Boolean): Boolean
     suspend fun toggleWatchlist(media: MediaContent, setInWatchlist: Boolean): Boolean
@@ -52,6 +55,7 @@ interface IInteractionRepository {
     suspend fun createCustomList(listName: String)
     suspend fun deleteCustomList(listName: String)
     suspend fun getCustomLists(): Map<String, List<Int>>
+    fun getCustomListsFlow(): Flow<Map<String, List<Int>>>
     suspend fun getWatchedShowsWithSeasonCount(): List<MediaInteractionEntity>
     suspend fun updateLastKnownSeasons(mediaId: Int, seasons: Int)
     suspend fun syncFavoritesAndWatchedToRoom()

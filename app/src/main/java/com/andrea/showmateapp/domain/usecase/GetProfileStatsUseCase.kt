@@ -2,69 +2,52 @@ package com.andrea.showmateapp.domain.usecase
 
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.domain.repository.IInteractionRepository
+import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.GenreMapper
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
-class GetProfileStatsUseCase @Inject constructor() {
+class GetProfileStatsUseCase @Inject constructor(
+    private val userRepo: IUserRepository,
+    private val interactionRepo: IInteractionRepository
+) {
+    fun observeStats() = combine(userRepo.getUserProfileFlow(), interactionRepo.getWatchedShowsFlow()) { profile, watched ->
+        computeStats(watched.size, profile)
+    }.distinctUntilChanged()
 
-    fun execute(watchedShows: List<MediaContent>, userProfile: UserProfile?): ProfileStats {
-        val watchedEpisodesMap = userProfile?.watchedEpisodes ?: emptyMap()
-        var totalMinutes = 0
-        var totalEpisodes = 0
-        watchedShows.forEach { show ->
-            val episodesForShow = watchedEpisodesMap[show.id.toString()]
-            val effectiveEpCount = when {
-                episodesForShow != null && episodesForShow.isNotEmpty() -> episodesForShow.size
-                episodesForShow != null -> 0
-                else -> (show.numberOfSeasons ?: 1) * 10
-            }
-            val avgRuntime = show.episodeRunTime?.firstOrNull()?.takeIf { it > 0 } ?: 45
-            totalMinutes += effectiveEpCount * avgRuntime
-            totalEpisodes += effectiveEpCount
-        }
-        val totalHours = totalMinutes / 60
+    fun execute(watched: List<MediaContent>, profile: UserProfile?) = computeStats(watched.size, profile)
 
-        val topGenreId = userProfile?.genreScores?.maxByOrNull { it.value }?.key
-        val topGenreName = topGenreId?.let { GenreMapper.getGenreName(it) } ?: "Ninguno"
-
-        val topActorId = userProfile?.preferredActors?.maxByOrNull { it.value }?.key
-
-        val sortedGenres = userProfile?.genreScores
-            ?.filter { it.value > 0 }
-            ?.entries
-            ?.sortedByDescending { it.value }
-            ?: emptyList()
-        val maxScore = sortedGenres.firstOrNull()?.value?.coerceAtLeast(1f) ?: 1f
-        val topGenresList = sortedGenres.take(5).map {
-            Pair(GenreMapper.getGenreName(it.key), it.value / maxScore)
-        }
-
-        val ratingsValues = userProfile?.ratings?.values ?: emptyList()
-        val avgRating = if (ratingsValues.isNotEmpty()) ratingsValues.average().toFloat() else 0f
-        val likedCount = userProfile?.likedMediaIds?.size ?: 0
-        val dislikedCount = userProfile?.dislikedMediaIds?.size ?: 0
-        val likeRate = if (likedCount + dislikedCount > 0)
-            likedCount.toFloat() / (likedCount + dislikedCount)
-        else 0f
+    private fun computeStats(watchedCount: Int, profile: UserProfile?): ProfileStats {
+        val p = profile ?: return ProfileStats()
+        val totalEpisodes = p.watchedEpisodes.values.sumOf { it.size }
+        val ratings = p.ratings.values
+        val genres = p.genreScores.filter { it.value > 0 }.entries.sortedByDescending { it.value }.take(5)
+        val maxScore = genres.firstOrNull()?.value?.coerceAtLeast(1f) ?: 1f
+        val topGenres = genres.map { GenreMapper.getGenreName(it.key) to (it.value / maxScore) }
+        val liked = p.likedMediaIds.size
+        val disliked = p.dislikedMediaIds.size
 
         return ProfileStats(
-            totalWatchedHours = totalHours,
-            watchedCount = watchedShows.size,
+            totalHours = (totalEpisodes * 45) / 60,
+            watchedCount = watchedCount,
             totalEpisodes = totalEpisodes,
-            topGenre = topGenreName,
-            favoriteActorId = topActorId,
-            topGenres = topGenresList,
-            likedCount = likedCount,
-            essentialCount = userProfile?.essentialMediaIds?.size ?: 0,
-            ratingsCount = ratingsValues.size,
-            avgRating = avgRating,
-            likeRate = likeRate
+            topGenre = topGenres.firstOrNull()?.first ?: "Ninguno",
+            favoriteActorId = p.preferredActors.maxByOrNull { it.value }?.key,
+            topGenres = topGenres,
+            likedCount = liked,
+            essentialCount = p.essentialMediaIds.size,
+            ratingsCount = ratings.size,
+            avgRating = if (ratings.isEmpty()) 0f else ratings.average().toFloat(),
+            likeRate = if (liked + disliked > 0) liked.toFloat() / (liked + disliked) else 0f
         )
     }
 
     data class ProfileStats(
-        val totalWatchedHours: Int,
-        val watchedCount: Int,
+        val totalHours: Int = 0,
+        val watchedCount: Int = 0,
         val totalEpisodes: Int = 0,
         val topGenre: String = "N/A",
         val favoriteActorId: String? = null,

@@ -1,15 +1,16 @@
 package com.andrea.showmateapp.ui.navigation
 
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.testing.TestNavHostController
 import com.andrea.showmateapp.ui.screens.login.LoginScreenContent
 import com.andrea.showmateapp.ui.screens.login.LoginUiState
-import com.andrea.showmateapp.util.UiText
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

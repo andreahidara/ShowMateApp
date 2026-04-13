@@ -1,83 +1,41 @@
-# ── Debug info ────────────────────────────────────────────────────────────────
-# Keep source file names + line numbers for crash stack traces (Crashlytics)
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
+# ─────────────────────────────────────────────────────────────────────────────
+# ShowMate — ProGuard / R8 Rules
+# ─────────────────────────────────────────────────────────────────────────────
+# Notas:
+#  · -dontoptimize: desactiva optimizaciones agresivas de R8 (evita crashes
+#    con SQLCipher y reflexión de Hilt en algunos dispositivos).
+#  · El shrinking (eliminación de código muerto) sigue activo.
+#  · No usar -keep class com.andrea.showmateapp.** { *; } globalmente:
+#    impide todo shrinking y es la mayor fuente de APKs grandes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+-dontoptimize
+
+# ── Atributos (una sola vez) ──────────────────────────────────────────────────
+-keepattributes Signature, InnerClasses, EnclosingMethod,
+                RuntimeVisibleAnnotations, AnnotationDefault, *Annotation*
 
 # ── Kotlin ────────────────────────────────────────────────────────────────────
--keepattributes Signature, InnerClasses, EnclosingMethod
--keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
--keepattributes *Annotation*
--dontwarn kotlin.Unit
+-keep class kotlin.Metadata { *; }
 -dontwarn kotlin.**
--keepclassmembernames class kotlinx.coroutines.internal.MainDispatcherFactory {}
--keepclassmembernames class kotlinx.coroutines.CoroutineExceptionHandler {}
--keepclassmembernames class kotlinx.** { volatile <fields>; }
+-dontwarn kotlinx.**
 
-# ── Retrofit ──────────────────────────────────────────────────────────────────
--keepclassmembers,allowshrinking,allowobfuscation interface * {
-    @retrofit2.http.* <methods>;
-}
--dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
--dontwarn javax.annotation.**
--dontwarn retrofit2.KotlinExtensions
--dontwarn retrofit2.KotlinExtensions$*
-
-# ── OkHttp ────────────────────────────────────────────────────────────────────
--dontwarn okhttp3.**
--dontwarn okio.**
--keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
-
-# ── Gson / SerializedName ─────────────────────────────────────────────────────
--dontwarn sun.misc.**
--keep class com.google.gson.stream.** { *; }
--keep class * implements com.google.gson.TypeAdapterFactory
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
--keepclassmembers,allowobfuscation class * {
-    @com.google.gson.annotations.SerializedName <fields>;
-}
-
-# Keep TMDB network models and Room entities (used by Gson + Firestore toObject())
--keep class com.andrea.showmateapp.data.network.** { *; }
--keep class com.andrea.showmateapp.data.model.** { *; }
-
-# ── kotlinx.serialization ─────────────────────────────────────────────────────
--dontnote kotlinx.serialization.AnnotationsKt
--keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
--keepclasseswithmembers class **$$serializer {
-    kotlinx.serialization.descriptors.SerialDescriptor descriptor;
-}
--keepclassmembers @kotlinx.serialization.Serializable class ** {
+# ── Kotlin Serialization (Navigation type-safe con @Serializable) ─────────────
+# SIN ESTO las rutas crashean en release con ClassNotFoundException
+-keep @kotlinx.serialization.Serializable class * { *; }
+-keepclassmembers @kotlinx.serialization.Serializable class * {
     *** Companion;
-    *** serialVersionUID;
     kotlinx.serialization.KSerializer serializer(...);
+    <fields>;
 }
-
-# ── Firebase ──────────────────────────────────────────────────────────────────
-# Keep names only (class name obfuscation breaks Firebase reflection internals)
--keepnames class com.google.firebase.** { *; }
--keepnames class com.google.android.gms.** { *; }
--dontwarn com.google.firebase.**
--dontwarn com.google.android.gms.**
-# Firestore: keep no-arg constructors for toObject() deserialization
--keepclassmembers class com.andrea.showmateapp.data.model.** {
-    public <init>();
+-keepclasseswithmembers class * {
+    @kotlinx.serialization.SerialName <fields>;
 }
--keepclassmembers class com.andrea.showmateapp.data.network.** {
-    public <init>();
-}
+-dontnote kotlinx.serialization.AnnotationsKt
 
-# ── Room ──────────────────────────────────────────────────────────────────────
--keep class * extends androidx.room.RoomDatabase { *; }
--keep @androidx.room.Entity class * { *; }
--keep @androidx.room.Dao interface * { *; }
--keepclassmembers @androidx.room.Entity class * { *; }
--dontwarn androidx.room.**
-
-# ── SQLCipher ─────────────────────────────────────────────────────────────────
--keep class net.sqlcipher.** { *; }
--keep class net.sqlcipher.database.** { *; }
--dontwarn net.sqlcipher.**
+# ── Coroutines ────────────────────────────────────────────────────────────────
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 
 # ── Hilt / Dagger ─────────────────────────────────────────────────────────────
 -dontwarn dagger.hilt.**
@@ -86,48 +44,71 @@
 -keep @dagger.hilt.android.HiltAndroidApp class * { *; }
 -keep @dagger.hilt.InstallIn class * { *; }
 -keep @dagger.Module class * { *; }
-# HiltViewModel — keep all classes annotated with @HiltViewModel
--keep,allowobfuscation @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
--keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
-
-# ── Jetpack Compose ───────────────────────────────────────────────────────────
-# R8 + Compose work without extra rules since Compose 1.3; keep lambda stability
--keepclassmembers class * {
-    @androidx.compose.runtime.Stable <methods>;
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+-keepclassmembers class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
 }
 
-# ── Navigation Compose (type-safe routes via @Serializable) ──────────────────
--keep @kotlinx.serialization.Serializable class * { *; }
+# ── Modelos de datos (Firestore, Retrofit, Room) ──────────────────────────────
+-keep class com.andrea.showmateapp.data.model.** { *; }
+-keep class com.andrea.showmateapp.data.network.** { *; }
+-keep class com.andrea.showmateapp.data.local.** { *; }
+-keep class com.andrea.showmateapp.domain.model.** { *; }
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
 
-# ── WorkManager + Hilt Workers ────────────────────────────────────────────────
+# ── DI modules y domain (Hilt necesita los constructores) ─────────────────────
+-keep class com.andrea.showmateapp.di.** { *; }
+-keep class com.andrea.showmateapp.domain.** { *; }
+
+# ── Utilidades críticas ───────────────────────────────────────────────────────
+-keep class com.andrea.showmateapp.util.DatabaseKeyProvider { *; }
+-keep class com.andrea.showmateapp.util.SecurityChecker { *; }
+
+# ── Retrofit / OkHttp ─────────────────────────────────────────────────────────
+-keep class retrofit2.** { *; }
+-keep class okhttp3.** { *; }
+-keep class com.google.gson.** { *; }
+-dontwarn retrofit2.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# ── Firebase ──────────────────────────────────────────────────────────────────
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# ── Room ──────────────────────────────────────────────────────────────────────
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }
+-keep @androidx.room.Database class * { *; }
+
+# ── SQLCipher ─────────────────────────────────────────────────────────────────
+-keep class net.sqlcipher.** { *; }
+-keep class net.sqlcipher.database.** { *; }
+
+# ── WorkManager (SIN ESTO los workers no arrancan en release) ─────────────────
 -keep class * extends androidx.work.Worker { *; }
--keep class * extends androidx.work.CoroutineWorker { *; }
--keep class * extends androidx.work.ListenableWorker {
+-keep class * extends androidx.work.ListenableWorker { *; }
+-keepclassmembers class * extends androidx.work.ListenableWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
--keep @androidx.hilt.work.HiltWorker class * { *; }
-
-# ── DataStore ─────────────────────────────────────────────────────────────────
--dontwarn androidx.datastore.**
 
 # ── Coil ──────────────────────────────────────────────────────────────────────
+-keep class coil.** { *; }
+-keep interface coil.** { *; }
 -dontwarn coil.**
 
-# ── Timber (strip all log levels from release) ───────────────────────────────
--assumenosideeffects class timber.log.Timber {
-    public static *** v(...);
-    public static *** d(...);
-    public static *** i(...);
-    public static *** w(...);
-}
+# ── Paging 3 ──────────────────────────────────────────────────────────────────
+-keep class androidx.paging.** { *; }
+-dontwarn androidx.paging.**
 
-# ── Security Crypto (EncryptedSharedPreferences / MasterKey) ─────────────────
--keep class androidx.security.crypto.** { *; }
--dontwarn androidx.security.crypto.**
+# ── Navigation Compose ────────────────────────────────────────────────────────
+-keep class androidx.navigation.** { *; }
+-dontwarn androidx.navigation.**
 
-# ── General ───────────────────────────────────────────────────────────────────
-# Keep @Keep annotated classes/members (emergency escape hatch)
--keep @androidx.annotation.Keep class * { *; }
--keepclassmembers class * {
-    @androidx.annotation.Keep *;
-}
+# ── DataStore ─────────────────────────────────────────────────────────────────
+-keep class androidx.datastore.** { *; }

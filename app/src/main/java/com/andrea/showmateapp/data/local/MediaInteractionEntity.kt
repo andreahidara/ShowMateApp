@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey
     tableName = "media_interactions",
     indices = [
         Index(value = ["isWatched"]),
+        Index(value = ["isDisliked"]),
         Index(value = ["isInWatchlist"]),
         Index(value = ["syncPending"])
     ]
@@ -17,6 +18,7 @@ data class MediaInteractionEntity(
     val isLiked: Boolean = false,
     val isEssential: Boolean = false,
     val isWatched: Boolean = false,
+    val isDisliked: Boolean = false,
     val isInWatchlist: Boolean = false,
     val lastKnownSeasons: Int = 0,
     val syncPending: Boolean = false

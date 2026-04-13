@@ -6,12 +6,12 @@ import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class AchievementRepository @Inject constructor(
@@ -41,24 +41,23 @@ class AchievementRepository @Inject constructor(
         }
     }
 
-    override suspend fun unlockAchievements(achievementIds: List<String>, xpToAdd: Int) =
-        withContext(ioDispatcher) {
-            if (achievementIds.isEmpty() && xpToAdd == 0) return@withContext
-            try {
-                val doc = userDoc() ?: return@withContext
-                val updates = mutableMapOf<String, Any>(
-                    "xp" to FieldValue.increment(xpToAdd.toLong())
-                )
-                if (achievementIds.isNotEmpty()) {
-                    updates["unlockedAchievementIds"] =
-                        FieldValue.arrayUnion(*achievementIds.toTypedArray<Any>())
-                }
-                doc.update(updates).await()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+    override suspend fun unlockAchievements(achievementIds: List<String>, xpToAdd: Int) = withContext(ioDispatcher) {
+        if (achievementIds.isEmpty() && xpToAdd == 0) return@withContext
+        try {
+            val doc = userDoc() ?: return@withContext
+            val updates = mutableMapOf<String, Any>(
+                "xp" to FieldValue.increment(xpToAdd.toLong())
+            )
+            if (achievementIds.isNotEmpty()) {
+                updates["unlockedAchievementIds"] =
+                    FieldValue.arrayUnion(*achievementIds.toTypedArray<Any>())
             }
-            Unit
+            doc.update(updates).await()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
         }
+        Unit
+    }
 
     override suspend fun addXp(delta: Int) = withContext(ioDispatcher) {
         try {
@@ -95,9 +94,9 @@ class AchievementRepository @Inject constructor(
                             ?: email.substringBefore("@")
                         val xp = doc.getLong("xp")?.toInt() ?: 0
                         IAchievementRepository.LeaderboardEntry(
-                            username  = username,
-                            email     = email,
-                            xp        = xp,
+                            username = username,
+                            email = email,
+                            xp = xp,
                             levelName = AchievementDefs.levelForXp(xp).name
                         )
                     }

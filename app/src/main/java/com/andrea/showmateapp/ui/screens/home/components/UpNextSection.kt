@@ -21,16 +21,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.util.TmdbUtils
-import androidx.compose.ui.res.stringResource
-import com.andrea.showmateapp.R
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -78,19 +79,25 @@ fun UpNextSection(
                             .clip(RoundedCornerShape(16.dp))
                             .clickable { onItemClick(show, "up_next") }
                     ) {
-                        with(sharedTransitionScope) {
-                            TmdbImage(
-                                path = show.posterPath,
-                                contentDescription = show.name,
-                                size = TmdbUtils.ImageSize.W500,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .sharedElement(
-                                        state = rememberSharedContentState(key = "image-${show.id}-up_next"),
-                                        animatedVisibilityScope = animatedVisibilityScope
-                                    )
-                            )
-                        }
+                        TmdbImage(
+                            path = show.posterPath,
+                            contentDescription = show.name,
+                            size = TmdbUtils.ImageSize.W500,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (LocalInspectionMode.current) {
+                                        Modifier
+                                    } else {
+                                        with(sharedTransitionScope) {
+                                            Modifier.sharedElement(
+                                                state = rememberSharedContentState(key = "image-${show.id}-up_next"),
+                                                animatedVisibilityScope = animatedVisibilityScope
+                                            )
+                                        }
+                                    }
+                                )
+                        )
 
                         Box(
                             modifier = Modifier

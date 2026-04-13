@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.navigation.Screen
@@ -37,14 +38,10 @@ import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun GroupNightsScreen(
-    navController: NavController,
-    viewModel: GroupNightsViewModel = hiltViewModel()
-) {
-    val entries   by viewModel.entries.collectAsStateWithLifecycle()
+fun GroupNightsScreen(navController: NavController, viewModel: GroupNightsViewModel = hiltViewModel()) {
+    val entries by viewModel.entries.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     Column(
@@ -54,7 +51,7 @@ fun GroupNightsScreen(
             .statusBarsPadding()
     ) {
         Row(
-            modifier          = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -65,8 +62,8 @@ fun GroupNightsScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "🌙 Noches de series",
-                    color      = Color.White,
-                    fontSize   = 20.sp,
+                    color = Color.White,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Black
                 )
                 Text("Historial del grupo", color = TextGray, fontSize = 12.sp)
@@ -74,7 +71,7 @@ fun GroupNightsScreen(
             Icon(
                 Icons.Default.NightsStay,
                 null,
-                tint     = PrimaryPurpleLight,
+                tint = PrimaryPurpleLight,
                 modifier = Modifier.size(24.dp).padding(end = 8.dp)
             )
         }
@@ -88,8 +85,8 @@ fun GroupNightsScreen(
                 NightsStatsStrip(entries)
                 HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
                 LazyColumn(
-                    contentPadding        = PaddingValues(16.dp),
-                    verticalArrangement   = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     itemsIndexed(entries) { index, entry ->
                         var visible by remember { mutableStateOf(false) }
@@ -98,11 +95,11 @@ fun GroupNightsScreen(
                             visible = true
                         }
                         AnimatedVisibility(
-                            visible      = visible,
-                            enter        = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 2 }
+                            visible = visible,
+                            enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 2 }
                         ) {
                             NightCard(
-                                entry         = entry,
+                                entry = entry,
                                 onClickDetail = { showId ->
                                     navController.navigate(Screen.Detail(showId))
                                 }
@@ -119,7 +116,7 @@ fun GroupNightsScreen(
 private fun NightsStatsStrip(entries: List<NightEntry>) {
     val matches = entries.count { it.session.matchedMediaId != 0 }
     Row(
-        modifier              = Modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
@@ -140,19 +137,18 @@ private fun StatItem(emoji: String, value: String, label: String) {
 }
 
 @Composable
-private fun NightCard(
-    entry: NightEntry,
-    onClickDetail: (Int) -> Unit
-) {
+private fun NightCard(entry: NightEntry, onClickDetail: (Int) -> Unit) {
     val session = entry.session
-    val media   = entry.matchedMedia
+    val media = entry.matchedMedia
     val hasMatch = session.matchedMediaId != 0
 
     val dateStr = remember(session.finishedAt) {
         if (session.finishedAt > 0L) {
             SimpleDateFormat("dd MMM yyyy · HH:mm", Locale("es", "ES"))
                 .format(Date(session.finishedAt))
-        } else "Fecha desconocida"
+        } else {
+            "Fecha desconocida"
+        }
     }
 
     Row(
@@ -166,12 +162,14 @@ private fun NightCard(
                 RoundedCornerShape(20.dp)
             )
             .then(
-                if (hasMatch && media != null)
+                if (hasMatch && media != null) {
                     Modifier.clickable { onClickDetail(session.matchedMediaId) }
-                else Modifier
+                } else {
+                    Modifier
+                }
             )
             .padding(12.dp),
-        verticalAlignment     = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(
@@ -179,17 +177,20 @@ private fun NightCard(
                 .size(width = 64.dp, height = 90.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(
-                    if (hasMatch) PrimaryPurple.copy(alpha = 0.12f)
-                    else Color.White.copy(alpha = 0.05f)
+                    if (hasMatch) {
+                        PrimaryPurple.copy(alpha = 0.12f)
+                    } else {
+                        Color.White.copy(alpha = 0.05f)
+                    }
                 )
         ) {
             if (media?.posterPath != null) {
                 TmdbImage(
-                    path               = media.posterPath,
+                    path = media.posterPath,
                     contentDescription = media.name,
-                    size               = TmdbUtils.ImageSize.W185,
-                    modifier           = Modifier.fillMaxSize(),
-                    contentScale       = ContentScale.Crop
+                    size = TmdbUtils.ImageSize.W185,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
                 Box(
                     modifier = Modifier
@@ -204,7 +205,7 @@ private fun NightCard(
                 Icon(
                     if (hasMatch) Icons.Default.EmojiEvents else Icons.Default.Groups,
                     null,
-                    tint     = if (hasMatch) PrimaryPurpleLight else TextGray,
+                    tint = if (hasMatch) PrimaryPurpleLight else TextGray,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .size(28.dp)
@@ -213,18 +214,18 @@ private fun NightCard(
         }
 
         Column(
-            modifier            = Modifier.weight(1f),
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             val displayTitle = session.nightTitle
                 .ifBlank { if (hasMatch) media?.name ?: "Noche sin nombre" else "Sin match" }
             Text(
                 displayTitle,
-                color      = Color.White,
-                fontSize   = 15.sp,
+                color = Color.White,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines   = 1,
-                overflow   = TextOverflow.Ellipsis
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             Text(dateStr, color = TextGray, fontSize = 11.sp)
@@ -234,7 +235,7 @@ private fun NightCard(
                 .joinToString(" · ")
             Text(
                 memberList,
-                color    = TextGray.copy(alpha = 0.7f),
+                color = TextGray.copy(alpha = 0.7f),
                 fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -267,8 +268,8 @@ private fun NightCard(
                 Text("⭐", fontSize = 18.sp)
                 Text(
                     "${"%.1f".format(media.voteAverage)}",
-                    color      = StarYellow,
-                    fontSize   = 13.sp,
+                    color = StarYellow,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -291,18 +292,18 @@ private fun LoadingNights() {
 private fun EmptyNights() {
     val infiniteTransition = rememberInfiniteTransition(label = "float")
     val translateY by infiniteTransition.animateFloat(
-        initialValue  = 0f,
-        targetValue   = -14f,
+        initialValue = 0f,
+        targetValue = -14f,
         animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label         = "floatY"
+        label = "floatY"
     )
 
     Column(
-        modifier              = Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 32.dp),
-        horizontalAlignment   = Alignment.CenterHorizontally,
-        verticalArrangement   = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             "🌙",
@@ -312,16 +313,16 @@ private fun EmptyNights() {
         Spacer(Modifier.height(24.dp))
         Text(
             "Sin noches todavía",
-            color      = Color.White,
-            fontSize   = 20.sp,
+            color = Color.White,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Black,
-            textAlign  = TextAlign.Center
+            textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "Organiza tu primera sesión grupal con amigos y el historial aparecerá aquí.",
-            color     = TextGray,
-            fontSize  = 14.sp,
+            color = TextGray,
+            fontSize = 14.sp,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp
         )

@@ -54,14 +54,14 @@ class GetViewerPersonalityUseCase @Inject constructor() {
 
     private fun buildLabel(genres: List<String>): String {
         val primary = when {
-            genres.any { it.contains("Crimen") }                            -> "Analítico"
-            genres.any { it.contains("Misterio") }                          -> "Intuitivo"
-            genres.any { it.contains("Comedia") }                           -> "Optimista"
-            genres.any { it.contains("Drama") }                             -> "Empático"
+            genres.any { it.contains("Crimen") } -> "Analítico"
+            genres.any { it.contains("Misterio") } -> "Intuitivo"
+            genres.any { it.contains("Comedia") } -> "Optimista"
+            genres.any { it.contains("Drama") } -> "Empático"
             genres.any { it.contains("Sci-Fi") || it.contains("Fantasía") } -> "Imaginativo"
-            genres.any { it.contains("Acción") }                            -> "Apasionado"
-            genres.any { it.contains("Documental") }                        -> "Curioso"
-            else                                                             -> "Ecléctico"
+            genres.any { it.contains("Acción") } -> "Apasionado"
+            genres.any { it.contains("Documental") } -> "Curioso"
+            else -> "Ecléctico"
         }
         val topGenre = genres.firstOrNull() ?: return primary
         return "$primary · Amante de $topGenre"

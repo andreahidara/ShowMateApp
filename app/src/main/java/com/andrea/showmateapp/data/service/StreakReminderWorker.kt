@@ -40,27 +40,31 @@ class StreakReminderWorker @AssistedInject constructor(
     private fun sendNotification(profile: UserProfile) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED) {
+            PackageManager.PERMISSION_GRANTED
+        ) {
             return
         }
         val streakDays = computeStreak(profile)
-        val isDanger   = streakDays >= DANGER_STREAK_THRESHOLD
+        val isDanger = streakDays >= DANGER_STREAK_THRESHOLD
 
-        val channelId = if (isDanger) NotificationChannels.STREAK_DANGER
-                        else         NotificationChannels.GENERAL
+        val channelId = if (isDanger) {
+            NotificationChannels.STREAK_DANGER
+        } else {
+            NotificationChannels.GENERAL
+        }
 
         val title = when {
-            isDanger   -> "\uD83D\uDD25 ¡Racha de $streakDays días en peligro!"
+            isDanger -> "\uD83D\uDD25 ¡Racha de $streakDays días en peligro!"
             streakDays > 0 -> "¡No pierdas tu racha! \uD83D\uDD25"
-            else       -> "Vuelve a ShowMate \uD83C\uDFAC"
+            else -> "Vuelve a ShowMate \uD83C\uDFAC"
         }
         val body = when {
-            isDanger   ->
+            isDanger ->
                 "Llevas $streakDays días seguidos viendo series. ¡Pon aunque sea un episodio " +
-                "esta noche para no romperla!"
+                    "esta noche para no romperla!"
             streakDays > 0 ->
                 "Tienes una racha de $streakDays día${if (streakDays == 1) "" else "s"}. " +
-                "¡No la pierdas, pon un episodio!"
+                    "¡No la pierdas, pon un episodio!"
             else ->
                 "¡Vuelve a ShowMate y empieza una nueva racha hoy!"
         }
@@ -70,8 +74,11 @@ class StreakReminderWorker @AssistedInject constructor(
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(
-                if (isDanger) NotificationCompat.PRIORITY_HIGH
-                else          NotificationCompat.PRIORITY_DEFAULT
+                if (isDanger) {
+                    NotificationCompat.PRIORITY_HIGH
+                } else {
+                    NotificationCompat.PRIORITY_DEFAULT
+                }
             )
             .setAutoCancel(true)
             .build()
@@ -94,7 +101,7 @@ class StreakReminderWorker @AssistedInject constructor(
     }
 
     companion object {
-        const val NOTIFICATION_ID           = 1002
+        const val NOTIFICATION_ID = 1002
         private const val DANGER_STREAK_THRESHOLD = 6
     }
 }

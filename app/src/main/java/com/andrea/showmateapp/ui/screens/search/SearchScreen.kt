@@ -13,6 +13,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -21,9 +23,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -38,9 +40,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,22 +52,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.premium.*
 import com.andrea.showmateapp.ui.components.premium.shimmerBrush
 import com.andrea.showmateapp.ui.navigation.Screen
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.ui.draw.shadow
 import com.andrea.showmateapp.ui.theme.AccentBlue
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
-import androidx.compose.ui.res.stringResource
-import com.andrea.showmateapp.R
-import com.andrea.showmateapp.util.UiText
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -77,10 +79,20 @@ fun SearchScreen(
     var query by remember { mutableStateOf("") }
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val trendingShows by viewModel.trendingShows.collectAsStateWithLifecycle()
+    val trendingPeople by viewModel.trendingPeople.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isFilterActive by viewModel.isFilterActive.collectAsStateWithLifecycle()
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+    val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
+
+    // Paging 3 — solo activo en modo TITLE con texto
+    val pagingItems = viewModel.searchPagingData.collectAsLazyPagingItems()
+    val usePaging = query.isNotBlank() && searchMode == SearchMode.TITLE && !isFilterActive
+
+    // Modo persona (Actor/Director) sin query: mostrar trending people
+    val showTrendingPeople = query.isBlank() && !isFilterActive &&
+        (searchMode == SearchMode.ACTOR || searchMode == SearchMode.CREATOR)
 
     var showFilters by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -91,7 +103,6 @@ fun SearchScreen(
     val yearTo by viewModel.yearTo.collectAsStateWithLifecycle()
     val selectedRating by viewModel.selectedRating.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
-    val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
 
     val showRecent = query.isBlank() && !isFilterActive && recentSearches.isNotEmpty()
     val listToShow = if (query.isBlank() && !isFilterActive) trendingShows else searchResults
@@ -99,13 +110,26 @@ fun SearchScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             Column(
                 modifier = Modifier
                     .statusBarsPadding()
                     .background(MaterialTheme.colorScheme.background)
+                    .padding(top = 12.dp)
             ) {
-                Spacer(Modifier.height(8.dp))
+                // Título de la pantalla
+                val gradientColors = listOf(PrimaryPurple, com.andrea.showmateapp.ui.theme.PrimaryMagenta)
+                Text(
+                    text = stringResource(R.string.nav_search),
+                    style = TextStyle(brush = Brush.linearGradient(colors = gradientColors)),
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-1.5).sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+
+                Spacer(Modifier.height(4.dp))
 
                 Row(
                     modifier = Modifier
@@ -212,13 +236,19 @@ fun SearchScreen(
                             .size(52.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(
-                                if (isFilterActive) PrimaryPurple
-                                else Color.White.copy(alpha = 0.07f)
+                                if (isFilterActive) {
+                                    PrimaryPurple
+                                } else {
+                                    Color.White.copy(alpha = 0.07f)
+                                }
                             )
                             .border(
                                 width = 1.dp,
-                                color = if (isFilterActive) PrimaryPurple
-                                        else Color.White.copy(alpha = 0.1f),
+                                color = if (isFilterActive) {
+                                    PrimaryPurple
+                                } else {
+                                    Color.White.copy(alpha = 0.1f)
+                                },
                                 shape = RoundedCornerShape(16.dp)
                             )
                             .clickable { showFilters = true },
@@ -256,13 +286,19 @@ fun SearchScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(
-                                    if (isSelected) PrimaryPurple
-                                    else Color.White.copy(alpha = 0.07f)
+                                    if (isSelected) {
+                                        PrimaryPurple
+                                    } else {
+                                        Color.White.copy(alpha = 0.07f)
+                                    }
                                 )
                                 .border(
                                     1.dp,
-                                    if (isSelected) Color.Transparent
-                                    else Color.White.copy(alpha = 0.12f),
+                                    if (isSelected) {
+                                        Color.Transparent
+                                    } else {
+                                        Color.White.copy(alpha = 0.12f)
+                                    },
                                     RoundedCornerShape(20.dp)
                                 )
                                 .clickable { viewModel.setSearchMode(mode) }
@@ -278,212 +314,351 @@ fun SearchScreen(
                         }
                     }
                 }
-
             }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(padding)) {
-            if (showRecent) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.search_recent),
-                            color = TextGray,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.5.sp
-                        )
-                        TextButton(
-                            onClick = { viewModel.clearRecentSearches() },
-                            contentPadding = PaddingValues(0.dp)
+            Column(modifier = Modifier.padding(padding)) {
+                if (showRecent) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(stringResource(R.string.search_clear_all), color = PrimaryPurple, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(recentSearches, key = { it }) { recent ->
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(SurfaceDark)
-                                    .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(20.dp))
-                                    .clickable {
-                                        query = recent
-                                        viewModel.searchMedia(recent)
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 7.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            Text(
+                                text = stringResource(R.string.search_recent),
+                                color = TextGray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.5.sp
+                            )
+                            TextButton(
+                                onClick = { viewModel.clearRecentSearches() },
+                                contentPadding = PaddingValues(0.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.History,
-                                    contentDescription = null,
-                                    tint = TextGray,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                                Text(recent, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
-                                Icon(
-                                    Icons.Default.Clear,
-                                    contentDescription = "Eliminar",
-                                    tint = TextGray,
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clickable { viewModel.removeRecentSearch(recent) }
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                }
-            }
-
-            AnimatedContent(
-                targetState = when {
-                    isLoading -> "loading"
-                    errorMessage != null -> "error"
-                    listToShow.isNotEmpty() -> "results"
-                    query.isNotBlank() || isFilterActive -> "empty"
-                    else -> "idle"
-                },
-                transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
-                label = "searchState"
-            ) { state ->
-                when (state) {
-                    "loading" -> SearchGridSkeleton()
-
-                    "error" -> ErrorView(
-                        message = errorMessage?.asString() ?: stringResource(R.string.error_unknown),
-                        onRetry = { viewModel.searchMedia(query) }
-                    )
-
-                    "results" -> {
-                        val gridState = rememberLazyGridState()
-                        LaunchedEffect(scrollToTopTrigger) {
-                            if (scrollToTopTrigger > 0) gridState.animateScrollToItem(0)
-                        }
-                        Column {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .background(PrimaryPurple, CircleShape)
-                                )
                                 Text(
-                                    text = if (query.isBlank() && !isFilterActive)
-                                        stringResource(R.string.search_trending_label)
-                                    else
-                                        stringResource(R.string.search_results_count, listToShow.size),
-                                    color = TextGray,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.5.sp
+                                    stringResource(R.string.search_clear_all),
+                                    color = PrimaryPurple,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(recentSearches, key = { it }) { recent ->
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(SurfaceDark)
+                                        .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(20.dp))
+                                        .clickable {
+                                            query = recent
+                                            viewModel.searchMedia(recent)
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.History,
+                                        contentDescription = null,
+                                        tint = TextGray,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(recent, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
+                                    Icon(
+                                        Icons.Default.Clear,
+                                        contentDescription = "Eliminar",
+                                        tint = TextGray,
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .clickable { viewModel.removeRecentSearch(recent) }
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+
+                if (usePaging) {
+                    // ── Modo paginado (Paging 3) para búsqueda por título ──────────────
+                    val isPagingLoading = pagingItems.loadState.refresh is LoadState.Loading
+                    val isPagingError = pagingItems.loadState.refresh is LoadState.Error
+
+                    AnimatedContent(
+                        targetState = when {
+                            isPagingLoading && pagingItems.itemCount == 0 -> "loading"
+                            isPagingError -> "error"
+                            pagingItems.itemCount > 0 -> "results"
+                            !isPagingLoading -> "empty"
+                            else -> "loading"
+                        },
+                        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
+                        label = "searchPagingState"
+                    ) { state ->
+                        when (state) {
+                            "loading" -> SearchGridSkeleton()
+                            "error" -> ErrorView(
+                                message = stringResource(R.string.error_unknown),
+                                onRetry = { pagingItems.retry() }
+                            )
+                            "results" -> {
+                                val gridState = rememberLazyGridState()
+                                LaunchedEffect(scrollToTopTrigger) {
+                                    if (scrollToTopTrigger > 0) gridState.animateScrollToItem(0)
+                                }
+                                Column {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(Modifier.size(6.dp).background(PrimaryPurple, CircleShape))
+                                        Text(
+                                            text = stringResource(R.string.search_results_count, pagingItems.itemCount),
+                                            color = TextGray,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 1.5.sp
+                                        )
+                                    }
+                                    LazyVerticalGrid(
+                                        state = gridState,
+                                        columns = GridCells.Adaptive(minSize = 105.dp),
+                                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        items(
+                                            count = pagingItems.itemCount,
+                                            key = pagingItems.itemKey { it.id }
+                                        ) { index ->
+                                            pagingItems[index]?.let { media ->
+                                                ShowCard(
+                                                    media = media,
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                    onClick = { selectedMedia, tag ->
+                                                        globalNavController.navigate(
+                                                            Screen.Detail(selectedMedia.id, tag)
+                                                        )
+                                                    },
+                                                    tag = "search_results",
+                                                    width = Dp.Unspecified
+                                                )
+                                            }
+                                        }
+                                        if (pagingItems.loadState.append is LoadState.Loading) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        color = PrimaryPurple,
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else -> NoResultsState(query)
+                        }
+                    }
+                } else if (showTrendingPeople) {
+                    // ── Trending Actores / Directores (sin query) ──────────────────────
+                    val personLabel =
+                        if (searchMode == SearchMode.ACTOR) "ACTORES EN TENDENCIA" else "DIRECTORES EN TENDENCIA"
+                    Column {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(modifier = Modifier.size(6.dp).background(PrimaryPurple, CircleShape))
+                            Text(
+                                text = personLabel,
+                                color = TextGray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.5.sp
+                            )
+                        }
+                        if (trendingPeople.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = PrimaryPurple, modifier = Modifier.size(28.dp))
+                            }
+                        } else {
                             LazyVerticalGrid(
-                                state = gridState,
-                                columns = GridCells.Adaptive(minSize = 160.dp),
+                                columns = GridCells.Adaptive(minSize = 100.dp),
                                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(18.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(listToShow, key = { it.id }) { media ->
-                                    ShowCard(
-                                        media = media,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        onClick = { selectedMedia, tag ->
-                                            globalNavController.navigate(Screen.Detail(selectedMedia.id, tag))
-                                        },
-                                        tag = listTag,
-                                        width = Dp.Unspecified
+                                items(trendingPeople, key = { it.id }) { person ->
+                                    TrendingPersonCard(
+                                        person = person,
+                                        onClick = { globalNavController.navigate(Screen.Actor(person.id, person.name)) }
                                     )
                                 }
                             }
                         }
                     }
+                } else {
+                    // ── Modo estándar (Actor, Creator, filtros) ───────────────────────
+                    AnimatedContent(
+                        targetState = when {
+                            isLoading -> "loading"
+                            errorMessage != null -> "error"
+                            listToShow.isNotEmpty() -> "results"
+                            query.isNotBlank() || isFilterActive -> "empty"
+                            else -> "idle"
+                        },
+                        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
+                        label = "searchState"
+                    ) { state ->
+                        when (state) {
+                            "loading" -> SearchGridSkeleton()
 
-                    "empty" -> {
-                        if (searchMode != SearchMode.TITLE && query.isNotBlank()) {
-                            SearchModeComingSoon(searchMode)
-                        } else {
-                            NoResultsState(query)
+                            "error" -> ErrorView(
+                                message = errorMessage?.asString() ?: stringResource(R.string.error_unknown),
+                                onRetry = { viewModel.searchMedia(query) }
+                            )
+
+                            "results" -> {
+                                val gridState = rememberLazyGridState()
+                                LaunchedEffect(scrollToTopTrigger) {
+                                    if (scrollToTopTrigger > 0) gridState.animateScrollToItem(0)
+                                }
+                                Column {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .background(PrimaryPurple, CircleShape)
+                                        )
+                                        Text(
+                                            text = if (query.isBlank() && !isFilterActive) {
+                                                stringResource(R.string.search_trending_label)
+                                            } else {
+                                                stringResource(R.string.search_results_count, listToShow.size)
+                                            },
+                                            color = TextGray,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 1.5.sp
+                                        )
+                                    }
+                                    LazyVerticalGrid(
+                                        state = gridState,
+                                        columns = GridCells.Adaptive(minSize = 105.dp),
+                                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        items(listToShow, key = { it.id }) { media ->
+                                            ShowCard(
+                                                media = media,
+                                                sharedTransitionScope = sharedTransitionScope,
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                onClick = { selectedMedia, tag ->
+                                                    globalNavController.navigate(Screen.Detail(selectedMedia.id, tag))
+                                                },
+                                                tag = listTag,
+                                                width = Dp.Unspecified
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            "empty" -> {
+                                if (searchMode != SearchMode.TITLE && query.isNotBlank()) {
+                                    SearchModeComingSoon(searchMode)
+                                } else {
+                                    NoResultsState(query)
+                                }
+                            }
+
+                            else -> {}
                         }
                     }
-
-                    else -> {}
-                }
+                } // fin else modo estándar
             }
-        }
 
-        AnimatedVisibility(
-            visible = suggestions.isNotEmpty(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .padding(top = padding.calculateTopPadding())
-                .padding(horizontal = 16.dp)
-        ) {
-            Surface(
-                color = Color(0xFF1C1C2E),
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 8.dp,
-                shadowElevation = 8.dp
+            AnimatedVisibility(
+                visible = suggestions.isNotEmpty(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(top = padding.calculateTopPadding())
+                    .padding(horizontal = 16.dp)
             ) {
-                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    suggestions.forEachIndexed { idx, media ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    query = media.name
-                                    viewModel.updateSuggestions("")
-                                    viewModel.searchMedia(media.name)
-                                }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
+                Surface(
+                    color = Color(0xFF1C1C2E),
+                    shape = RoundedCornerShape(16.dp),
+                    tonalElevation = 8.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        suggestions.forEachIndexed { idx, media ->
+                            Row(
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .background(PrimaryPurple.copy(alpha = 0.12f), CircleShape),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        query = media.name
+                                        viewModel.updateSuggestions("")
+                                        viewModel.searchMedia(media.name)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = PrimaryPurple,
-                                    modifier = Modifier.size(16.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(PrimaryPurple.copy(alpha = 0.12f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = PrimaryPurple,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    media.name,
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                media.name,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        if (idx < suggestions.lastIndex) {
-                            HorizontalDivider(
-                                color = Color.White.copy(alpha = 0.05f),
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
+                            if (idx < suggestions.lastIndex) {
+                                HorizontalDivider(
+                                    color = Color.White.copy(alpha = 0.05f),
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
         } // close Box
     }
 
@@ -651,8 +826,11 @@ fun FilterSheetContent(
         ) {
             FilterSectionLabel(stringResource(R.string.search_release_year))
             Text(
-                text = if (yearFrom == SearchViewModel.MIN_YEAR && yearTo == currentYear) stringResource(R.string.search_all)
-                       else "$yearFrom – $yearTo",
+                text = if (yearFrom == SearchViewModel.MIN_YEAR && yearTo == currentYear) {
+                    stringResource(R.string.search_all)
+                } else {
+                    "$yearFrom – $yearTo"
+                },
                 color = PrimaryPurpleLight,
                 fontWeight = FontWeight.Black,
                 fontSize = 14.sp
@@ -687,8 +865,11 @@ fun FilterSheetContent(
             ) {
                 Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(15.dp))
                 Text(
-                    text = if (selectedRating == null || selectedRating == 0f) stringResource(R.string.search_rating_all)
-                           else stringResource(R.string.search_rating_format, selectedRating),
+                    text = if (selectedRating == null || selectedRating == 0f) {
+                        stringResource(R.string.search_rating_all)
+                    } else {
+                        stringResource(R.string.search_rating_format, selectedRating)
+                    },
                     color = Color(0xFFFFC107),
                     fontWeight = FontWeight.Black,
                     fontSize = 14.sp
@@ -783,10 +964,10 @@ fun SearchModeComingSoon(mode: SearchMode) {
 private fun SearchGridSkeleton() {
     val shimmer = shimmerBrush()
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
+        columns = GridCells.Adaptive(minSize = 105.dp),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
         userScrollEnabled = false
     ) {
@@ -831,26 +1012,30 @@ fun NoResultsState(query: String) {
     ) {
         Box(
             modifier = Modifier
-                .size(88.dp)
+                .size(110.dp)
                 .background(
                     Brush.radialGradient(
-                        listOf(Color.White.copy(alpha = 0.04f), Color.Transparent)
+                        listOf(PrimaryPurple.copy(alpha = 0.18f), Color.Transparent)
                     ),
                     CircleShape
-                ),
+                )
+                .border(1.dp, PrimaryPurple.copy(alpha = 0.20f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                Icons.Default.Search,
+                Icons.Default.TravelExplore,
                 contentDescription = null,
-                modifier = Modifier.size(44.dp),
-                tint = Color.White.copy(alpha = 0.12f)
+                modifier = Modifier.size(52.dp),
+                tint = PrimaryPurpleLight.copy(alpha = 0.55f)
             )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(28.dp))
         Text(
-            text = if (query.isNotBlank()) stringResource(R.string.search_no_results, query)
-                   else stringResource(R.string.search_no_matches),
+            text = if (query.isNotBlank()) {
+                stringResource(R.string.search_no_results, query)
+            } else {
+                stringResource(R.string.search_no_matches)
+            },
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Black,
@@ -865,5 +1050,74 @@ fun NoResultsState(query: String) {
             textAlign = TextAlign.Center,
             lineHeight = 21.sp
         )
+        if (query.isNotBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Prueba con el título exacto o en inglés",
+                color = TextGray.copy(alpha = 0.6f),
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun TrendingPersonCard(person: com.andrea.showmateapp.data.network.PersonSearchResult, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(90.dp)
+                .clip(CircleShape)
+                .background(SurfaceDark)
+        ) {
+            if (person.profilePath != null) {
+                com.andrea.showmateapp.ui.components.premium.TmdbImage(
+                    path = person.profilePath,
+                    contentDescription = person.name,
+                    size = com.andrea.showmateapp.util.TmdbUtils.ImageSize.W185,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = TextGray,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .align(Alignment.Center)
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = person.name,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+        person.knownForDepartment?.let { dept ->
+            Text(
+                text = when (dept.lowercase()) {
+                    "acting" -> "Actor"
+                    "directing" -> "Director"
+                    "writing" -> "Guionista"
+                    "production" -> "Productor"
+                    else -> dept
+                },
+                color = TextGray,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }

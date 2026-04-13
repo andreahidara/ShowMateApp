@@ -1,22 +1,24 @@
 package com.andrea.showmateapp.ui.screens.profile.friends
 
 import android.util.Patterns
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.util.GenreMapper
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
+@Immutable
 data class FriendCompareUiState(
     val friendEmail: String = "",
     val commonShows: List<MediaContent> = emptyList(),
@@ -35,6 +37,12 @@ class FriendCompareViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(FriendCompareUiState())
     val uiState: StateFlow<FriendCompareUiState> = _uiState.asStateFlow()
 
+    fun initWithEmail(email: String) {
+        if (email.isBlank() || _uiState.value.hasSearched) return
+        _uiState.update { it.copy(friendEmail = email) }
+        compare()
+    }
+
     fun onEmailChange(email: String) {
         _uiState.update { it.copy(friendEmail = email, error = null) }
     }
@@ -50,7 +58,14 @@ class FriendCompareViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, commonShows = emptyList(), compatibilityScore = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    commonShows = emptyList(),
+                    compatibilityScore = null
+                )
+            }
 
             val myProfileDeferred = async { userRepository.getUserProfile() }
             val friendProfileDeferred = async { userRepository.getFriendProfile(email) }
@@ -58,7 +73,13 @@ class FriendCompareViewModel @Inject constructor(
             val friendProfile = friendProfileDeferred.await()
 
             if (friendProfile == null) {
-                _uiState.update { it.copy(isLoading = false, hasSearched = true, error = "No se encontró ningún usuario con ese email") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        hasSearched = true,
+                        error = "No se encontró ningún usuario con ese email"
+                    )
+                }
                 return@launch
             }
 

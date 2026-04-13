@@ -139,9 +139,12 @@ class GetCollaborativeBoostUseCaseTest {
     fun `given essential show with lower explicit rating, when buildRatingVector, then essential always wins`() {
         // Given — essential siempre sobrescribe (incluso si rating era mayor)
         val profile = UserProfile(
-            ratings = mapOf("30" to 9.5f),    // 0.95 explicit
-            likedMediaIds = listOf(30),         // 0.80 liked
-            essentialMediaIds = listOf(30)      // 1.00 essential — should win
+            // 0.95 explicit
+            ratings = mapOf("30" to 9.5f),
+            // 0.80 liked
+            likedMediaIds = listOf(30),
+            // 1.00 essential — should win
+            essentialMediaIds = listOf(30)
         )
 
         // When
@@ -171,20 +174,24 @@ class GetCollaborativeBoostUseCaseTest {
         // Given
         val profile = UserProfile(
             watchedEpisodes = mapOf("1" to listOf(1), "2" to listOf(1)),
-            ratings = mapOf("1" to 7f),         // show 1: watched overwrote by rating 0.70
-            likedMediaIds = listOf(2),           // show 2: watched 0.40 → liked max → 0.80
-            essentialMediaIds = listOf(3),       // show 3: only essential → 1.00
-            dislikedMediaIds = listOf(4)         // show 4: excluded
+            // show 1: watched overwrote by rating 0.70
+            ratings = mapOf("1" to 7f),
+            // show 2: watched 0.40 → liked max → 0.80
+            likedMediaIds = listOf(2),
+            // show 3: only essential → 1.00
+            essentialMediaIds = listOf(3),
+            // show 4: excluded
+            dislikedMediaIds = listOf(4)
         )
 
         // When
         val vector = useCase.buildRatingVector(profile)
 
         // Then
-        assertEquals(0.70f, vector[1]!!, 0.001f)  // 7/10
-        assertEquals(0.80f, vector[2]!!, 0.001f)  // liked overrides watched
-        assertEquals(1.00f, vector[3]!!, 0.001f)  // essential
-        assertTrue(4 !in vector)                   // disliked excluded
+        assertEquals(0.70f, vector[1]!!, 0.001f) // 7/10
+        assertEquals(0.80f, vector[2]!!, 0.001f) // liked overrides watched
+        assertEquals(1.00f, vector[3]!!, 0.001f) // essential
+        assertTrue(4 !in vector) // disliked excluded
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -208,68 +215,90 @@ class GetCollaborativeBoostUseCaseTest {
     fun `given identical profiles, when execute, then cosine similarity is 1 and boost is recommended`() = runTest {
         // Given — ambos perfiles idénticos → cosine=1.0 ≥ MIN_SIMILARITY=0.15
         val sharedShows = listOf(1, 2, 3)
-        val myProfile = UserProfile(userId = "me",
+        val myProfile = UserProfile(
+            userId = "me",
             likedMediaIds = sharedShows,
-            essentialMediaIds = listOf(10))
-        val neighborProfile = UserProfile(userId = "neighbor",
+            essentialMediaIds = listOf(10)
+        )
+        val neighborProfile = UserProfile(
+            userId = "neighbor",
             likedMediaIds = sharedShows,
             essentialMediaIds = listOf(10),
             // Show 20 que yo no he visto pero el vecino sí (liked)
-            ratings = mapOf("20" to 9f))
+            ratings = mapOf("20" to 9f)
+        )
         coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(neighborProfile)
 
         // When
         val result = useCase.execute(myProfile)
 
         // Then — show 20 debería aparecer con boost
-        assertTrue("Show liked by identical neighbor should get collaborative boost",
-            result.isNotEmpty())
-        assertTrue("Boost values must be in [0, MAX_BOOST=1.20]",
-            result.values.all { it in 0f..1.20f })
+        assertTrue(
+            "Show liked by identical neighbor should get collaborative boost",
+            result.isNotEmpty()
+        )
+        assertTrue(
+            "Boost values must be in [0, MAX_BOOST=1.20]",
+            result.values.all { it in 0f..1.20f }
+        )
     }
 
     @Test
     fun `given neighbor below MIN_SIMILARITY threshold, when execute, then result is empty`() = runTest {
         // Given — mi perfil: solo show 1; vecino: solo show 99 (sin superposición → cosine≈0 < 0.15)
         val myProfile = UserProfile(userId = "me", likedMediaIds = listOf(1))
-        val unrelatedNeighbor = UserProfile(userId = "stranger",
-            likedMediaIds = listOf(99, 100, 101))
+        val unrelatedNeighbor = UserProfile(
+            userId = "stranger",
+            likedMediaIds = listOf(99, 100, 101)
+        )
         coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(unrelatedNeighbor)
 
         // When
         val result = useCase.execute(myProfile)
 
         // Then — similaridad coseno ≈ 0 < MIN_SIMILARITY=0.15 → el vecino es filtrado
-        assertTrue("Neighbor with no overlap should not contribute to collaborative boost",
-            result.isEmpty())
+        assertTrue(
+            "Neighbor with no overlap should not contribute to collaborative boost",
+            result.isEmpty()
+        )
     }
 
     @Test
     fun `given show already seen by current user, when execute, then it is excluded from boost map`() = runTest {
         // Given — yo ya he visto el show 5; el vecino también lo valora bien
-        val myProfile = UserProfile(userId = "me",
+        val myProfile = UserProfile(
+            userId = "me",
             likedMediaIds = listOf(1, 2, 3),
-            watchedEpisodes = mapOf("5" to listOf(1, 2, 3)))  // show 5 ya visto
-        val neighborProfile = UserProfile(userId = "neighbor",
-            likedMediaIds = listOf(1, 2, 3, 5)) // show 5 también liked por vecino
+            watchedEpisodes = mapOf("5" to listOf(1, 2, 3))
+        ) // show 5 ya visto
+        val neighborProfile = UserProfile(
+            userId = "neighbor",
+            likedMediaIds = listOf(1, 2, 3, 5)
+        ) // show 5 también liked por vecino
         coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(neighborProfile)
 
         // When
         val result = useCase.execute(myProfile)
 
         // Then — show 5 ya está en mi historial → no debe aparecer en el boost
-        assertTrue("Already-watched show must not appear in collaborative recommendations",
-            5 !in result)
+        assertTrue(
+            "Already-watched show must not appear in collaborative recommendations",
+            5 !in result
+        )
     }
 
     @Test
     fun `given show disliked by current user, when execute, then it is excluded from boost map`() = runTest {
         // Given — yo ya he visto y dado dislike al show 7
-        val myProfile = UserProfile(userId = "me",
+        val myProfile = UserProfile(
+            userId = "me",
             likedMediaIds = listOf(1, 2, 3),
-            dislikedMediaIds = listOf(7))
-        val neighborProfile = UserProfile(userId = "neighbor",
-            likedMediaIds = listOf(1, 2, 3, 7))
+            dislikedMediaIds = listOf(7)
+        )
+        val neighborProfile = UserProfile(
+            userId = "neighbor",
+            likedMediaIds = listOf(1, 2, 3, 7)
+        )
         coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(neighborProfile)
 
         // When
@@ -284,8 +313,10 @@ class GetCollaborativeBoostUseCaseTest {
         // Given — vecino tiene 100 shows liked que yo no he visto
         val myProfile = UserProfile(userId = "me", likedMediaIds = listOf(1))
         val neighborIds = (100..199).toList()
-        val neighborProfile = UserProfile(userId = "neighbor",
-            likedMediaIds = listOf(1) + neighborIds) // 1 compartido + 100 únicos
+        val neighborProfile = UserProfile(
+            userId = "neighbor",
+            likedMediaIds = listOf(1) + neighborIds
+        ) // 1 compartido + 100 únicos
         coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(neighborProfile)
 
         // When
@@ -311,11 +342,17 @@ class GetCollaborativeBoostUseCaseTest {
     @Test
     fun `given partially overlapping profiles, when execute, then similarity is between 0 and 1`() = runTest {
         // Given — 2 shows compartidos de 4 en total
-        val myProfile = UserProfile(userId = "me",
-            likedMediaIds = listOf(1, 2, 3, 4))
-        val neighborProfile = UserProfile(userId = "neighbor",
-            likedMediaIds = listOf(1, 2),   // comparten 1 y 2
-            ratings = mapOf("10" to 8f))     // show 10 → yo no lo he visto
+        val myProfile = UserProfile(
+            userId = "me",
+            likedMediaIds = listOf(1, 2, 3, 4)
+        )
+        val neighborProfile = UserProfile(
+            userId = "neighbor",
+            // comparten 1 y 2
+            likedMediaIds = listOf(1, 2),
+            // show 10 → yo no lo he visto
+            ratings = mapOf("10" to 8f)
+        )
         coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(neighborProfile)
 
         // When
@@ -328,25 +365,34 @@ class GetCollaborativeBoostUseCaseTest {
     }
 
     @Test
-    fun `given multiple similar users recommending same show, when execute, then boost reflects weighted average`() = runTest {
-        // Given — dos vecinos ambos recomiendan el show 50 con ratings altos
-        val myProfile = UserProfile(userId = "me", likedMediaIds = listOf(1, 2, 3))
-        val neighbor1 = UserProfile(userId = "n1",
-            likedMediaIds = listOf(1, 2, 3),
-            essentialMediaIds = listOf(50))    // show 50: SIGNAL_ESSENTIAL=1.0
-        val neighbor2 = UserProfile(userId = "n2",
-            likedMediaIds = listOf(1, 2, 3),
-            ratings = mapOf("50" to 9f))       // show 50: 9/10 = 0.90
-        coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(neighbor1, neighbor2)
+    fun `given multiple similar users recommending same show, when execute, then boost reflects weighted average`() =
+        runTest {
+            // Given — dos vecinos ambos recomiendan el show 50 con ratings altos
+            val myProfile = UserProfile(userId = "me", likedMediaIds = listOf(1, 2, 3))
+            val neighbor1 = UserProfile(
+                userId = "n1",
+                likedMediaIds = listOf(1, 2, 3),
+                essentialMediaIds = listOf(50)
+            ) // show 50: SIGNAL_ESSENTIAL=1.0
+            val neighbor2 = UserProfile(
+                userId = "n2",
+                likedMediaIds = listOf(1, 2, 3),
+                ratings = mapOf("50" to 9f)
+            ) // show 50: 9/10 = 0.90
+            coEvery { userRepository.getSimilarUsers(limit = any()) } returns listOf(neighbor1, neighbor2)
 
-        // When
-        val result = useCase.execute(myProfile)
+            // When
+            val result = useCase.execute(myProfile)
 
-        // Then — show 50 debería aparecer con alto boost por dos vecinos de alta similitud
-        assertTrue("Show recommended by two similar neighbors should appear in results",
-            50 in result)
-        val boost = result[50]!!
-        assertTrue("Boost from two high-similarity neighbors should be significant (>0.5)",
-            boost > 0.5f)
-    }
+            // Then — show 50 debería aparecer con alto boost por dos vecinos de alta similitud
+            assertTrue(
+                "Show recommended by two similar neighbors should appear in results",
+                50 in result
+            )
+            val boost = result[50]!!
+            assertTrue(
+                "Boost from two high-similarity neighbors should be significant (>0.5)",
+                boost > 0.5f
+            )
+        }
 }

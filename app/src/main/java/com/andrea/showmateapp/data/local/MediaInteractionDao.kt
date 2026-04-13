@@ -27,6 +27,12 @@ interface MediaInteractionDao {
     @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1")
     fun getWatchedMediaIdsFlow(): Flow<List<Int>>
 
+    @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1 OR isDisliked = 1")
+    suspend fun getExcludedMediaIds(): List<Int>
+
+    @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1 OR isDisliked = 1")
+    fun getExcludedMediaIdsFlow(): Flow<List<Int>>
+
     @Query("SELECT * FROM media_interactions WHERE isWatched = 1 AND lastKnownSeasons > 0")
     suspend fun getWatchedWithSeasonCount(): List<MediaInteractionEntity>
 

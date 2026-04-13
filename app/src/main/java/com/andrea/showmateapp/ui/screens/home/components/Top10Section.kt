@@ -16,15 +16,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.util.TmdbUtils
-import androidx.compose.ui.res.stringResource
-import com.andrea.showmateapp.R
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -77,10 +78,16 @@ fun Top10Section(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(RoundedCornerShape(14.dp))
-                                .sharedElement(
-                                    state = rememberSharedContentState(key = "image-${show.id}-top10"),
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                )
+                                .let {
+                                    if (LocalInspectionMode.current) {
+                                        it
+                                    } else {
+                                        it.sharedElement(
+                                            state = rememberSharedContentState(key = "image-${show.id}-top10"),
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        )
+                                    }
+                                }
                         )
                     }
                     Box(
@@ -100,7 +107,7 @@ fun Top10Section(
                             ),
                             fontSize = if (rank < 10) 74.sp else 60.sp,
                             fontWeight = FontWeight.Black,
-                            lineHeight = 74.sp,
+                            lineHeight = 74.sp
                         )
                     }
                 }

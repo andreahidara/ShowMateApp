@@ -16,11 +16,11 @@ class ShowMateMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
-        val data    = remoteMessage.data
-        val title   = data["title"]   ?: remoteMessage.notification?.title
-        val body    = data["body"]    ?: remoteMessage.notification?.body
+        val data = remoteMessage.data
+        val title = data["title"] ?: remoteMessage.notification?.title
+        val body = data["body"] ?: remoteMessage.notification?.body
         val channel = data["channel"] ?: NotificationChannels.GENERAL
-        val showId  = data["show_id"]?.toIntOrNull()
+        val showId = data["show_id"]?.toIntOrNull()
 
         showNotification(title, body, channel, showId)
     }
@@ -33,26 +33,23 @@ class ShowMateMessagingService : FirebaseMessagingService() {
             .update("fcmToken", token)
     }
 
-    private fun showNotification(
-        title: String?,
-        message: String?,
-        channelId: String,
-        showId: Int?
-    ) {
+    private fun showNotification(title: String?, message: String?, channelId: String, showId: Int?) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
             showId?.let { putExtra("open_show_id", it) }
         }
 
         val pendingIntent = PendingIntent.getActivity(
-            this, showId ?: 0, intent,
+            this,
+            showId ?: 0,
+            intent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val priority = when (channelId) {
             NotificationChannels.SEASON,
             NotificationChannels.STREAK_DANGER -> NotificationCompat.PRIORITY_HIGH
-            else                               -> NotificationCompat.PRIORITY_DEFAULT
+            else -> NotificationCompat.PRIORITY_DEFAULT
         }
 
         val notification = NotificationCompat.Builder(this, channelId)

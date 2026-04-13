@@ -10,9 +10,13 @@ plugins {
     alias(libs.plugins.ksp)
     id("kotlin-parcelize")
     alias(libs.plugins.kotlin.serialization)
-    id("app.cash.paparazzi") version "1.3.4"
+    id("app.cash.paparazzi") version "1.3.5"
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
+}
+
+ksp {
+    arg("dagger.hilt.disableModulesHaveInstallInCheck", "true")
 }
 
 val secretProperties = Properties()
@@ -34,11 +38,14 @@ android {
 
         testInstrumentationRunner = "com.andrea.showmateapp.HiltTestRunner"
 
-        buildConfigField(
-            "String",
-            "TMDB_API_TOKEN",
-            "\"${secretProperties.getProperty("TMDB_API_TOKEN") ?: ""}\""
-        )
+        resConfigs("es")
+
+        val tmdbToken = if (secretProperties.containsKey("TMDB_API_TOKEN")) {
+            secretProperties.getProperty("TMDB_API_TOKEN").replace("\"", "").trim()
+        } else {
+            "NO_TOKEN"
+        }
+        buildConfigField("String", "TMDB_API_TOKEN", "\"$tmdbToken\"")
     }
 
     signingConfigs {
@@ -90,6 +97,7 @@ android {
 dependencies {
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
     implementation(libs.androidx.core.ktx)
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
@@ -104,6 +112,7 @@ dependencies {
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.logging)
     implementation(libs.coil.compose)
 
     implementation(platform(libs.firebase.bom))
@@ -130,6 +139,10 @@ dependencies {
     implementation(libs.sqlcipher)
     implementation(libs.security.crypto)
     implementation(libs.play.services.auth)
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
+    implementation("androidx.glance:glance-appwidget:1.1.0")
+    implementation("androidx.glance:glance-material3:1.1.0")
 
     testImplementation(libs.junit)
     testImplementation("org.mockito:mockito-core:5.11.0")

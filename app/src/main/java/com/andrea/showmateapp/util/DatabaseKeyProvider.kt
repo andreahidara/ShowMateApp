@@ -8,7 +8,7 @@ import java.security.SecureRandom
 
 object DatabaseKeyProvider {
 
-    private const val PREFS_NAME     = "db_key_store"
+    private const val PREFS_NAME = "db_key_store"
     private const val KEY_PASSPHRASE = "db_passphrase_v1"
 
     fun getOrCreatePassphrase(context: Context): ByteArray {

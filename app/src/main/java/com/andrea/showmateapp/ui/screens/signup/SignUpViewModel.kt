@@ -1,20 +1,22 @@
 package com.andrea.showmateapp.ui.screens.signup
 
 import android.util.Patterns
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
+import com.andrea.showmateapp.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import com.andrea.showmateapp.util.UiText
-import com.andrea.showmateapp.R
 
+@Immutable
 data class SignUpUiState(
     val username: String = "",
     val email: String = "",
@@ -47,7 +49,7 @@ class SignUpViewModel @Inject constructor(
     fun onPasswordChanged(pass: String) {
         _uiState.update { it.copy(password = pass, error = null) }
     }
-    
+
     fun onConfirmPasswordChanged(confPass: String) {
         _uiState.update { it.copy(confirmPassword = confPass, error = null) }
     }
@@ -55,15 +57,17 @@ class SignUpViewModel @Inject constructor(
     fun togglePasswordVisibility() {
         _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
     }
-    
+
     fun toggleConfirmPasswordVisibility() {
         _uiState.update { it.copy(isConfirmPasswordVisible = !it.isConfirmPasswordVisible) }
     }
 
     fun onSignUpClick() {
         val state = _uiState.value
-        
-        if (state.email.isBlank() || state.password.isBlank() || state.username.isBlank() || state.confirmPassword.isBlank()) {
+
+        if (state.email.isBlank() || state.password.isBlank() ||
+            state.username.isBlank() || state.confirmPassword.isBlank()
+        ) {
             _uiState.update { it.copy(error = UiText.StringResource(R.string.error_empty_fields)) }
             return
         }
@@ -90,18 +94,20 @@ class SignUpViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            
+
             authRepository.signUp(state.email, state.password)
                 .onSuccess {
                     userRepository.initUserProfile(state.username)
                     _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 .onFailure { throwable ->
-                    _uiState.update { it.copy(
-                        isLoading = false,
-                        error = throwable.message?.let { UiText.DynamicString(it) } 
-                            ?: UiText.StringResource(R.string.error_signup_failed)
-                    ) }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = throwable.message?.let { UiText.DynamicString(it) }
+                                ?: UiText.StringResource(R.string.error_signup_failed)
+                        )
+                    }
                 }
         }
     }

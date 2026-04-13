@@ -1,6 +1,7 @@
 package com.andrea.showmateapp.ui.screens.home.components
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -39,47 +40,58 @@ import com.andrea.showmateapp.util.GenreMapper
 import com.andrea.showmateapp.util.TmdbUtils
 
 @Composable
-fun WhatToWatchDialog(
-    media: MediaContent,
-    onDismiss: () -> Unit,
-    onViewDetails: () -> Unit
-) {
-    val matchPct = if (media.affinityScore > 0f)
-        (media.affinityScore * 100).toInt().coerceIn(0, 100) else -1
+fun WhatToWatchDialog(media: MediaContent, onDismiss: () -> Unit, onViewDetails: () -> Unit) {
+    val matchPct = if (media.affinityScore > 0f) {
+        (media.affinityScore * 100).toInt().coerceIn(0, 100)
+    } else {
+        -1
+    }
     val matchColor = when {
         matchPct >= 80 -> Color(0xFF4CAF50)
         matchPct >= 50 -> Color(0xFFFFC107)
-        matchPct >= 0  -> Color.White.copy(alpha = 0.7f)
-        else           -> null
+        else -> Color(0xFFE91E63)
     }
 
-    val matchPulse = rememberInfiniteTransition(label = "matchPulse")
-    val matchGlowRaw by matchPulse.animateFloat(
-        initialValue = 0.15f, targetValue = 0.35f,
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val matchGlow by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.6f,
         animationSpec = infiniteRepeatable(
-            tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse
-        ), label = "glow"
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
     )
 
-    val matchGlow = if (matchColor != null) matchGlowRaw else 0f
-
     val genreNames = remember(media.id) {
-        (media.genres?.map { it.name }?.takeIf { it.isNotEmpty() }
-            ?: media.safeGenreIds.map { GenreMapper.getGenreName(it) }).take(3)
+        (
+            media.genres?.map { it.name }?.takeIf { it.isNotEmpty() }
+                ?: media.safeGenreIds.map { GenreMapper.getGenreName(it) }
+            ).take(3)
     }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 12.dp,
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(32.dp),
+            // Un azul oscuro más profundo para el dialog
+            color = Color(0xFF1A1A2E),
+            tonalElevation = 16.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.12f), Color.Transparent)
+                    ),
+                    shape = RoundedCornerShape(32.dp)
+                )
         ) {
             Column {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(260.dp)
+                        // Imagen un poco más alta
+                        .height(320.dp)
                 ) {
                     TmdbImage(
                         path = media.backdropPath ?: media.posterPath,
@@ -121,22 +133,32 @@ fun WhatToWatchDialog(
                         )
                     }
 
-                    if (matchColor != null && matchPct >= 0) {
-                        Box(
+                    if (matchPct >= 0) {
+                        Surface(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .padding(12.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(matchColor.copy(alpha = matchGlow))
-                                .border(1.dp, matchColor.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                                .padding(16.dp),
+                            color = matchColor.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, matchColor.copy(alpha = matchGlow))
                         ) {
-                            Text(
-                                text = "$matchPct% match",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(matchColor, CircleShape)
+                                )
+                                Text(
+                                    text = "$matchPct% afinidad",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
                         }
                     }
 
@@ -256,10 +278,7 @@ fun WhatToWatchDialog(
 }
 
 @Composable
-fun ContextSelectorDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (MoodOption?, TimeOption?) -> Unit
-) {
+fun ContextSelectorDialog(onDismiss: () -> Unit, onConfirm: (MoodOption?, TimeOption?) -> Unit) {
     var selectedMood by remember { mutableStateOf<MoodOption?>(null) }
     var selectedTime by remember { mutableStateOf<TimeOption?>(null) }
 
@@ -288,7 +307,12 @@ fun ContextSelectorDialog(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.home_how_are_you), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.home_how_are_you),
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         MoodOption.entries.forEach { mood ->
                             val selected = selectedMood == mood
@@ -318,7 +342,12 @@ fun ContextSelectorDialog(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.home_how_much_time), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.home_how_much_time),
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         TimeOption.entries.forEach { time ->
                             val selected = selectedTime == time

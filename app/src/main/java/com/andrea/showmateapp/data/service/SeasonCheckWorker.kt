@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -44,7 +45,6 @@ class SeasonCheckWorker @AssistedInject constructor(
         if (!notifEnabled || !notifNewEpisodes) return Result.success()
 
         return try {
-
             val watchedWithCount = interactionRepository.getWatchedShowsWithSeasonCount()
 
             coroutineScope {
@@ -72,9 +72,13 @@ class SeasonCheckWorker @AssistedInject constructor(
     private fun sendNotification(showId: Int, showName: String, newSeasonCount: Int) {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val intent = Intent(ctx, MainActivity::class.java).apply {
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("showmate://detail/$showId"),
+            ctx,
+            MainActivity::class.java
+        ).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("open_show_name", showName)
         }
         val pendingIntent = PendingIntent.getActivity(
             ctx,
@@ -83,24 +87,24 @@ class SeasonCheckWorker @AssistedInject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val bigText = "La temporada $newSeasonCount de $showName ya está disponible. ¡Es el momento de ponerte al día!"
+        val bigText = ctx.getString(R.string.notif_season_big_text, newSeasonCount, showName)
 
         val notification = NotificationCompat.Builder(ctx, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("🎬 ¡Nueva temporada de $showName!")
-            .setContentText("Temporada $newSeasonCount disponible")
+            .setContentTitle(ctx.getString(R.string.notif_season_title, showName))
+            .setContentText(ctx.getString(R.string.notif_season_content, newSeasonCount))
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText(bigText)
-                    .setBigContentTitle("¡Nueva temporada de $showName!")
-                    .setSummaryText("ShowMate")
+                    .setBigContentTitle(ctx.getString(R.string.notif_season_big_title, showName))
+                    .setSummaryText(ctx.getString(R.string.notif_season_summary))
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .addAction(
                 R.mipmap.ic_launcher,
-                "Ver ahora",
+                ctx.getString(R.string.notif_season_action),
                 pendingIntent
             )
             .build()

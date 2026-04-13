@@ -11,19 +11,19 @@ sealed class ErrorType {
 
     data class Server(val code: Int) : ErrorType() {
         override val defaultMessage = "Error del servidor ($code). Inténtalo más tarde."
-        override val isCritical  = code >= 500
+        override val isCritical = code >= 500
         override val isRetryable = code >= 500
     }
 
     object Auth : ErrorType() {
         override val defaultMessage = "Sesión caducada. Vuelve a iniciar sesión."
-        override val isCritical  = true
+        override val isCritical = true
         override val isRetryable = false
     }
 
     object Data : ErrorType() {
-        override val defaultMessage = "Error al procesar los datos recibidos."
-        override val isRetryable = false
+        override val defaultMessage = "Error al cargar el contenido. Comprueba tu conexión."
+        override val isRetryable = true
     }
 
     object Unknown : ErrorType()

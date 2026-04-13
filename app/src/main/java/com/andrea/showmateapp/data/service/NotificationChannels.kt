@@ -6,12 +6,12 @@ import android.content.Context
 
 object NotificationChannels {
 
-    const val SEASON          = "new_season"
+    const val SEASON = "new_season"
     const val FRIEND_ACTIVITY = "friend_activity"
     const val INACTIVITY_RECS = "inactivity_recs"
-    const val HIDDEN_GEM      = "hidden_gem"
-    const val STREAK_DANGER   = "streak_danger"
-    const val GENERAL         = "showmate_general"
+    const val HIDDEN_GEM = "hidden_gem"
+    const val STREAK_DANGER = "streak_danger"
+    const val GENERAL = "showmate_general"
 
     fun createAll(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -61,7 +61,7 @@ object NotificationChannels {
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Notificaciones push genéricas de ShowMate"
-            },
+            }
         )
 
         channels.forEach { nm.createNotificationChannel(it) }

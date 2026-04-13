@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.friends
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.ActivityEvent
@@ -11,6 +12,7 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,12 +22,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 enum class FriendsTab { FRIENDS, REQUESTS, FEED, DISCOVER }
 
 enum class FriendsMode { COMPARE, GROUP }
 
+@Immutable
 data class FriendsUiState(
     val tab: FriendsTab = FriendsTab.FRIENDS,
     val friends: List<FriendInfo> = emptyList(),
@@ -58,6 +60,7 @@ class FriendsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(FriendsUiState())
     val uiState: StateFlow<FriendsUiState> = _uiState.asStateFlow()
 
+    @Suppress("ktlint:standard:property-naming")
     private val _rawSearchQuery = MutableStateFlow("")
 
     init {
@@ -72,8 +75,14 @@ class FriendsViewModel @Inject constructor(
             _rawSearchQuery.debounce(500L).collectLatest { query ->
                 if (query.length >= 2) {
                     _uiState.update { it.copy(isSearching = true) }
-                    val results = try { socialRepository.searchByUsername(query) }
-                    catch (e: Exception) { if (e is CancellationException) throw e; emptyList() }
+                    val results = try {
+                        socialRepository.searchByUsername(query)
+                    } catch (
+                        e: Exception
+                    ) {
+                        if (e is CancellationException) throw e
+                        emptyList()
+                    }
                     _uiState.update { it.copy(isSearching = false, searchResults = results) }
                 } else {
                     _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
@@ -85,9 +94,9 @@ class FriendsViewModel @Inject constructor(
     fun setTab(tab: FriendsTab) {
         _uiState.update { it.copy(tab = tab) }
         when (tab) {
-            FriendsTab.FRIENDS  -> loadFriends()
+            FriendsTab.FRIENDS -> loadFriends()
             FriendsTab.REQUESTS -> loadRequests()
-            FriendsTab.FEED     -> loadFeed()
+            FriendsTab.FEED -> loadFeed()
             FriendsTab.DISCOVER -> if (_uiState.value.suggestions.isEmpty()) loadSuggestions()
         }
     }
@@ -96,15 +105,28 @@ class FriendsViewModel @Inject constructor(
         if (_uiState.value.isFriendsLoading) return
         viewModelScope.launch {
             _uiState.update { it.copy(isFriendsLoading = true) }
-            val friends = try { socialRepository.getFriends() }
-            catch (e: Exception) { if (e is CancellationException) throw e; emptyList() }
+            val friends = try {
+                socialRepository.getFriends()
+            } catch (
+                e: Exception
+            ) {
+                if (e is CancellationException) throw e
+                emptyList()
+            }
             _uiState.update { it.copy(isFriendsLoading = false, friends = friends) }
         }
     }
 
     private fun loadPendingCount() {
         viewModelScope.launch {
-            val count = try { socialRepository.getPendingRequestCount() } catch (e: Exception) { if (e is CancellationException) throw e; 0 }
+            val count = try {
+                socialRepository.getPendingRequestCount()
+            } catch (
+                e: Exception
+            ) {
+                if (e is CancellationException) throw e
+                0
+            }
             _uiState.update { it.copy(unreadRequestCount = count) }
         }
     }
@@ -117,9 +139,9 @@ class FriendsViewModel @Inject constructor(
                 val outgoing = socialRepository.getOutgoingRequests()
                 _uiState.update {
                     it.copy(
-                        isRequestsLoading  = false,
-                        incomingRequests   = incoming,
-                        outgoingRequests   = outgoing,
+                        isRequestsLoading = false,
+                        incomingRequests = incoming,
+                        outgoingRequests = outgoing,
                         unreadRequestCount = incoming.size
                     )
                 }
@@ -136,11 +158,13 @@ class FriendsViewModel @Inject constructor(
                 socialRepository.acceptFriendRequest(request.id, request.fromUid)
                 _uiState.update {
                     it.copy(
-                        incomingRequests   = it.incomingRequests.filter { r -> r.id != request.id },
+                        successMessage = "¡Ahora sois amigos!",
+                        incomingRequests = it.incomingRequests.filter { r -> r.id != request.id },
                         unreadRequestCount = (it.unreadRequestCount - 1).coerceAtLeast(0)
                     )
                 }
                 loadFriends()
+
                 runCatching { achievementChecker.addXp(AchievementDefs.XP_ADD_FRIEND) }
                 val profile = runCatching { userRepository.getUserProfile() }.getOrNull()
                 if (profile != null) {
@@ -161,11 +185,13 @@ class FriendsViewModel @Inject constructor(
                 socialRepository.rejectFriendRequest(requestId)
                 _uiState.update {
                     it.copy(
-                        incomingRequests   = it.incomingRequests.filter { r -> r.id != requestId },
+                        incomingRequests = it.incomingRequests.filter { r -> r.id != requestId },
                         unreadRequestCount = (it.unreadRequestCount - 1).coerceAtLeast(0)
                     )
                 }
-            } catch (e: Exception) { if (e is CancellationException) throw e }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -174,7 +200,9 @@ class FriendsViewModel @Inject constructor(
             try {
                 socialRepository.rejectFriendRequest(requestId)
                 _uiState.update { it.copy(outgoingRequests = it.outgoingRequests.filter { r -> r.id != requestId }) }
-            } catch (e: Exception) { if (e is CancellationException) throw e }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -200,8 +228,14 @@ class FriendsViewModel @Inject constructor(
         if (_uiState.value.isSuggestionsLoading) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSuggestionsLoading = true) }
-            val suggestions = try { socialRepository.getSuggestedFriends() }
-            catch (e: Exception) { if (e is CancellationException) throw e; emptyList() }
+            val suggestions = try {
+                socialRepository.getSuggestedFriends()
+            } catch (
+                e: Exception
+            ) {
+                if (e is CancellationException) throw e
+                emptyList()
+            }
             _uiState.update { it.copy(isSuggestionsLoading = false, suggestions = suggestions) }
         }
     }
@@ -213,13 +247,19 @@ class FriendsViewModel @Inject constructor(
 
     fun sendFriendRequest(toUid: String, toUsername: String) {
         viewModelScope.launch {
-            val success = try { socialRepository.sendFriendRequest(toUid, toUsername) }
-            catch (e: Exception) { if (e is CancellationException) throw e; false }
+            val success = try {
+                socialRepository.sendFriendRequest(toUid, toUsername)
+            } catch (
+                e: Exception
+            ) {
+                if (e is CancellationException) throw e
+                false
+            }
             if (success) {
                 _uiState.update {
                     it.copy(
                         sentRequestUids = it.sentRequestUids + toUid,
-                        successMessage  = "Solicitud enviada a $toUsername"
+                        successMessage = "Solicitud enviada a $toUsername"
                     )
                 }
             } else {
@@ -233,7 +273,9 @@ class FriendsViewModel @Inject constructor(
             try {
                 socialRepository.removeFriend(uid)
                 _uiState.update { it.copy(friends = it.friends.filter { f -> f.uid != uid }) }
-            } catch (e: Exception) { if (e is CancellationException) throw e }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -255,7 +297,7 @@ class FriendsViewModel @Inject constructor(
 
     fun clearGroupError() = _uiState.update { it.copy(groupAddError = null) }
 
-    fun dismissError()   = _uiState.update { it.copy(errorMessage   = null) }
+    fun dismissError() = _uiState.update { it.copy(errorMessage = null) }
     fun dismissSuccess() = _uiState.update { it.copy(successMessage = null) }
 
     fun getCurrentUid() = socialRepository.getCurrentUid()

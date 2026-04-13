@@ -6,9 +6,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import com.andrea.showmateapp.di.SecurityDataStore
 import com.andrea.showmateapp.domain.repository.IAuthRepository
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 
 @Singleton
 class SessionRepository @Inject constructor(

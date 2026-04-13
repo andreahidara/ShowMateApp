@@ -1,9 +1,11 @@
 package com.andrea.showmateapp.domain.repository
 
 import com.andrea.showmateapp.data.model.UserProfile
+import kotlinx.coroutines.flow.Flow
 
 interface IUserRepository {
     suspend fun getUserProfile(): UserProfile?
+    fun getUserProfileFlow(): Flow<UserProfile?>
     fun getCurrentUserEmail(): String?
     suspend fun initUserProfile(username: String)
     suspend fun saveOnboardingInterests(
@@ -24,4 +26,5 @@ interface IUserRepository {
     suspend fun clearUserCache()
     suspend fun updateProfilePhoto(url: String)
     suspend fun deleteAccount()
+    suspend fun restoreBackup(partial: UserProfile)
 }
