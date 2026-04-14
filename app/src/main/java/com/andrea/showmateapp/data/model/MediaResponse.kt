@@ -1,6 +1,6 @@
 package com.andrea.showmateapp.data.model
 
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.google.gson.annotations.SerializedName
 
 data class MediaResponse(
@@ -9,3 +9,4 @@ data class MediaResponse(
     @SerializedName("total_pages") val total_pages: Int,
     @SerializedName("total_results") val total_results: Int
 )
+

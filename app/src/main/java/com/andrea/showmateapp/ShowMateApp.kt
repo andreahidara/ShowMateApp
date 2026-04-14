@@ -8,7 +8,6 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.imageLoader
 import coil.memory.MemoryCache
-import com.andrea.showmateapp.data.service.FirestoreSyncWorker
 import com.andrea.showmateapp.data.service.NotificationScheduler
 import com.andrea.showmateapp.util.AppUtils
 import com.andrea.showmateapp.util.AppUtils.isDebug
@@ -53,7 +52,7 @@ class ShowMateApp : Application(), Configuration.Provider, ImageLoaderFactory {
         if (!isDebug && SecurityChecker.isDeviceCompromised()) {
             FirebaseCrashlytics.getInstance().log("Security check failed: rooted=${SecurityChecker.isRooted()} emulator=${SecurityChecker.isEmulator()}")
         }
-        
+
         NotificationScheduler.scheduleAll(this)
     }
 

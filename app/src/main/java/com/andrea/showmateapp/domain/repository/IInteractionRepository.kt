@@ -2,7 +2,7 @@ package com.andrea.showmateapp.domain.repository
 
 import com.andrea.showmateapp.data.local.MediaInteractionEntity
 import com.andrea.showmateapp.data.model.MediaEntity
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import kotlinx.coroutines.flow.Flow
 
 interface IInteractionRepository {
@@ -19,12 +19,14 @@ interface IInteractionRepository {
     suspend fun getWatchlist(): List<MediaContent>
     fun getLikedShowsFlow(): Flow<List<MediaEntity>>
     fun getWatchedShowsFlow(): Flow<List<MediaEntity>>
+    fun getWatchlistShowsFlow(): Flow<List<MediaEntity>>
     suspend fun getFavorites(): List<MediaContent>
     suspend fun getEssentials(): List<MediaContent>
     suspend fun getWatchedMediaIds(): Set<Int>
     fun getWatchedMediaIdsFlow(): Flow<Set<Int>>
     suspend fun getExcludedMediaIds(): Set<Int>
     fun getExcludedMediaIdsFlow(): Flow<Set<Int>>
+    fun getInteractedMediaIdsFlow(): Flow<Set<Int>>
     suspend fun getLocalInteractionState(mediaId: Int): MediaInteractionEntity?
     suspend fun toggleWatched(media: MediaContent, setWatched: Boolean): Boolean
     suspend fun toggleDislike(media: MediaContent, setDisliked: Boolean): Boolean
@@ -60,3 +62,4 @@ interface IInteractionRepository {
     suspend fun updateLastKnownSeasons(mediaId: Int, seasons: Int)
     suspend fun syncFavoritesAndWatchedToRoom()
 }
+

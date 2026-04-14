@@ -1,7 +1,7 @@
 package com.andrea.showmateapp.util
 
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import kotlin.math.sqrt
 
 object ContentEmbeddingEngine {
@@ -36,9 +36,6 @@ object ContentEmbeddingEngine {
     fun buildUserVector(profile: UserProfile, space: EmbeddingSpace): FloatArray {
         val vec = FloatArray(space.totalDim)
 
-        // tanh normaliza a (-1, +1) preservando el signo:
-        // score positivo → preferencia real; score negativo → aversión real.
-        // coerceAtLeast(1f) evita división por cero manteniendo la escala.
         fun normalize(score: Float, maxAbs: Float): Float = kotlin.math.tanh((score / maxAbs).toDouble()).toFloat()
 
         val maxAbsGenre = profile.genreScores.values.maxOfOrNull { kotlin.math.abs(it) }?.coerceAtLeast(1f) ?: 1f
@@ -102,7 +99,6 @@ object ContentEmbeddingEngine {
             normB += (b[i] * b[i]).toDouble()
         }
         val denom = sqrt(normA) * sqrt(normB)
-        // Permitimos rango (-1, +1): similitud negativa = el show contradice las preferencias del usuario
         return if (denom < 1e-9) 0f else (dot / denom).toFloat().coerceIn(-1f, 1f)
     }
 
@@ -121,3 +117,4 @@ object ContentEmbeddingEngine {
         return if (denom == 0.0) 0f else (dot / denom).toFloat().coerceIn(-1f, 1f)
     }
 }
+

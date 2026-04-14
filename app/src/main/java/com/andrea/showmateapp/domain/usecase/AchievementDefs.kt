@@ -6,7 +6,6 @@ import com.andrea.showmateapp.data.model.AchievementCategory
 object AchievementDefs {
 
     val all: List<Achievement> = listOf(
-        // EXPLORER
         Achievement(
             "first_show",
             AchievementCategory.EXPLORER,
@@ -53,7 +52,6 @@ object AchievementDefs {
             200
         ),
 
-        // MARATHON
         Achievement("marathon_day", AchievementCategory.MARATHON, "Maratón", "5 episodios en un mismo día", "⚡", 100),
         Achievement(
             "weekend_warrior",
@@ -88,7 +86,6 @@ object AchievementDefs {
             150
         ),
 
-        // CRITIC
         Achievement(
             "first_review",
             AchievementCategory.CRITIC,
@@ -130,7 +127,6 @@ object AchievementDefs {
             75
         ),
 
-        // SOCIAL
         Achievement(
             "first_friend",
             AchievementCategory.SOCIAL,
@@ -165,7 +161,6 @@ object AchievementDefs {
             100
         ),
 
-        // DISCOVERER
         Achievement(
             "hidden_gem",
             AchievementCategory.DISCOVERER,

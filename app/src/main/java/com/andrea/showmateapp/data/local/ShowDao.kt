@@ -21,8 +21,11 @@ interface ShowDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertShows(shows: List<MediaEntity>)
 
-    @Query("SELECT * FROM media_content WHERE id = :id LIMIT 1")
-    suspend fun getShowById(id: Int): MediaEntity?
+    @Query("SELECT * FROM media_content WHERE id = :id AND category = 'liked' LIMIT 1")
+    suspend fun getLikedShowById(id: Int): MediaEntity?
+
+    @Query("SELECT * FROM media_content WHERE id = :id AND category = 'watched' LIMIT 1")
+    suspend fun getWatchedShowById(id: Int): MediaEntity?
 
     @Query("DELETE FROM media_content WHERE category = :category")
     suspend fun deleteShowsByCategory(category: String)
@@ -42,13 +45,33 @@ interface ShowDao {
     @Query("DELETE FROM media_content WHERE id = :id AND category = 'watched'")
     suspend fun deleteWatchedShow(id: Int)
 
-    @Query("DELETE FROM media_content WHERE category IN ('liked', 'watched')")
+    @Query("SELECT * FROM media_content WHERE category = 'watchlist'")
+    fun getWatchlistShowsFlow(): Flow<List<MediaEntity>>
+
+    @Query("DELETE FROM media_content WHERE id = :id AND category = 'watchlist'")
+    suspend fun deleteWatchlistShow(id: Int)
+
+    @Query("DELETE FROM media_content WHERE category IN ('liked', 'watched', 'watchlist')")
     suspend fun clearUserData()
+
+    @Query("DELETE FROM media_content WHERE id = :id AND category = :category")
+    suspend fun deleteShowById(id: Int, category: String)
 
     @Transaction
     suspend fun replaceCategory(category: String, shows: List<MediaEntity>) {
         deleteShowsByCategory(category)
         insertShows(shows)
+    }
+
+    @Transaction
+    suspend fun syncCategory(category: String, shows: List<MediaEntity>) {
+        val incomingIds = shows.map { it.id }.toSet()
+        val existing = getShowsByCategory(category)
+        val toDelete = existing.filter { it.id !in incomingIds }
+        toDelete.forEach { deleteShowById(it.id, category) }
+        if (shows.isNotEmpty()) {
+            insertShows(shows)
+        }
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

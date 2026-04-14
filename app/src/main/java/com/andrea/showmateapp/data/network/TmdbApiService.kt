@@ -1,6 +1,6 @@
 package com.andrea.showmateapp.data.network
 
-import com.andrea.showmateapp.data.model.MediaResponse
+import com.andrea.showmateapp.data.model.*
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -96,40 +96,3 @@ interface TmdbApiService {
         @Query("language") language: String = "es-ES"
     ): SeasonResponse
 }
-
-data class SeasonResponse(
-    @SerializedName("_id") val tmdbId: String = "",
-    @SerializedName("air_date") val airDate: String? = null,
-    val episodes: List<Episode> = emptyList(),
-    val name: String = "",
-    val overview: String = "",
-    val id: Int = 0,
-    @SerializedName("poster_path") val posterPath: String? = null,
-    @SerializedName("season_number") val seasonNumber: Int = 0
-)
-
-data class Episode(
-    @SerializedName("air_date") val airDate: String? = null,
-    @SerializedName("episode_number") val episodeNumber: Int = 0,
-    val id: Int = 0,
-    val name: String = "",
-    val overview: String = "",
-    @SerializedName("production_code") val productionCode: String? = null,
-    val runtime: Int? = null,
-    @SerializedName("season_number") val seasonNumber: Int = 0,
-    @SerializedName("show_id") val showId: Int = 0,
-    @SerializedName("still_path") val stillPath: String? = null,
-    @SerializedName("vote_average") val voteAverage: Float = 0f,
-    @SerializedName("vote_count") val voteCount: Int = 0
-)
-
-data class PersonResponse(
-    val id: Int = 0,
-    val name: String = "",
-    @SerializedName("profile_path") val profilePath: String? = null,
-    val biography: String = "",
-    val birthday: String? = null,
-    @SerializedName("place_of_birth") val placeOfBirth: String? = null,
-    @SerializedName("known_for_department") val knownForDepartment: String? = null,
-    val popularity: Float = 0f
-)

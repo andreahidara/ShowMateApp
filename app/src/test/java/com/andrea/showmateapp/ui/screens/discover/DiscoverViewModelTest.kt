@@ -77,8 +77,6 @@ class DiscoverViewModelTest {
         context = context
     )
 
-    // ─── Tests ───────────────────────────────────────────────────────────────
-
     @Test
     fun `loadDiscoverContent success sets isLoading false and no errorMessage`() = runTest {
         coEvery { repository.getShowsByGenres("18", emptyList()) } returns Resource.Success(mockMedia)

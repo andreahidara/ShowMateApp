@@ -8,12 +8,6 @@ import com.andrea.showmateapp.util.UiText
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Screenshot tests for [LoginScreenContent] using Paparazzi.
- *
- * Run: ./gradlew recordPaparazziDebug   (record new golden images)
- *       ./gradlew verifyPaparazziDebug  (compare against golden images)
- */
 class LoginScreenshotTest {
 
     @get:Rule

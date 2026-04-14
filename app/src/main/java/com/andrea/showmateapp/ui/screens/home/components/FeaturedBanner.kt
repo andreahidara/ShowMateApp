@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.MatchBadge
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
@@ -235,3 +235,4 @@ fun FeaturedBanner(
         }
     }
 }
+

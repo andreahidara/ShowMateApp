@@ -27,14 +27,17 @@ interface MediaInteractionDao {
     @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1")
     fun getWatchedMediaIdsFlow(): Flow<List<Int>>
 
-    @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1 OR isDisliked = 1")
+    @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1 OR isDisliked = 1 OR isLiked = 1")
     suspend fun getExcludedMediaIds(): List<Int>
 
-    @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1 OR isDisliked = 1")
+    @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1 OR isDisliked = 1 OR isLiked = 1")
     fun getExcludedMediaIdsFlow(): Flow<List<Int>>
 
     @Query("SELECT * FROM media_interactions WHERE isWatched = 1 AND lastKnownSeasons > 0")
     suspend fun getWatchedWithSeasonCount(): List<MediaInteractionEntity>
+
+    @Query("SELECT mediaId FROM media_interactions WHERE isWatched = 1 OR isLiked = 1 OR isDisliked = 1")
+    fun getInteractedMediaIdsFlow(): Flow<List<Int>>
 
     @Query("SELECT mediaId FROM media_interactions WHERE isInWatchlist = 1")
     suspend fun getWatchlistMediaIds(): List<Int>
@@ -44,4 +47,7 @@ interface MediaInteractionDao {
 
     @Query("SELECT * FROM media_interactions WHERE syncPending = 1")
     suspend fun getPendingSyncInteractions(): List<MediaInteractionEntity>
+
+    @Query("DELETE FROM media_interactions")
+    suspend fun deleteAll()
 }

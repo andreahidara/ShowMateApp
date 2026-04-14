@@ -58,7 +58,6 @@ fun AchievementsScreen(navController: NavController, viewModel: AchievementsView
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            // Gradient header
             item {
                 Row(
                     modifier = Modifier
@@ -403,6 +402,5 @@ private fun LeaderboardRow(position: Int, entry: IAchievementRepository.Leaderbo
 }
 
 private fun Modifier.graphicsLayerAlpha(alpha: Float): Modifier = this.then(
-    // no-op wrapper; actual alpha is handled per-widget above
     Modifier
 )

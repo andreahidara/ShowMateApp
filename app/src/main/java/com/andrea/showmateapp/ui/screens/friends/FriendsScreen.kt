@@ -541,7 +541,7 @@ private fun FriendCard(
             ) {
                 FriendActionButton(
                     label = "Comparar",
-                    icon = Icons.Default.CompareArrows,
+                    icon = Icons.Default.Compare,
                     onClick = onCompare,
                     modifier = Modifier.weight(1f)
                 )
@@ -765,7 +765,6 @@ private fun ActivityEventCard(event: ActivityEvent, onClick: () -> Unit, modifie
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Avatar del amigo
         Box(
             modifier = Modifier
                 .size(36.dp)
@@ -783,7 +782,6 @@ private fun ActivityEventCard(event: ActivityEvent, onClick: () -> Unit, modifie
             )
         }
 
-        // Póster de la serie
         if (event.mediaPoster.isNotBlank()) {
             TmdbImage(
                 path = event.mediaPoster,

@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.NowWatching
 import com.andrea.showmateapp.data.model.SharedList
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.ISharedListRepository
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -86,7 +86,6 @@ class SharedListViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(successMessage = null)
     }
 
-    // CollabList detail
     fun loadCollabList(listId: String) {
         _collabState.value = CollabListUiState(isLoading = true)
         viewModelScope.launch {
@@ -124,3 +123,4 @@ class SharedListViewModel @Inject constructor(
         viewModelScope.launch { sharedListRepo.clearNowWatching() }
     }
 }
+

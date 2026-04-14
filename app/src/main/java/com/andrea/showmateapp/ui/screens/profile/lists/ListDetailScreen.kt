@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.HeartRed
@@ -339,3 +339,4 @@ private fun ListDetailEmptyState(modifier: Modifier = Modifier, listName: String
         }
     }
 }
+

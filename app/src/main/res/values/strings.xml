@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">ShowMateApp</string>
-    <string name="widget_description">Muestra tu próxima serie en la lista de seguimiento</string>
     <string name="actor_filmography">Filmografía</string>
     <string name="actor_born">Fecha de nacimiento</string>
     <string name="shared_lists_title">Listas compartidas</string>
@@ -40,7 +39,7 @@
     <string name="error_add_to_list_failed">Error al añadir a la lista</string>
     <string name="detail_added_to_list">Añadido a «%1$s»</string>
 
-    <!-- Swipe -->
+
     <string name="swipe_for_you">Para ti</string>
     <string name="swipe_calibrate_subtitle">Desliza para calibrar tus gustos</string>
     <string name="swipe_of_max_ratings">de %1$d</string>
@@ -48,7 +47,7 @@
     <string name="swipe_all_ready_desc">Hemos calibrado tus gustos. Ahora ShowMate es mucho más inteligente para ti.</string>
     <string name="swipe_start_exploring">Empezar a explorar</string>
 
-    <!-- Stats / Profile -->
+
     <string name="stats_monthly_activity">Actividad mensual</string>
     <string name="stats_favorite_genres">Géneros favoritos</string>
     <string name="profile_progress_towards">%1$d%% hacia %2$s</string>
@@ -56,14 +55,14 @@
     <string name="profile_series_count">%1$d series</string>
     <string name="profile_my_lists">Mis listas</string>
 
-    <!-- UI Core / Auth -->
+
     <string name="splash_premium_guide">TU GUÍA PREMIUM DE SERIES</string>
     <string name="splash_powered_by">Powered by TMDB</string>
     <string name="signup_create_account">Crea tu cuenta</string>
     <string name="signup_join_free">Únete a ShowMate gratis</string>
     <string name="signup_already_have_account">¿Ya tienes cuenta? </string>
 
-    <!-- Search -->
+
     <string name="search_clear_all">Borrar todo</string>
     <string name="search_recent">RECIENTES</string>
     <string name="search_all">Todos</string>
@@ -71,14 +70,14 @@
     <string name="search_coming_soon">Próximamente podrás buscar directamente por %1$s.</string>
     <string name="search_try_other_terms">Prueba con otros términos o ajusta los filtros.</string>
 
-    <!-- Onboarding -->
+
     <string name="onboarding_title">Personaliza tu experiencia</string>
     <string name="onboarding_subtitle">Selecciona al menos 3 géneros que te apasionen para calibrar tu algoritmo.</string>
     <string name="continue_button">Continuar</string>
     <string name="onboarding_selected_perfect">seleccionados · ¡Perfecto!</string>
     <string name="onboarding_selected_minimum">seleccionados (mínimo 3)</string>
 
-    <!-- Detail Screen -->
+
     <string name="detail_why_recommended">¿Por qué te lo recomendamos?</string>
     <string name="detail_why_recommended_empty">Interactúa con más series para obtener recomendaciones personalizadas.</string>
     <string name="detail_your_rating">Tu puntuación</string>
@@ -112,7 +111,7 @@
     <string name="detail_review_saved_label">Reseña guardada</string>
     <string name="detail_official_trailer">TRÁILER OFICIAL</string>
 
-    <!-- Core UI Actions -->
+
     <string name="ok">Entendido</string>
     <string name="understood">Entendido</string>
     <string name="edit">Editar</string>
@@ -123,7 +122,7 @@
     <string name="cancel">Cancelar</string>
     <string name="close">Cerrar</string>
 
-    <!-- Home Screen -->
+
     <string name="home_greeting_morning">Buenos días</string>
     <string name="home_greeting_afternoon">Buenas tardes</string>
     <string name="home_greeting_night">Buenas noches</string>
@@ -157,7 +156,7 @@
     <string name="home_no_platform_news">Sin novedades en %1$s esta semana</string>
     <string name="home_on_air">EN ANTENA</string>
 
-    <!-- Search Screen -->
+
     <string name="search_placeholder">¿Qué quieres ver hoy?</string>
     <string name="search_filters">Filtros</string>
     <string name="search_reset">Restablecer</string>
@@ -173,7 +172,7 @@
     <string name="search_rating_all">Todas</string>
     <string name="search_rating_format">%1$.0f/10</string>
 
-    <!-- Error messages -->
+
     <string name="error_invalid_email">Email no válido</string>
     <string name="error_invalid_email_format">Formato de correo inválido</string>
     <string name="error_password_length">La contraseña debe tener al menos 8 caracteres</string>
@@ -183,18 +182,18 @@
     <string name="error_signup_failed">Error al crear la cuenta</string>
     <string name="error_google_signin">No se pudo iniciar sesión con Google</string>
 
-    <!-- Google Sign-In — replace with your web client ID from Firebase Console -->
+
     <string name="google_web_client_id">992885817745-3qrbpnce23kttdet8gehrn7teu7tvo2b.apps.googleusercontent.com</string>
 
-    <!-- GDPR Consent -->
+
     <string name="consent_title">Antes de continuar</string>
     <string name="consent_accept">Acepto y continúo</string>
     <string name="consent_decline">No acepto</string>
 
-    <!-- Generic actions -->
+
     <string name="action_close">Cerrar</string>
 
-    <!-- Notifications — SeasonCheckWorker -->
+
     <string name="notif_season_title">🎬 ¡Nueva temporada de %1$s!</string>
     <string name="notif_season_content">Temporada %1$d disponible</string>
     <string name="notif_season_big_text">La temporada %1$d de %2$s ya está disponible. ¡Es el momento de ponerte al día!</string>
@@ -202,13 +201,13 @@
     <string name="notif_season_summary">ShowMate</string>
     <string name="notif_season_action">Ver ahora</string>
 
-    <!-- Notifications — FriendActivityWorker -->
+
     <string name="notif_friend_title">Tu amigo %1$s acaba de terminar %2$s</string>
     <string name="notif_friend_content">Coincidís en un %1$d%% \u2014 \u00bfla ves t\u00fa tambi\u00e9n?</string>
     <string name="notif_friend_big_text">Tu amigo %1$s acaba de terminar \u201c%2$s\u201d y vuestra compatibilidad es del %3$d\u202f%%. ¡Puede ser tu próxima serie!</string>
     <string name="notif_friend_action">Ver detalles</string>
 
-    <!-- Notifications — HiddenGemWorker -->
+
     <string name="notif_gem_title">\u2728 Joya oculta del día: %1$s</string>
     <string name="notif_gem_content">\u2b50 %1$.1f  \u00b7  %2$d votos</string>
     <string name="notif_gem_big_text">\u2b50 %1$.1f \u00b7 solo %2$d votos\n\n%3$s</string>
@@ -216,7 +215,7 @@
     <string name="notif_gem_summary">Joya oculta · ShowMate</string>
     <string name="notif_gem_action">Ver detalles</string>
 
-    <!-- Profile dialogs -->
+
     <string name="profile_logout">Cerrar Sesión</string>
     <string name="profile_logout_confirm">¿Estás seguro de que quieres salir de ShowMate?</string>
     <string name="profile_logout_action">Salir</string>

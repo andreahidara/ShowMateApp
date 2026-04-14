@@ -4,7 +4,7 @@
     android:height="120dp"
     android:viewportWidth="120"
     android:viewportHeight="120">
-    <!-- Outlined Star icon for splash screen -->
+
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="2"

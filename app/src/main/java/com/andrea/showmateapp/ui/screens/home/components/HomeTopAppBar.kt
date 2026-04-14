@@ -44,7 +44,6 @@ fun greeting(): String {
 fun HomeTopAppBar(userName: String = "", onPickWhatToWatch: () -> Unit = {}, onAvatarClick: () -> Unit = {}) {
     val gradientColors = listOf(PrimaryPurple, PrimaryMagenta)
 
-    // Animación de pulso suave para el botón de recomendación
     val infiniteTransition = rememberInfiniteTransition(label = "wtwGlow")
     val glowAlpha by infiniteTransition.animateFloat(
         initialValue = 0.12f,
@@ -63,7 +62,6 @@ fun HomeTopAppBar(userName: String = "", onPickWhatToWatch: () -> Unit = {}, onA
             .padding(horizontal = ShowMateSpacing.m, vertical = ShowMateSpacing.s),
         contentAlignment = Alignment.Center
     ) {
-        // Logotipo centrado
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -84,7 +82,6 @@ fun HomeTopAppBar(userName: String = "", onPickWhatToWatch: () -> Unit = {}, onA
             )
         }
 
-        // Botón icono "¿Qué ver?" — solo icono
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)

@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -137,7 +138,10 @@ fun SocialReviewsSection(
                         OutlinedButton(
                             onClick = viewModel::loadMorePublic,
                             shape = RoundedCornerShape(12.dp),
-                            border = ButtonDefaults.outlinedButtonBorder
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         ) {
                             Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
@@ -486,7 +490,7 @@ private fun WriteReviewSheet(
                     SeasonFilterRow(
                         seasons = seasons,
                         selected = state.selectedSeason,
-                        onSelect = { /* season selection from sheet reflects the parent filter */ }
+                        onSelect = { }
                     )
                 }
             }

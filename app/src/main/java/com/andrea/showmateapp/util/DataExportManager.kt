@@ -87,11 +87,7 @@ class DataExportManager @Inject constructor(
         }
     }
 
-    /**
-     * Parses a JSON backup (produced by [buildJsonExport]) into a partial [UserProfile].
-     * Only the fields present in the backup are populated; identity fields (userId, email) are left blank
-     * so the caller can merge them with the existing profile.
-     */
+
     fun parseJsonBackup(content: String): UserProfile? {
         return try {
             val json = JSONObject(content)

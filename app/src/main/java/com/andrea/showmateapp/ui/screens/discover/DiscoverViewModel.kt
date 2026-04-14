@@ -5,7 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
@@ -66,13 +66,17 @@ data class DiscoverUiState(
     val moodSectionTitle: String = "",
     val creatorShows: List<MediaContent> = emptyList(),
     val creatorName: String = "",
-    val collaborativeShows: List<MediaContent> = emptyList()
+    val collaborativeShows: List<MediaContent> = emptyList(),
+    val explorationShows: List<MediaContent> = emptyList(),
+    val explorationGenreName: String = "",
+    val timeTravelShows: List<MediaContent> = emptyList()
 )
 
 @HiltViewModel
 class DiscoverViewModel @Inject constructor(
     private val repository: IShowRepository,
     private val userRepository: IUserRepository,
+    private val interactionRepository: com.andrea.showmateapp.domain.repository.IInteractionRepository,
     private val getRecommendationsUseCase: GetRecommendationsUseCase,
     private val networkMonitor: NetworkMonitor,
     @ApplicationContext private val context: Context
@@ -93,6 +97,38 @@ class DiscoverViewModel @Inject constructor(
 
     init {
         loadDiscoverContent()
+        observeInteractions()
+    }
+
+    private fun observeInteractions() {
+        viewModelScope.launch {
+            interactionRepository.getInteractedMediaIdsFlow().collect { interactedIds ->
+                if (interactedIds.isEmpty()) return@collect
+                
+                _uiState.update { state ->
+                    state.copy(
+                        heroShow = state.heroShow?.takeIf { it.id !in interactedIds },
+                        topGenreShows = state.topGenreShows.filter { it.id !in interactedIds },
+                        secondGenreShows = state.secondGenreShows.filter { it.id !in interactedIds },
+                        thirdGenreShows = state.thirdGenreShows.filter { it.id !in interactedIds },
+                        similarShows = state.similarShows.filter { it.id !in interactedIds },
+                        actorShows = state.actorShows.filter { it.id !in interactedIds },
+                        secondActorShows = state.secondActorShows.filter { it.id !in interactedIds },
+                        topRatedShows = state.topRatedShows.filter { it.id !in interactedIds },
+                        topKeywordShows = state.topKeywordShows.filter { it.id !in interactedIds },
+                        contextPicksShows = state.contextPicksShows.filter { it.id !in interactedIds },
+                        dayOfWeekShows = state.dayOfWeekShows.filter { it.id !in interactedIds },
+                        narrativeStyleShows = state.narrativeStyleShows.filter { it.id !in interactedIds },
+                        hiddenGemShows = state.hiddenGemShows.filter { it.id !in interactedIds },
+                        moodSectionShows = state.moodSectionShows.filter { it.id !in interactedIds },
+                        creatorShows = state.creatorShows.filter { it.id !in interactedIds },
+                        collaborativeShows = state.collaborativeShows.filter { it.id !in interactedIds },
+                        explorationShows = state.explorationShows.filter { it.id !in interactedIds },
+                        timeTravelShows = state.timeTravelShows.filter { it.id !in interactedIds }
+                    )
+                }
+            }
+        }
     }
 
     fun retry() {
@@ -416,14 +452,6 @@ class DiscoverViewModel @Inject constructor(
                     emptyList()
                 }
 
-                val moodSectionShows = if (moodShows is Resource.Success && moodShows.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
-                        moodShows.data.shuffled().take(10)
-                    )
-                } else {
-                    emptyList()
-                }
-
                 val creatorLoaded = creatorPerson is Resource.Success &&
                     creatorShowsRaw is Resource.Success && creatorShowsRaw.data.isNotEmpty()
                 val creatorName = if (creatorLoaded) {
@@ -562,3 +590,4 @@ class DiscoverViewModel @Inject constructor(
         else -> Pair(null, "")
     }
 }
+

@@ -59,7 +59,6 @@ fun StatsScreen(navController: NavController, viewModel: StatsViewModel = hiltVi
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Header con gradiente (consistente con Home/Discover/Friends)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -191,7 +190,7 @@ fun StatsScreen(navController: NavController, viewModel: StatsViewModel = hiltVi
                     uiState.personalityProfile?.let { PersonalitySection(it) }
 
                     Spacer(modifier = Modifier.height(32.dp))
-                } // close inner padding Column
+                }
             }
         }
     }

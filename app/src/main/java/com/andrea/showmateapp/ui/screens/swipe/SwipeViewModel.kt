@@ -3,7 +3,7 @@ package com.andrea.showmateapp.ui.screens.swipe
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
@@ -225,3 +225,4 @@ class SwipeViewModel @Inject constructor(
         }
     }
 }
+

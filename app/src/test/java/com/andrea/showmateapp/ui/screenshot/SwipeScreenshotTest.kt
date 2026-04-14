@@ -9,12 +9,6 @@ import com.andrea.showmateapp.util.MainDispatcherRule
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Screenshot tests for [SwipeScreenContent] using Paparazzi.
- *
- * Run: ./gradlew recordPaparazziDebug   (record new golden images)
- *       ./gradlew verifyPaparazziDebug  (compare against golden images)
- */
 class SwipeScreenshotTest {
 
     @get:Rule

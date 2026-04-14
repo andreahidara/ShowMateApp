@@ -26,8 +26,6 @@ class LoginViewModelTest {
 
     private fun viewModel() = LoginViewModel(authRepository, userRepository)
 
-    // ── Email / password updates ──────────────────────────────────────────────
-
     @Test
     fun `onEmailChanged updates email in state`() {
         val vm = viewModel()
@@ -56,14 +54,12 @@ class LoginViewModelTest {
     @Test
     fun `onPasswordChanged clears previous error`() {
         val vm = viewModel()
-        vm.onLoginClick() // empty → error
+        vm.onLoginClick()
         assertNotNull(vm.uiState.value.error)
 
         vm.onPasswordChanged("newpass")
         assertNull(vm.uiState.value.error)
     }
-
-    // ── Password visibility ───────────────────────────────────────────────────
 
     @Test
     fun `togglePasswordVisibility toggles flag from false to true`() {
@@ -80,8 +76,6 @@ class LoginViewModelTest {
         vm.togglePasswordVisibility()
         assertFalse(vm.uiState.value.isPasswordVisible)
     }
-
-    // ── Validation errors ─────────────────────────────────────────────────────
 
     @Test
     fun `onLoginClick with empty email sets error state`() {
@@ -116,8 +110,6 @@ class LoginViewModelTest {
         assertFalse(vm.uiState.value.isLoading)
     }
 
-    // ── Successful login ──────────────────────────────────────────────────────
-
     @Test
     fun `onLoginClick with valid credentials sets isSuccess on success`() = runTest {
         coEvery { authRepository.login(any(), any()) } returns Result.success(Unit)
@@ -145,7 +137,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onLoginClick sets isLoading false after failure`() = runTest {
+    fun `onLoginClick sets isLoading false after failure`() {
         coEvery { authRepository.login(any(), any()) } returns
             Result.failure(Exception("Error"))
 
@@ -156,8 +148,6 @@ class LoginViewModelTest {
 
         assertFalse(vm.uiState.value.isLoading)
     }
-
-    // ── Password reset ────────────────────────────────────────────────────────
 
     @Test
     fun `sendPasswordReset with blank email sets resetError`() {

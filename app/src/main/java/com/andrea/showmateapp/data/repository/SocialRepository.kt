@@ -113,10 +113,6 @@ class SocialRepository @Inject constructor(
     override suspend fun acceptFriendRequest(requestId: String, fromUid: String) = withContext(ioDispatcher) {
         val myUid = auth.currentUser?.uid ?: return@withContext
         try {
-            // Step 1 — Transaction: delete the request + add fromUid to OWN friend list.
-            // We only touch myUserRef here so the transaction doesn't conflict with
-            // concurrent reads/writes on fromUserRef (avoids the size-check race condition
-            // in the isValidFriendUpdate security rule).
             db.runTransaction { transaction ->
                 val requestRef = friendRequests.document(requestId)
                 val myUserRef = users.document(myUid)
@@ -131,16 +127,10 @@ class SocialRepository @Inject constructor(
                 transaction.update(myUserRef, "friendIds", myFriendIds)
             }.await()
 
-            // Step 2 — Atomically add myUid to the sender's friend list.
-            // arrayUnion is idempotent and requires only the isValidFriendUpdate rule
-            // (no size read needed, so no race condition).
             users.document(fromUid)
                 .update("friendIds", FieldValue.arrayUnion(myUid))
                 .await()
 
-            // Step 3 — Send notification. Wrapped in runCatching so a clock-skew
-            // rejection (isRecentMs rule) or any other notification error never
-            // bubbles up and makes the whole accept look failed to the user.
             runCatching {
                 val myUsername = resolveUsername(myUid)
                 users.document(fromUid).collection("notifications").add(
@@ -246,8 +236,6 @@ class SocialRepository @Inject constructor(
                 .get().await()
                 .documents
                 .mapNotNull { doc ->
-                    // Always use the actual document ID — the stored "id" field may be missing
-                    // in older records and would default to "" causing the accept to fail.
                     doc.toObject(FriendRequest::class.java)?.copy(id = doc.id)
                 }
         } catch (e: Exception) {

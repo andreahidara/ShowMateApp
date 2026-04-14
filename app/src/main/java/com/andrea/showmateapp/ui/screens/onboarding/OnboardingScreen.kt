@@ -141,7 +141,7 @@ private fun OnboardingHeader(step: Int, onBack: () -> Unit) {
 private fun OnboardingButton(state: OnboardingUiState, viewModel: OnboardingViewModel) {
     val enabled = when (state.step) {
         1 -> state.selectedGenres.size in 3..5
-        2 -> true // optional
+        2 -> true
         3 -> state.episodeLengthPref != null && state.statusPref != null && state.dubbedPref != null
         5 -> true
         else -> false

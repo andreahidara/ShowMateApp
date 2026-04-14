@@ -40,7 +40,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.MatchBadge
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.components.premium.shimmerBrush
@@ -278,7 +278,6 @@ fun SwipeScreenContent(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botón PASO (X)
                 Box(
                     modifier = Modifier
                         .size(62.dp)
@@ -301,7 +300,6 @@ fun SwipeScreenContent(
                     )
                 }
 
-                // Botón DESHACER (pequeño)
                 val undoActive = lastAction != null
                 Box(
                     modifier = Modifier
@@ -335,7 +333,6 @@ fun SwipeScreenContent(
                     )
                 }
 
-                // Botón ME GUSTA (Corazón — principal)
                 Box(
                     modifier = Modifier
                         .size(78.dp)
@@ -363,7 +360,6 @@ fun SwipeScreenContent(
                     )
                 }
 
-                // Botón ESENCIAL (Estrella)
                 Box(
                     modifier = Modifier
                         .size(62.dp)
@@ -792,3 +788,4 @@ private fun SwipeCardSkeleton() {
         Spacer(Modifier.height(32.dp))
     }
 }
+

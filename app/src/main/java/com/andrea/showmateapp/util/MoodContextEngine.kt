@@ -1,6 +1,6 @@
 package com.andrea.showmateapp.util
 
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -100,3 +100,4 @@ object MoodContextEngine {
         return (finalGenre * rtMult).coerceIn(0.80f, 1.35f)
     }
 }
+

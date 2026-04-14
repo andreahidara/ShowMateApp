@@ -5,7 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.GenreMapper
@@ -103,3 +103,4 @@ class FriendCompareViewModel @Inject constructor(
         (GenreMapper.jaccardSimilarity(mine.genreScores, friend.genreScores) * 100)
             .toInt().coerceIn(0, 100)
 }
+

@@ -14,11 +14,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Tests unitarios para AchievementChecker.
- * Verifica que cada condición de desbloqueo se evalúa correctamente y que
- * los logros ya desbloqueados no se emiten de nuevo.
- */
 class AchievementCheckerTest {
 
     private val achievementRepository = mockk<IAchievementRepository>(relaxed = true)
@@ -27,7 +22,7 @@ class AchievementCheckerTest {
     private lateinit var checker: AchievementChecker
 
     private fun baseProfile() = UserProfile(
-        uid = "test_uid",
+        userId = "test_uid",
         genreScores = emptyMap(),
         likedMediaIds = emptyList(),
         watchedEpisodes = emptyMap(),
@@ -39,8 +34,6 @@ class AchievementCheckerTest {
         checker = AchievementChecker(achievementRepository, socialRepository)
     }
 
-    // ── first_show ────────────────────────────────────────────────────────────
-
     @Test
     fun `first_show desbloqueado cuando likedMediaIds no está vacío`() = runTest {
         coEvery { achievementRepository.getUnlockedIds() } returns emptyList()
@@ -51,7 +44,7 @@ class AchievementCheckerTest {
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("first_show debe estar entre los desbloqueados", "first_show" in idsSlot.captured)
+        assertTrue("first_show" in idsSlot.captured)
     }
 
     @Test
@@ -62,11 +55,8 @@ class AchievementCheckerTest {
         val profile = baseProfile().copy(likedMediaIds = listOf(1, 2))
         checker.evaluate(AchievementChecker.EvalContext(profile))
 
-        // Sin first_show no hay nada que desbloquear → unlockAchievements no se llama
         coVerify(exactly = 0) { achievementRepository.unlockAchievements(any(), any()) }
     }
-
-    // ── genre_explorer ────────────────────────────────────────────────────────
 
     @Test
     fun `genre_explorer se desbloquea con 10 géneros distintos`() = runTest {
@@ -79,7 +69,7 @@ class AchievementCheckerTest {
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("genre_explorer debe estar entre los desbloqueados", "genre_explorer" in idsSlot.captured)
+        assertTrue("genre_explorer" in idsSlot.captured)
     }
 
     @Test
@@ -94,8 +84,6 @@ class AchievementCheckerTest {
         coVerify(exactly = 0) { achievementRepository.unlockAchievements(any(), any()) }
     }
 
-    // ── marathon_day ──────────────────────────────────────────────────────────
-
     @Test
     fun `marathon_day se desbloquea con 5 o más episodios en el día`() = runTest {
         coEvery { achievementRepository.getUnlockedIds() } returns emptyList()
@@ -105,7 +93,7 @@ class AchievementCheckerTest {
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("marathon_day debe estar entre los desbloqueados", "marathon_day" in idsSlot.captured)
+        assertTrue("marathon_day" in idsSlot.captured)
     }
 
     @Test
@@ -118,8 +106,6 @@ class AchievementCheckerTest {
         coVerify(exactly = 0) { achievementRepository.unlockAchievements(any(), any()) }
     }
 
-    // ── first_friend / social_butterfly ───────────────────────────────────────
-
     @Test
     fun `first_friend se desbloquea con al menos 1 amigo`() = runTest {
         coEvery { achievementRepository.getUnlockedIds() } returns emptyList()
@@ -131,7 +117,7 @@ class AchievementCheckerTest {
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("first_friend debe estar entre los desbloqueados", "first_friend" in idsSlot.captured)
+        assertTrue("first_friend" in idsSlot.captured)
     }
 
     @Test
@@ -145,24 +131,20 @@ class AchievementCheckerTest {
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("social_butterfly debe estar entre los desbloqueados", "social_butterfly" in idsSlot.captured)
+        assertTrue("social_butterfly" in idsSlot.captured)
     }
-
-    // ── hidden_gem ────────────────────────────────────────────────────────────
 
     @Test
     fun `hidden_gem se desbloquea con un show de menos de 1000 votos`() = runTest {
         coEvery { achievementRepository.getUnlockedIds() } returns emptyList()
         coEvery { socialRepository.getFriends() } returns emptyList()
 
-        checker.evaluate(AchievementChecker.EvalContext(baseProfile(), watchedShowVoteCount = 999))
+        checker.evaluate(AchievementChecker.EvalContext(baseProfile(), voteCount = 999))
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("hidden_gem debe estar entre los desbloqueados", "hidden_gem" in idsSlot.captured)
+        assertTrue("hidden_gem" in idsSlot.captured)
     }
-
-    // ── korean_drama ──────────────────────────────────────────────────────────
 
     @Test
     fun `korean_drama se desbloquea al ver contenido con origen KR`() = runTest {
@@ -172,16 +154,14 @@ class AchievementCheckerTest {
         checker.evaluate(
             AchievementChecker.EvalContext(
                 profile = baseProfile(),
-                watchedShowOriginCountries = listOf("KR", "US")
+                countries = listOf("KR", "US")
             )
         )
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("korean_drama debe estar entre los desbloqueados", "korean_drama" in idsSlot.captured)
+        assertTrue("korean_drama" in idsSlot.captured)
     }
-
-    // ── review achievements ────────────────────────────────────────────────────
 
     @Test
     fun `first_review se desbloquea con 1 reseña`() = runTest {
@@ -192,7 +172,7 @@ class AchievementCheckerTest {
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("first_review debe estar entre los desbloqueados", "first_review" in idsSlot.captured)
+        assertTrue("first_review" in idsSlot.captured)
     }
 
     @Test
@@ -204,10 +184,8 @@ class AchievementCheckerTest {
 
         val idsSlot = slot<List<String>>()
         coVerify { achievementRepository.unlockAchievements(capture(idsSlot), any()) }
-        assertTrue("prolific_critic debe estar entre los desbloqueados", "prolific_critic" in idsSlot.captured)
+        assertTrue("prolific_critic" in idsSlot.captured)
     }
-
-    // ── group_matcher ─────────────────────────────────────────────────────────
 
     @Test
     fun `group_matcher se desbloquea al completar 3 sesiones grupales`() = runTest {

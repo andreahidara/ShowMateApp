@@ -106,7 +106,6 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                         animationSpec = tween(300),
                         label = "dotWidth"
                     )
-                    // Páginas ya visitadas: rellenas; actual: rellena; futuras: vacías
                     val isPast = index < pagerState.currentPage
                     Box(
                         modifier = Modifier

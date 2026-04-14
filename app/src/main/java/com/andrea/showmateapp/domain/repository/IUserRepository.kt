@@ -10,8 +10,8 @@ interface IUserRepository {
     suspend fun initUserProfile(username: String)
     suspend fun saveOnboardingInterests(
         genres: List<String>,
-        watchedShowIds: List<Int> = emptyList(),
-        lovedShowIds: List<Int> = emptyList(),
+        watchedShows: List<com.andrea.showmateapp.data.model.MediaContent> = emptyList(),
+        lovedShows: List<com.andrea.showmateapp.data.model.MediaContent> = emptyList(),
         preferShortEpisodes: Boolean? = null,
         preferFinishedShows: Boolean? = null,
         preferDubbed: Boolean? = null
@@ -28,3 +28,4 @@ interface IUserRepository {
     suspend fun deleteAccount()
     suspend fun restoreBackup(partial: UserProfile)
 }
+

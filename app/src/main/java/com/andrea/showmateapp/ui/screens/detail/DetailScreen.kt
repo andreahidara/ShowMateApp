@@ -39,7 +39,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.RecommendationReason
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
@@ -73,7 +73,6 @@ fun DetailScreen(
         viewModel.loadShowDetails(showId)
     }
 
-    // Carga los shows similares de forma diferida, solo cuando el contenido principal ya está visible
     LaunchedEffect(uiState.media?.id) {
         uiState.media?.id?.let { mediaId ->
             viewModel.loadSimilarShowsIfNeeded(mediaId)
@@ -290,15 +289,15 @@ fun DetailScreenContent(
                             modifier = Modifier.weight(1f)
                         )
                         if (show.affinityScore > 0f && whyFactors.isNotEmpty()) {
-                            Column(
-                                horizontalAlignment = Alignment.End,
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier.padding(start = 12.dp, top = 4.dp)
                             ) {
                                 MatchBadge(
                                     score = show.affinityScore,
                                     isAffinity = true
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
                                 Row(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(14.dp))
@@ -337,18 +336,7 @@ fun DetailScreenContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
 
-                    if (show.reasons.isNotEmpty()) {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(bottom = 10.dp)
-                        ) {
-                            items(show.reasons.take(3)) { reason ->
-                                ReasonPill(reason = reason)
-                            }
-                        }
-                    }
 
                     val year = remember(show.firstAirDate) { show.firstAirDate?.take(4) ?: "" }
                     val seasonsCount = remember(show.numberOfSeasons) {
@@ -548,10 +536,11 @@ fun DetailScreenContent(
                                     )
                                 }
 
-                                if (!show.seasons.isNullOrEmpty()) {
+                                val showSeasons = show.seasons
+                                if (!showSeasons.isNullOrEmpty()) {
                                     Spacer(modifier = Modifier.height(28.dp))
                                     EpisodesSection(
-                                        seasons = show.seasons,
+                                        seasons = showSeasons,
                                         selectedSeason = uiState.selectedSeason,
                                         isSeasonLoading = uiState.isSeasonLoading,
                                         watchedEpisodes = uiState.watchedEpisodes,
@@ -758,3 +747,4 @@ private fun DetailScreenSkeleton() {
         }
     }
 }
+

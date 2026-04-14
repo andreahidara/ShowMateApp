@@ -23,10 +23,6 @@ import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Snapshot tests using simplified composables that avoid SharedTransition
- * (which requires hardware rendering not available in Paparazzi's software renderer).
- */
 class HomeSnapshotTest {
 
     @get:Rule
@@ -77,7 +73,6 @@ class HomeSnapshotTest {
         )
     )
 
-    /** A simplified featured banner without shared element transitions for snapshot testing */
     @Composable
     private fun SimpleFeaturedBanner(shows: List<MediaContent>) {
         val media = shows.firstOrNull() ?: return
@@ -116,7 +111,6 @@ class HomeSnapshotTest {
         }
     }
 
-    /** A simplified Top 10 row without shared element transitions for snapshot testing */
     @Composable
     private fun SimpleTop10Section(shows: List<MediaContent>) {
         Column {

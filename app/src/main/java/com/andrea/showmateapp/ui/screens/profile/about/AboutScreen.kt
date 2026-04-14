@@ -211,12 +211,12 @@ fun AboutScreen(navController: NavController) {
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp
                                 )
-                                Text("Ingeniería Informática", color = TextGray, fontSize = 12.sp)
+                                Text("Grado en Desarrollo de Aplicaciones Multiplataforma", color = TextGray, fontSize = 12.sp)
                             }
                         }
                         HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                         Text(
-                            "ShowMate es una aplicación de descubrimiento de series desarrollada como TFG. " +
+                            "ShowMate es una aplicación de descubrimiento de series desarrollada como TFG para el grado DAM. " +
                                 "Combina un sistema de recomendación híbrido, funciones sociales, gamificación " +
                                 "y análisis estadístico para ofrecer una experiencia personalizada.",
                             color = Color.White.copy(alpha = 0.85f),
@@ -224,9 +224,9 @@ fun AboutScreen(navController: NavController) {
                             lineHeight = 20.sp
                         )
                         HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
-                        AboutInfoRow(Icons.Default.Person, "Autora", "Andrea Hidara")
+                        AboutInfoRow(Icons.Default.Person, "Autora", "Andrea Hidalgo")
                         AboutInfoRow(Icons.Default.CalendarMonth, "Curso", "2025 – 2026")
-                        AboutInfoRow(Icons.Default.LocationOn, "Universidad", "UPM · ETSISI")
+                        AboutInfoRow(Icons.Default.LocationOn, "Institución", "ThePower")
                     }
                 }
 

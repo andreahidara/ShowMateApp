@@ -165,7 +165,7 @@ class SharedListRepository @Inject constructor(
         ioDispatcher
     ) {
         if (friendUids.isEmpty()) return@withContext emptyList()
-        val cutoff = System.currentTimeMillis() - 2 * 60 * 60 * 1000L // 2 hours
+        val cutoff = System.currentTimeMillis() - 2 * 60 * 60 * 1000L
         try {
             val batches = friendUids.chunked(10)
             batches.flatMap { batch ->

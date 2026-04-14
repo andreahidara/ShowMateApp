@@ -25,7 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.screens.home.components.*
@@ -81,6 +81,8 @@ fun HomeScreen(
             actionShows = uiState.genres.action,
             comedyShows = uiState.genres.comedy,
             dramaShows = uiState.genres.drama,
+            sciFiShows = uiState.genres.sciFi,
+            mysteryShows = uiState.genres.mystery,
             thisWeekShows = uiState.thisWeekShows,
             selectedPlatform = uiState.selectedPlatform,
             platformShows = uiState.platformShows,
@@ -143,6 +145,8 @@ fun HomeScreenContent(
     actionShows: List<MediaContent>,
     comedyShows: List<MediaContent>,
     dramaShows: List<MediaContent> = emptyList(),
+    sciFiShows: List<MediaContent> = emptyList(),
+    mysteryShows: List<MediaContent> = emptyList(),
     thisWeekShows: List<MediaContent>,
     selectedPlatform: String? = null,
     platformShows: Map<String, List<MediaContent>> = emptyMap(),
@@ -168,6 +172,8 @@ fun HomeScreenContent(
     val actionListState = rememberLazyListState()
     val comedyListState = rememberLazyListState()
     val dramaListState = rememberLazyListState()
+    val sciFiListState = rememberLazyListState()
+    val mysteryListState = rememberLazyListState()
 
     if (isLoading && trendingShows.isEmpty()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -192,6 +198,8 @@ fun HomeScreenContent(
             item { ShowSectionSkeleton(stringResource(R.string.home_popular_spain)) }
             item { ShowSectionSkeleton(stringResource(R.string.home_action_adventure)) }
             item { ShowSectionSkeleton(stringResource(R.string.home_drama)) }
+            item { ShowSectionSkeleton(stringResource(R.string.home_scifi)) }
+            item { ShowSectionSkeleton(stringResource(R.string.home_mystery_suspense)) }
             item { Spacer(modifier = Modifier.height(100.dp)) }
         }
     } else if (criticalError != null) {
@@ -371,12 +379,42 @@ fun HomeScreenContent(
                     }
                 }
 
+                if (sciFiShows.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = stringResource(R.string.home_scifi),
+                            items = sciFiShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "scifi",
+                            subtitle = stringResource(R.string.home_scifi_desc),
+                            listState = sciFiListState
+                        )
+                    }
+                }
+
+                if (mysteryShows.isNotEmpty()) {
+                    item {
+                        ShowSection(
+                            title = stringResource(R.string.home_mystery_suspense),
+                            items = mysteryShows,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onItemClick = onMediaClick,
+                            tag = "mystery",
+                            listState = mysteryListState
+                        )
+                    }
+                }
+
                 item { Spacer(modifier = Modifier.height(100.dp)) }
             }
         }
     }
-} // HomeScreenContent
+}
 
 private fun navigateToDetail(navController: NavController, media: MediaContent, tag: String) {
     navController.navigate(Screen.Detail(media.id, tag))
 }
+

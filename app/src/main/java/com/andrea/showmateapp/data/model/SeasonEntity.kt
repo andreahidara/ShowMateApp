@@ -2,7 +2,7 @@ package com.andrea.showmateapp.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.andrea.showmateapp.data.network.SeasonResponse
+import com.andrea.showmateapp.data.model.SeasonResponse
 
 @Entity(
     tableName = "seasons",

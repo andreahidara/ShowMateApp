@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.ShowMateSpacing
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.screens.home.MoodOption
@@ -73,7 +73,6 @@ fun WhatToWatchDialog(media: MediaContent, onDismiss: () -> Unit, onViewDetails:
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(32.dp),
-            // Un azul oscuro más profundo para el dialog
             color = Color(0xFF1A1A2E),
             tonalElevation = 16.dp,
             modifier = Modifier
@@ -90,7 +89,6 @@ fun WhatToWatchDialog(media: MediaContent, onDismiss: () -> Unit, onViewDetails:
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // Imagen un poco más alta
                         .height(320.dp)
                 ) {
                     TmdbImage(
@@ -384,3 +382,4 @@ fun ContextSelectorDialog(onDismiss: () -> Unit, onConfirm: (MoodOption?, TimeOp
         }
     }
 }
+

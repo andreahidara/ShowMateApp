@@ -43,14 +43,11 @@ class SwipeViewModelTest {
         achievementChecker
     )
 
-    // Helpers — acceden a uiState.value para mayor legibilidad
     private val SwipeViewModel.shows get() = uiState.value.shows
     private val SwipeViewModel.isLoading get() = uiState.value.isLoading
     private val SwipeViewModel.ratedCount get() = uiState.value.ratedCount
     private val SwipeViewModel.lastAction get() = uiState.value.lastAction
     private val SwipeViewModel.errorMessage get() = uiState.value.errorMessage
-
-    // ── loadShows ─────────────────────────────────────────────────────────────
 
     @Test
     fun `loadShows sets shows from use case`() = runTest {
@@ -113,8 +110,6 @@ class SwipeViewModelTest {
         assertFalse(vm.isLoading)
     }
 
-    // ── likeTopShow ───────────────────────────────────────────────────────────
-
     @Test
     fun `likeTopShow removes first show from list`() = runTest {
         coEvery { getRecommendationsUseCase.execute() } returns sampleShows
@@ -167,8 +162,6 @@ class SwipeViewModelTest {
         assertNull(vm.lastAction)
     }
 
-    // ── skipTopShow ───────────────────────────────────────────────────────────
-
     @Test
     fun `skipTopShow removes first show from list`() = runTest {
         coEvery { getRecommendationsUseCase.execute() } returns sampleShows
@@ -211,8 +204,6 @@ class SwipeViewModelTest {
         assertEquals(sampleShows.first(), vm.lastAction?.show)
         assertTrue(vm.lastAction?.isLike == false)
     }
-
-    // ── undoLastAction ────────────────────────────────────────────────────────
 
     @Test
     fun `undoLastAction restores removed show to front`() = runTest {
@@ -281,7 +272,7 @@ class SwipeViewModelTest {
         vm.likeTopShow()
         advanceUntilIdle()
         vm.undoLastAction()
-        vm.undoLastAction() // segunda vez no debe decrementar
+        vm.undoLastAction()
 
         assertTrue(vm.ratedCount >= 0)
     }

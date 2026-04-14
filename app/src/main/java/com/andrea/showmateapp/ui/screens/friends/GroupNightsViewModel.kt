@@ -3,7 +3,7 @@ package com.andrea.showmateapp.ui.screens.friends
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.GroupSession
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IGroupSessionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -58,3 +58,4 @@ class GroupNightsViewModel @Inject constructor(
         }
     }
 }
+

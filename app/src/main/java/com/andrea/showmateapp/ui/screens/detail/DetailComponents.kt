@@ -38,8 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.model.ReasonType
-import com.andrea.showmateapp.data.model.RecommendationReason
+import com.andrea.showmateapp.data.model.*
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
@@ -206,7 +205,7 @@ fun MetaChip(text: String) {
 
 @Composable
 fun CastMemberItem(
-    member: com.andrea.showmateapp.data.network.CastMember,
+    member: com.andrea.showmateapp.data.model.CastMember,
     modifier: Modifier = Modifier,
     onClick: ((Int, String) -> Unit)? = null
 ) {
@@ -275,35 +274,38 @@ fun CastMemberItem(
 }
 
 @Composable
-fun WatchProvidersSection(providers: com.andrea.showmateapp.data.network.CountryProviders, showName: String) {
+fun WatchProvidersSection(providers: com.andrea.showmateapp.data.model.CountryProviders, showName: String) {
     val jwLink = providers.link
 
     Column {
         DetailSectionHeader(title = stringResource(R.string.detail_where_to_watch))
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (!providers.flatrate.isNullOrEmpty()) {
+        val flatrate = providers.flatrate
+        if (!flatrate.isNullOrEmpty()) {
             ProviderTypeRow(
                 label = stringResource(R.string.detail_provider_flatrate),
-                providers = providers.flatrate,
+                providers = flatrate,
                 showName = showName,
                 fallbackUrl = jwLink
             )
         }
-        if (!providers.rent.isNullOrEmpty()) {
+        val rent = providers.rent
+        if (!rent.isNullOrEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
             ProviderTypeRow(
                 label = stringResource(R.string.detail_provider_rent),
-                providers = providers.rent,
+                providers = rent,
                 showName = showName,
                 fallbackUrl = jwLink
             )
         }
-        if (!providers.buy.isNullOrEmpty()) {
+        val buy = providers.buy
+        if (!buy.isNullOrEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
             ProviderTypeRow(
                 label = stringResource(R.string.detail_provider_buy),
-                providers = providers.buy,
+                providers = buy,
                 showName = showName,
                 fallbackUrl = jwLink
             )
@@ -321,7 +323,7 @@ fun WatchProvidersSection(providers: com.andrea.showmateapp.data.network.Country
 @Composable
 fun ProviderTypeRow(
     label: String,
-    providers: List<com.andrea.showmateapp.data.network.Provider>,
+    providers: List<com.andrea.showmateapp.data.model.Provider>,
     showName: String,
     fallbackUrl: String?
 ) {
@@ -347,7 +349,7 @@ fun ProviderTypeRow(
 
 @Composable
 fun ProviderLogo(
-    provider: com.andrea.showmateapp.data.network.Provider,
+    provider: com.andrea.showmateapp.data.model.Provider,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -657,8 +659,8 @@ fun ReviewSection(
 
 @Composable
 fun EpisodesSection(
-    seasons: List<com.andrea.showmateapp.data.network.Season>,
-    selectedSeason: com.andrea.showmateapp.data.network.SeasonResponse?,
+    seasons: List<com.andrea.showmateapp.data.model.Season>,
+    selectedSeason: com.andrea.showmateapp.data.model.SeasonResponse?,
     isSeasonLoading: Boolean,
     watchedEpisodes: List<Int>,
     modifier: Modifier = Modifier,
@@ -894,7 +896,7 @@ fun EpisodesSection(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EpisodeItem(
-    episode: com.andrea.showmateapp.data.network.Episode,
+    episode: com.andrea.showmateapp.data.model.Episode,
     isWatched: Boolean,
     onToggle: () -> Unit,
     onTogglePrevious: () -> Unit
@@ -1003,6 +1005,11 @@ fun WhyRecommendedDialog(factors: List<RecommendationReason>, onDismiss: () -> U
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = "El algoritmo de ShowMate ha cruzado tu historial visual interactivo, tus géneros guardados y la afinidad de otros usuarios similares para calcular tu nivel de afinidad con este título.",
+                    color = TextGray,
+                    fontSize = 13.sp,
+                )
                 if (factors.isEmpty()) {
                     Text(
                         stringResource(R.string.detail_why_recommended_empty),
@@ -1034,7 +1041,6 @@ fun WhyRecommendedDialog(factors: List<RecommendationReason>, onDismiss: () -> U
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text(text = reason.iconEmoji, fontSize = 18.sp)
                                 Text(
                                     text = reason.description,
                                     color = Color.White,
@@ -1211,3 +1217,4 @@ fun AddToListDialog(
         }
     )
 }
+

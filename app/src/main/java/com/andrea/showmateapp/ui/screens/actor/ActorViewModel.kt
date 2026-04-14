@@ -3,8 +3,8 @@ package com.andrea.showmateapp.ui.screens.actor
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.andrea.showmateapp.data.network.MediaContent
-import com.andrea.showmateapp.data.network.PersonResponse
+import com.andrea.showmateapp.data.model.MediaContent
+import com.andrea.showmateapp.data.model.PersonResponse
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,3 +57,4 @@ class ActorViewModel @Inject constructor(
         }
     }
 }
+

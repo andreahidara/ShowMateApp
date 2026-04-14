@@ -102,7 +102,6 @@ class HomeViewModelTest {
 
         val viewModel = HomeViewModel(repository, getRecommendationsUseCase, userRepository, interactionRepository)
 
-        // Select Netflix (id "8")
         viewModel.onAction(com.andrea.showmateapp.ui.screens.home.HomeAction.SelectPlatform("Netflix"))
 
         val state = viewModel.uiState.value

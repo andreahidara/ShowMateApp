@@ -98,7 +98,6 @@ fun SplashScreen(
         label = "d3"
     )
 
-    // ── Animaciones de entrada (sin navegación) ──────────────────────────
     LaunchedEffect(Unit) {
         launch { glowAlpha.animateTo(0.55f, tween(1400, easing = LinearOutSlowInEasing)) }
         launch { logoAlpha.animateTo(1f, tween(900, easing = LinearOutSlowInEasing)) }
@@ -116,11 +115,10 @@ fun SplashScreen(
         launch { bottomAlpha.animateTo(1f, tween(800, easing = LinearOutSlowInEasing)) }
     }
 
-    // ── Navegación: espera a que el VM decida + splash mínimo de 1.5s ────
     val authDecision by viewModel.authDecision.collectAsStateWithLifecycle()
     LaunchedEffect(authDecision) {
         val destination = authDecision ?: return@LaunchedEffect
-        delay(1500L) // Duración mínima del splash siempre garantizada
+        delay(1500L)
         when (destination) {
             SplashDestination.HOME -> onNavigateToMain()
             SplashDestination.ONBOARDING -> onNavigateToOnboarding()
@@ -138,7 +136,7 @@ fun SplashScreen(
                     .offset(y = (-60).dp)
                     .size(260.dp)
                     .scale(glowPulse)
-                    .alpha(glowAlpha.value)
+                    .alpha(glowAlpha.value * 0.35f)
                     .blur(50.dp)
                     .background(
                         Brush.radialGradient(

@@ -36,16 +36,19 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch {
             val genres = _uiState.value.availableGenres.keys.toList()
 
-            // Fetch several candidates per genre in parallel
             val deferred = genres.map { genreId ->
                 async {
                     val result = showRepository.discoverShows(
                         genreId = genreId,
-                        sortBy = "popularity.desc"
+                        sortBy = "popularity.desc",
+                        minRating = 6f // Solo series con buena puntuación
                     )
                     val candidates = when (result) {
                         is Resource.Success -> result.data
-                            .filter { !it.posterPath.isNullOrBlank() }
+                            .filter { show ->
+                                !show.posterPath.isNullOrBlank() &&
+                                show.safeGenreIds.contains(genreId.toIntOrNull() ?: -1) // Doble comprobación de género
+                            }
                             .map { it.posterPath!! }
                         else -> emptyList()
                     }
@@ -54,7 +57,6 @@ class OnboardingViewModel @Inject constructor(
             }
             val candidatesPerGenre = deferred.awaitAll()
 
-            // Assign unique posters greedily (no two genres share the same image)
             val usedPosters = mutableSetOf<String>()
             val posters = mutableMapOf<String, String?>()
             for ((genreId, candidates) in candidatesPerGenre) {
@@ -173,8 +175,8 @@ class OnboardingViewModel @Inject constructor(
 
             userRepository.saveOnboardingInterests(
                 genres = state.selectedGenres.toList(),
-                watchedShowIds = state.watchedShowIds.toList(),
-                lovedShowIds = state.lovedShowIds.toList(),
+                watchedShows = state.popularShows.filter { it.id in state.watchedShowIds },
+                lovedShows = state.popularShows.filter { it.id in state.lovedShowIds },
                 preferShortEpisodes = when (state.episodeLengthPref) {
                     EpisodeLengthPref.SHORT -> true
                     EpisodeLengthPref.LONG -> false

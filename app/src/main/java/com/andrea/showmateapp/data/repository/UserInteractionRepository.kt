@@ -6,7 +6,7 @@ import com.andrea.showmateapp.data.local.ShowDao
 import com.andrea.showmateapp.data.model.ActivityEvent
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.model.toEntity
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IInteractionRepository.InteractionType
@@ -56,6 +56,7 @@ class UserInteractionRepository @Inject constructor(
 
     override fun getLikedShowsFlow() = showDao.getLikedShowsFlow()
     override fun getWatchedShowsFlow() = showDao.getWatchedShowsFlow()
+    override fun getWatchlistShowsFlow() = showDao.getWatchlistShowsFlow()
     override suspend fun getWatchedShows() = getCollection("watched", MediaContent::class.java)
     override suspend fun getWatchlist() = getCollection("watchlist", MediaContent::class.java)
     override suspend fun getFavorites() = getCollection("favorites", MediaContent::class.java)
@@ -65,6 +66,7 @@ class UserInteractionRepository @Inject constructor(
     override fun getWatchedMediaIdsFlow() = interactionDao.getWatchedMediaIdsFlow().map { it.toSet() }.distinctUntilChanged()
     override suspend fun getExcludedMediaIds() = withContext(ioDispatcher) { interactionDao.getExcludedMediaIds().toSet() }
     override fun getExcludedMediaIdsFlow() = interactionDao.getExcludedMediaIdsFlow().map { it.toSet() }.distinctUntilChanged()
+    override fun getInteractedMediaIdsFlow() = interactionDao.getInteractedMediaIdsFlow().map { it.toSet() }.distinctUntilChanged()
 
     override suspend fun getLocalInteractionState(mediaId: Int) = withContext(ioDispatcher) { interactionDao.getById(mediaId) }
 
@@ -76,13 +78,15 @@ class UserInteractionRepository @Inject constructor(
         onSuccess: suspend () -> Unit = {}
     ): Boolean = withContext(ioDispatcher) {
         val current = interactionDao.getById(media.id) ?: MediaInteractionEntity(mediaId = media.id)
-        interactionDao.upsert(updateDao(current).copy(syncPending = true))
+        val optimisticState = updateDao(current).copy(syncPending = true)
+        interactionDao.upsert(optimisticState)
+
+        onSuccess()
 
         try {
             val ref = userDoc()?.collection(coll)?.document(media.id.toString())
             if (set) ref?.set(media)?.await() else ref?.delete()?.await()
-            interactionDao.upsert(updateDao(current).copy(syncPending = false))
-            onSuccess()
+            interactionDao.upsert(optimisticState.copy(syncPending = false))
             userRepo.get().getUserProfile()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -91,16 +95,34 @@ class UserInteractionRepository @Inject constructor(
         set
     }
 
-    override suspend fun toggleWatched(media: MediaContent, setWatched: Boolean) = toggleBase(media, "watched", setWatched, { it.copy(isWatched = setWatched) }) {
-        if (setWatched) showDao.insertShows(listOf(media.toEntity("watched"))) else showDao.deleteWatchedShow(media.id)
+    override suspend fun toggleWatched(media: MediaContent, setWatched: Boolean) = toggleBase(
+        media, "watched", setWatched,
+        updateDao = {
+            if (setWatched) it.copy(isWatched = true, isInWatchlist = false)
+            else it.copy(isWatched = false)
+        }
+    ) {
+        if (setWatched) {
+            showDao.insertShows(listOf(media.toEntity("watched")))
+            runCatching {
+                userDoc()?.collection("watchlist")?.document(media.id.toString())?.delete()?.await()
+            }
+        } else {
+            showDao.deleteWatchedShow(media.id)
+        }
     }
 
-    override suspend fun toggleFavorite(media: MediaContent, setLiked: Boolean) = toggleBase(media, "favorites", setLiked, { it.copy(isLiked = setLiked) }) {
+    override suspend fun toggleFavorite(media: MediaContent, setLiked: Boolean) = toggleBase(
+        media, "favorites", setLiked,
+        updateDao = { it.copy(isLiked = setLiked) }
+    ) {
         if (setLiked) {
             showDao.insertShows(listOf(media.toEntity("liked")))
             runCatching { socialRepo.get().postActivityEvent(ActivityEvent.TYPE_LIKED, media.id, media.name, media.posterPath ?: "") }
             runCatching { achievement.get().addXp(AchievementDefs.XP_LIKE_SHOW) }
-        } else showDao.deleteLikedShow(media.id)
+        } else {
+            showDao.deleteLikedShow(media.id)
+        }
     }
 
     override suspend fun toggleEssential(media: MediaContent, setEssential: Boolean) = toggleBase(media, "essentials", setEssential, { it.copy(isEssential = setEssential) }) {
@@ -169,7 +191,7 @@ class UserInteractionRepository @Inject constructor(
 
     override suspend fun updateRating(mediaId: Int, rating: Int) = withContext(ioDispatcher) {
         val doc = userDoc() ?: return@withContext
-        val show = showDao.getShowById(mediaId)
+        val show = showDao.getLikedShowById(mediaId) ?: showDao.getWatchedShowById(mediaId)
         try {
             db.runTransaction { tx ->
                 tx.set(doc.collection("ratings").document(mediaId.toString()), mapOf("rating" to rating))
@@ -212,7 +234,9 @@ class UserInteractionRepository @Inject constructor(
         userRepo.get().getUserProfile()
     }
 
-    override suspend fun getReview(mediaId: Int) = userDoc()?.get()?.await()?.toObject(UserProfile::class.java)?.mediaReviews?.get(mediaId.toString())
+    override suspend fun getReview(mediaId: Int) = withContext(ioDispatcher) {
+        userDoc()?.get()?.await()?.toObject(UserProfile::class.java)?.mediaReviews?.get(mediaId.toString())
+    }
 
     private suspend fun updateCustomList(list: String, action: (MutableList<Int>) -> Boolean) = withContext(ioDispatcher) {
         val doc = userDoc() ?: return@withContext
@@ -249,7 +273,9 @@ class UserInteractionRepository @Inject constructor(
         userRepo.get().getUserProfile()
     }
 
-    override suspend fun getCustomLists() = userDoc()?.get()?.await()?.toObject(UserProfile::class.java)?.customLists ?: emptyMap()
+    override suspend fun getCustomLists() = withContext(ioDispatcher) {
+        userDoc()?.get()?.await()?.toObject(UserProfile::class.java)?.customLists ?: emptyMap()
+    }
     override fun getCustomListsFlow() = userRepo.get().getUserProfileFlow().map { it?.customLists ?: emptyMap() }.distinctUntilChanged()
 
     override suspend fun toggleEpisodeWatched(showId: Int, episodeId: Int) = withContext(ioDispatcher) {
@@ -259,7 +285,7 @@ class UserInteractionRepository @Inject constructor(
             val watched = p.watchedEpisodes.toMutableMap()
             val eps = watched[showId.toString()]?.toMutableSet() ?: mutableSetOf()
             val added = if (eps.contains(episodeId)) { eps.remove(episodeId); false } else { eps.add(episodeId); true }
-            tx.update(doc, "watchedEpisodes", watched.apply { put(showId.toString(), eps.toList()) })
+            tx.set(doc, p.copy(watchedEpisodes = watched.apply { put(showId.toString(), eps.toList()) }))
             added
         }.await().also { if (it) runCatching { achievement.get().addXp(AchievementDefs.XP_WATCH_EPISODE) }; userRepo.get().getUserProfile() }
     }
@@ -268,7 +294,9 @@ class UserInteractionRepository @Inject constructor(
         val doc = userDoc() ?: return@withContext
         db.runTransaction { tx ->
             val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
-            tx.update(doc, "watchedEpisodes", p.watchedEpisodes.toMutableMap().apply { if (episodeIds.isEmpty()) remove(showId.toString()) else put(showId.toString(), episodeIds) })
+            val watched = p.watchedEpisodes.toMutableMap()
+            if (episodeIds.isEmpty()) watched.remove(showId.toString()) else watched[showId.toString()] = episodeIds
+            tx.set(doc, p.copy(watchedEpisodes = watched))
         }.await()
         userRepo.get().getUserProfile()
     }
@@ -279,24 +307,47 @@ class UserInteractionRepository @Inject constructor(
     override suspend fun syncFavoritesAndWatchedToRoom() = withContext(ioDispatcher) {
         val doc = userDoc() ?: return@withContext
         try {
-            val (fav, wat) = coroutineScope {
-                async { doc.collection("favorites").get().await().toObjects(MediaContent::class.java) } to
-                async { doc.collection("watched").get().await().toObjects(MediaContent::class.java) }
-            }.let { it.first.await() to it.second.await() }
+            val favSnapshot = doc.collection("favorites").get().await()
+            val watSnapshot = doc.collection("watched").get().await()
+            val wlsSnapshot = doc.collection("watchlist").get().await()
 
-            showDao.replaceCategory("liked", fav.map { it.toEntity("liked") })
-            showDao.replaceCategory("watched", wat.map { it.toEntity("watched") })
+            val fav = favSnapshot.toObjects(MediaContent::class.java)
+            val wat = watSnapshot.toObjects(MediaContent::class.java)
+            val wls = wlsSnapshot.toObjects(MediaContent::class.java)
 
-            val fIds = fav.map { it.id }.toSet()
-            val wIds = wat.map { it.id }.toSet()
-            val all = (fIds + wIds).toList()
+            val validFav = fav.filter { it.id != 0 }
+            val validWat = wat.filter { it.id != 0 }
+            val validWls = wls.filter { it.id != 0 }
+
+            if (fav.isNotEmpty() && validFav.isEmpty()) return@withContext
+            if (wat.isNotEmpty() && validWat.isEmpty()) return@withContext
+            if (wls.isNotEmpty() && validWls.isEmpty()) return@withContext
+
+            showDao.syncCategory("liked", validFav.map { it.toEntity("liked") })
+            showDao.syncCategory("watched", validWat.map { it.toEntity("watched") })
+            showDao.syncCategory("watchlist", validWls.map { it.toEntity("watchlist") })
+
+            val fIds = validFav.map { it.id }.toSet()
+            val wIds = validWat.map { it.id }.toSet()
+            val wlIds = validWls.map { it.id }.toSet()
+            val all = (fIds + wIds + wlIds).toList()
+
             if (all.isNotEmpty()) {
                 val existing = interactionDao.getByIds(all).associateBy { it.mediaId }
-                interactionDao.upsertAll(all.mapNotNull { id ->
+                interactionDao.upsertAll(all.map { id ->
                     val e = existing[id] ?: MediaInteractionEntity(mediaId = id)
-                    if (!e.syncPending) e.copy(isLiked = id in fIds, isWatched = id in wIds) else null
+                    e.copy(
+                        isLiked = id in fIds,
+                        isWatched = id in wIds,
+                        isInWatchlist = id in wlIds,
+                        syncPending = false
+                    )
                 })
             }
-        } catch (e: Exception) { Timber.w(e, "Sync failed") }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Timber.e(e, "syncFavoritesAndWatchedToRoom failed")
+        }
     }
 }
+

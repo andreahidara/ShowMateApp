@@ -1,7 +1,8 @@
 package com.andrea.showmateapp.domain.usecase
 
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.toDomain
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.GenreMapper
@@ -15,14 +16,34 @@ class GetProfileStatsUseCase @Inject constructor(
     private val interactionRepo: IInteractionRepository
 ) {
     fun observeStats() = combine(userRepo.getUserProfileFlow(), interactionRepo.getWatchedShowsFlow()) { profile, watched ->
-        computeStats(watched.size, profile)
+        computeStats(watched.map { it.toDomain() }, profile)
     }.distinctUntilChanged()
 
-    fun execute(watched: List<MediaContent>, profile: UserProfile?) = computeStats(watched.size, profile)
+    fun execute(watched: List<MediaContent>, profile: UserProfile?) = computeStats(watched, profile)
 
-    private fun computeStats(watchedCount: Int, profile: UserProfile?): ProfileStats {
-        val p = profile ?: return ProfileStats()
-        val totalEpisodes = p.watchedEpisodes.values.sumOf { it.size }
+    private fun computeStats(watched: List<MediaContent>, profile: UserProfile?): ProfileStats {
+        val p = profile ?: return ProfileStats(watchedCount = watched.size, topGenre = "Ninguno")
+        val watchedIds = watched.map { it.id.toString() }.toSet()
+
+        val totalEpisodes = watched.sumOf { show ->
+            val watchedList = p.watchedEpisodes[show.id.toString()]
+            if (watchedList != null) {
+                watchedList.size
+            } else {
+                (show.numberOfSeasons ?: 1) * 10
+            }
+        }
+        val totalMinutes = watched.sumOf { show ->
+            val watchedList = p.watchedEpisodes[show.id.toString()]
+            val count = if (watchedList != null) {
+                watchedList.size
+            } else {
+                (show.numberOfSeasons ?: 1) * 10
+            }
+            val runtime = show.episodeRunTime?.firstOrNull()?.takeIf { it > 0 } ?: 45
+            count * runtime
+        }
+
         val ratings = p.ratings.values
         val genres = p.genreScores.filter { it.value > 0 }.entries.sortedByDescending { it.value }.take(5)
         val maxScore = genres.firstOrNull()?.value?.coerceAtLeast(1f) ?: 1f
@@ -31,8 +52,8 @@ class GetProfileStatsUseCase @Inject constructor(
         val disliked = p.dislikedMediaIds.size
 
         return ProfileStats(
-            totalHours = (totalEpisodes * 45) / 60,
-            watchedCount = watchedCount,
+            totalHours = totalMinutes / 60,
+            watchedCount = watched.size,
             totalEpisodes = totalEpisodes,
             topGenre = topGenres.firstOrNull()?.first ?: "Ninguno",
             favoriteActorId = p.preferredActors.maxByOrNull { it.value }?.key,
@@ -49,7 +70,7 @@ class GetProfileStatsUseCase @Inject constructor(
         val totalHours: Int = 0,
         val watchedCount: Int = 0,
         val totalEpisodes: Int = 0,
-        val topGenre: String = "N/A",
+        val topGenre: String = "Ninguno",
         val favoriteActorId: String? = null,
         val topGenres: List<Pair<String, Float>> = emptyList(),
         val likedCount: Int = 0,
@@ -59,3 +80,4 @@ class GetProfileStatsUseCase @Inject constructor(
         val likeRate: Float = 0f
     )
 }
+

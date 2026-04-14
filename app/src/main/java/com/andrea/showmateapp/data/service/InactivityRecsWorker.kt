@@ -13,7 +13,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -124,3 +124,4 @@ class InactivityRecsWorker @AssistedInject constructor(
         ) == PackageManager.PERMISSION_GRANTED
     }
 }
+

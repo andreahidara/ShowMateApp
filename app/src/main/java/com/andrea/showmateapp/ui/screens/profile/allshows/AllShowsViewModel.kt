@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.andrea.showmateapp.data.model.toDomain
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,3 +33,4 @@ class AllShowsViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     }
 }
+

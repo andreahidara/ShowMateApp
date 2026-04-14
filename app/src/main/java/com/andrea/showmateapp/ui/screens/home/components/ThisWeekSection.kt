@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.theme.AccentBlue
 import com.andrea.showmateapp.ui.theme.StarYellow
@@ -52,7 +52,7 @@ fun ThisWeekSection(
     isLoadingMore: Boolean = false
 ) {
     if (allShows.isEmpty()) return
-    val platforms = remember { listOf("Netflix", "Prime", "Disney+", "Max") }
+    val platforms = remember { listOf("Netflix", "Prime", "Disney+", "Max", "Apple TV+") }
     val displayedShows = if (selectedPlatform != null) {
         platformShows[selectedPlatform] ?: emptyList()
     } else {
@@ -175,6 +175,7 @@ fun ThisWeekSection(
                 items(displayedShows, key = { it.id }) { show ->
                     ThisWeekCard(
                         media = show,
+                        modifier = Modifier.animateItem(),
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         onClick = { onMediaClick(show, "thisweek") }
@@ -203,12 +204,13 @@ fun ThisWeekSection(
 @Composable
 fun ThisWeekCard(
     media: MediaContent,
+    modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .width(176.dp)
             .height(104.dp)
             .clip(RoundedCornerShape(14.dp))
@@ -298,3 +300,4 @@ fun ThisWeekCard(
         }
     }
 }
+

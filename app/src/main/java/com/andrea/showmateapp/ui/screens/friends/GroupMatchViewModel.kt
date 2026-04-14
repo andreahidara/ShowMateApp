@@ -7,7 +7,7 @@ import com.andrea.showmateapp.data.model.GroupFilters
 import com.andrea.showmateapp.data.model.GroupSession
 import com.andrea.showmateapp.data.model.MemberVoteDoc
 import com.andrea.showmateapp.data.model.VoteType
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IAchievementRepository
 import com.andrea.showmateapp.domain.repository.IGroupSessionRepository
@@ -337,3 +337,4 @@ class GroupMatchViewModel @Inject constructor(
 
     fun isHost(): Boolean = myEmail != null && myEmail == _uiState.value.session?.hostEmail
 }
+

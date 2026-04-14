@@ -3,7 +3,7 @@ package com.andrea.showmateapp.domain.usecase
 import com.andrea.showmateapp.data.model.ReasonType
 import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -31,36 +31,25 @@ class GetRecommendationsUseCase @Inject constructor(
     companion object {
         private const val W_PERSONAL = 0.70f
         private const val W_GLOBAL = 0.30f
-
         private const val NARRATIVE_ADDITIVE_MAX = 1.50f
-
         private const val C = 6.5f
         private const val M = 150f
-
         private const val DECAY_LAMBDA = 0.0077f
-
         private const val MAX_GENRE_FRACTION = 0.35f
-
         private const val SERENDIPITY_FRACTION = 0.15f
-
         private const val ABANDONMENT_THRESHOLD = 0.20f
         private const val ABANDONMENT_PENALTY = 1.50f
         private const val AVG_EPISODES_PER_SEASON = 10
-
         private const val NOVELTY_BOOST_1M = 0.40f
         private const val NOVELTY_BOOST_3M = 0.20f
         private const val NOVELTY_BOOST_6M = 0.10f
-
         private const val GENRE_SATURATION_THRESHOLD = 0.45f
         private const val GENRE_SATURATION_PENALTY = 0.20f
-
         private const val HIDDEN_GEM_VOTE_THRESHOLD = 500
         private const val HIDDEN_GEM_MIN_AFFINITY = 6.5f
         private const val HIDDEN_GEM_BOOST = 0.35f
-
         private const val BINGE_THRESHOLD_EPS = 3.0f
         private const val BINGE_PROFILE_BOOST = 0.20f
-
         private const val EXPLORATION_BONUS = 0.30f
 
         private val ALL_GENRE_IDS = setOf(
@@ -91,7 +80,6 @@ class GetRecommendationsUseCase @Inject constructor(
 
     private fun buildRecommendationContext(profile: UserProfile, now: Long): RecommendationContext {
         val decayed = applyTimeDecay(profile, now)
-
         val positiveGenres = decayed.genreScores.filter { it.value > 0 }
         val saturatedGenreId: Int?
         val isSaturated: Boolean
@@ -132,7 +120,6 @@ class GetRecommendationsUseCase @Inject constructor(
     suspend fun execute(): List<MediaContent> {
         return try {
             val userProfile = userRepository.getUserProfile()
-            // Una sola query Room — combina isWatched + isDisliked sin round-trip a Firestore
             val excludedIds = interactionRepository.getExcludedMediaIds().toList()
 
             if (userProfile == null || userProfile.genreScores.isEmpty()) {
@@ -153,18 +140,14 @@ class GetRecommendationsUseCase @Inject constructor(
                 val collabJob = async {
                     try {
                         getCollaborativeBoostUseCase.execute(userProfile)
-                    } catch (
-                        e: Exception
-                    ) {
+                    } catch (e: Exception) {
                         emptyMap<Int, Float>()
                     }
                 }
                 candidatesJob.await() to collabJob.await()
             }
 
-            val watchedEpisodesMap = userProfile.watchedEpisodes
             val candidatesById = candidates.associateBy { it.id }
-
             val collabOnlyIds = collaborativeBoost.entries
                 .sortedByDescending { it.value }
                 .take(15)
@@ -205,16 +188,20 @@ class GetRecommendationsUseCase @Inject constructor(
     suspend fun scoreShows(shows: List<MediaContent>): List<MediaContent> {
         return try {
             val userProfile = userRepository.getUserProfile()
-            if (userProfile == null || userProfile.genreScores.isEmpty()) return shows
+            val excludedIds = interactionRepository.getExcludedMediaIds().toSet()
+            if (userProfile == null || userProfile.genreScores.isEmpty()) {
+                return shows.filter { it.id !in excludedIds }
+            }
             val context = buildRecommendationContext(userProfile, System.currentTimeMillis())
 
-            shows.map { show ->
-                scoreShow(
-                    show = show,
-                    context = context,
-                    noveltyBoost = calculateNoveltyBoost(show, context.today)
-                )
-            }.sortedByDescending { it.affinityScore }
+            shows.filter { it.id !in excludedIds }
+                .map { show ->
+                    scoreShow(
+                        show = show,
+                        context = context,
+                        noveltyBoost = calculateNoveltyBoost(show, context.today)
+                    )
+                }.sortedByDescending { it.affinityScore }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Timber.e(e, "Error scoring shows")
@@ -261,8 +248,6 @@ class GetRecommendationsUseCase @Inject constructor(
             0f
         }
 
-        // No clipear aquí: personalAffinity puede ser negativa (géneros odiados).
-        // El coerceIn final en el score total evita valores imposibles.
         val personalAffinity = embeddingScore + narrativeContrib + popBoost
 
         val moodMultiplier = MoodContextEngine.getMoodMultiplier(show, context.moodContext)
@@ -273,7 +258,6 @@ class GetRecommendationsUseCase @Inject constructor(
         )
 
         val global = calculateBayesianRating(show)
-
         val completeness = calculateCompletenessBoost(show)
         val saturationPenalty = calculateGenreSaturationPenalty(show, context.weights)
         val hiddenGemBoost = calculateHiddenGemBoost(show, personalAffinity)
@@ -417,12 +401,9 @@ class GetRecommendationsUseCase @Inject constructor(
         bingeBoost: Float
     ): List<RecommendationReason> {
         val profile = context.decayedProfile
-        // Reasons con raíz en las preferencias reales del usuario
         val personal = mutableListOf<RecommendationReason>()
-        // Reasons sistémicos: solo aparecen si no hay suficientes personales
         val systemic = mutableListOf<RecommendationReason>()
 
-        // GÉNERO — umbral 3f: preferencia activa, no mera exposición
         val topGenreEntry = show.safeGenreIds
             .mapNotNull { id -> profile.genreScores[id.toString()]?.let { id to it } }
             .filter { it.second > 3f }
@@ -435,7 +416,6 @@ class GetRecommendationsUseCase @Inject constructor(
             )
         }
 
-        // ACTOR
         val topActorEntry = show.credits?.cast
             ?.mapNotNull { actor -> profile.preferredActors[actor.id.toString()]?.let { actor to it } }
             ?.filter { it.second > 3f }
@@ -450,7 +430,6 @@ class GetRecommendationsUseCase @Inject constructor(
             }
         }
 
-        // NARRATIVE STYLE
         val topStyleEntry = showStyles.entries
             .mapNotNull { (style, rel) ->
                 profile.narrativeStyleScores[style]?.takeIf { it > 3f }?.let { style to (it * rel) }
@@ -466,7 +445,6 @@ class GetRecommendationsUseCase @Inject constructor(
             }
         }
 
-        // CREATOR
         val topCreatorEntry = show.credits?.crew
             ?.filter { it.job in MediaContent.CREATOR_JOBS }
             ?.mapNotNull { crew -> profile.preferredCreators[crew.id.toString()]?.let { crew to it } }
@@ -482,7 +460,6 @@ class GetRecommendationsUseCase @Inject constructor(
             }
         }
 
-        // COLLABORATIVE — personal porque refleja gustos de usuarios similares
         if (collabBoost > 0.30f) {
             val weight = (collabBoost / 1.20f).coerceIn(0f, 1f)
             personal += RecommendationReason(
@@ -491,7 +468,6 @@ class GetRecommendationsUseCase @Inject constructor(
             )
         }
 
-        // SISTÉMICOS — solo si no hay 2 reasons personales ya
         if (personal.size < 2) {
             if (hiddenGemBoost > 0f) {
                 systemic += RecommendationReason(
@@ -511,7 +487,6 @@ class GetRecommendationsUseCase @Inject constructor(
                     "🍿"
                 )
             }
-            // COMPLETENESS y TRENDING: último recurso, solo sin ningún reason personal
             if (personal.isEmpty()) {
                 if (show.status == "Ended" || show.status == "Canceled") {
                     systemic += RecommendationReason(
@@ -555,7 +530,7 @@ class GetRecommendationsUseCase @Inject constructor(
         "narrativa_compleja" -> "Tiene esa narrativa compleja que te engancha"
         "protagonista_detective" -> "Con ese detective que tanto te gusta"
         "protagonista_antihero" -> "Con un anti-héroe que no puedes dejar de ver"
-        "protagonista_genio" -> "Con ese protagonista brillante que tanto te engancha"
+        "protagonista_genio" -> "Con ese protagonist brillante que tanto te engancha"
         "tono_oscuro" -> "Tiene esa narrativa oscura que te atrapa"
         "tono_emocional" -> "Te va a llegar al corazón, te lo prometemos"
         "tono_ligero" -> "Ligera y perfecta para desconectar"
@@ -615,3 +590,4 @@ class GetRecommendationsUseCase @Inject constructor(
         return main
     }
 }
+

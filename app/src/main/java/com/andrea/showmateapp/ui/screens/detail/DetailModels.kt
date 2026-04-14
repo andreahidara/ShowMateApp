@@ -1,8 +1,8 @@
 package com.andrea.showmateapp.ui.screens.detail
 
 import androidx.compose.runtime.Immutable
-import com.andrea.showmateapp.data.network.MediaContent
-import com.andrea.showmateapp.data.network.SeasonResponse
+import com.andrea.showmateapp.data.model.MediaContent
+import com.andrea.showmateapp.data.model.SeasonResponse
 import com.andrea.showmateapp.util.BaseUiState
 import com.andrea.showmateapp.util.UiText
 
@@ -29,3 +29,4 @@ data class DetailUiState(
     val customLists: Map<String, List<Int>> = emptyMap(),
     val showAddToListDialog: Boolean = false
 ) : BaseUiState
+

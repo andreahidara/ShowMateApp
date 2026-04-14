@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Exclude the local Room database (contains cached media; rebuilt from Firestore on install) -->
+
     <exclude domain="database" path="showmate_database"/>
     <exclude domain="database" path="showmate_database-shm"/>
     <exclude domain="database" path="showmate_database-wal"/>
-    <!-- Exclude DataStore preferences (contains sensitive settings) -->
+
     <exclude domain="sharedpref" path="com.andrea.showmateapp_preferences.xml"/>
 </full-backup-content>

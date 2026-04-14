@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Exclude local Room database; user data lives in Firestore and is restored from there -->
+
         <exclude domain="database" path="showmate_database"/>
         <exclude domain="database" path="showmate_database-shm"/>
         <exclude domain="database" path="showmate_database-wal"/>

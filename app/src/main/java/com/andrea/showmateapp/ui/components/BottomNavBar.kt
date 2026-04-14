@@ -212,7 +212,7 @@ fun BottomNavBar(navController: NavController, onScrollToTop: (Any) -> Unit = {}
                         }
                     }
                 }
-            } // close Column
+            }
         }
     }
 }

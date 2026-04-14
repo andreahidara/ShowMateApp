@@ -5,7 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.ui.navigation.Screen
@@ -79,3 +79,4 @@ class ListDetailViewModel @Inject constructor(
         }
     }
 }
+

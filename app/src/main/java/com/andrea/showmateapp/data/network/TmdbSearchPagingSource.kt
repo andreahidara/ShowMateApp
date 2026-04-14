@@ -3,11 +3,8 @@ package com.andrea.showmateapp.data.network
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
+import com.andrea.showmateapp.data.model.MediaContent
 
-/**
- * PagingSource para búsqueda paginada de series en TMDB.
- * Aplica el scoring de recomendaciones en cada página cargada.
- */
 class TmdbSearchPagingSource(
     private val apiService: TmdbApiService,
     private val query: String,

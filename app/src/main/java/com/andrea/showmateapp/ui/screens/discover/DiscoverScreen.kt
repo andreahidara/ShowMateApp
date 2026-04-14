@@ -42,7 +42,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
@@ -67,7 +67,6 @@ fun DiscoverScreen(
     val onLoadMoreTopGenre = remember(viewModel) { { viewModel.loadMoreTopGenre() } }
     val onLoadMoreSecondGenre = remember(viewModel) { { viewModel.loadMoreSecondGenre() } }
 
-    // Refresh when screen becomes visible again (tab switch or app foreground)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         var isFirstResume = true
@@ -796,3 +795,4 @@ private fun DiscoverSkeleton() {
 private fun navigateToDetail(navController: NavController, media: MediaContent, tag: String) {
     navController.navigate(Screen.Detail(media.id, tag))
 }
+

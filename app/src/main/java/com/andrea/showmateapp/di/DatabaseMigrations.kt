@@ -49,6 +49,13 @@ object DatabaseMigrations {
                     tmdbId TEXT NOT NULL, cachedAt INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(id))""")
                 database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_seasons_showId_seasonNumber ON seasons (showId, seasonNumber)")
             }
+        },
+        object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE media_content ADD COLUMN status TEXT")
+                database.execSQL("ALTER TABLE media_content ADD COLUMN numberOfSeasons INTEGER")
+                database.execSQL("ALTER TABLE media_content ADD COLUMN firstAirDate TEXT")
+            }
         }
     )
 }

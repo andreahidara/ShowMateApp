@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.util.TmdbUtils
 
@@ -68,6 +68,7 @@ fun Top10Section(
                     modifier = Modifier
                         .width(130.dp)
                         .height(190.dp)
+                        .animateItem()
                         .clickable { onItemClick(show, "top10") }
                 ) {
                     with(sharedTransitionScope) {
@@ -115,3 +116,4 @@ fun Top10Section(
         }
     }
 }
+

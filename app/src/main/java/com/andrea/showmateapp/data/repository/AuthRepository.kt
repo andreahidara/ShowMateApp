@@ -4,6 +4,7 @@ import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.IAuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -18,8 +19,8 @@ class AuthRepository @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : IAuthRepository {
-    override suspend fun login(email: String, pass: String): Result<Unit> {
-        return try {
+    override suspend fun login(email: String, pass: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
             firebaseAuth.signInWithEmailAndPassword(email, pass).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -28,8 +29,8 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    override suspend fun signUp(email: String, pass: String): Result<Unit> {
-        return try {
+    override suspend fun signUp(email: String, pass: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
             firebaseAuth.createUserWithEmailAndPassword(email, pass).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -38,8 +39,8 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    override suspend fun signInWithGoogle(idToken: String): Result<Boolean> {
-        return try {
+    override suspend fun signInWithGoogle(idToken: String): Result<Boolean> = withContext(ioDispatcher) {
+        try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = firebaseAuth.signInWithCredential(credential).await()
             val isNewUser = result.additionalUserInfo?.isNewUser == true
@@ -64,8 +65,8 @@ class AuthRepository @Inject constructor(
         firebaseAuth.signOut()
     }
 
-    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
-        return try {
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
             firebaseAuth.sendPasswordResetEmail(email).await()
             Result.success(Unit)
         } catch (e: Exception) {

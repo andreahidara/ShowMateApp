@@ -28,7 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.util.TmdbUtils
@@ -71,7 +71,7 @@ fun UpNextSection(
         ) {
             items(shows, key = { it.id }) { show ->
                 val progress = progressMap[show.id] ?: 0f
-                Column(modifier = Modifier.width(130.dp)) {
+                Column(modifier = Modifier.width(130.dp).animateItem()) {
                     Box(
                         modifier = Modifier
                             .width(130.dp)
@@ -151,3 +151,4 @@ fun UpNextSection(
         }
     }
 }
+

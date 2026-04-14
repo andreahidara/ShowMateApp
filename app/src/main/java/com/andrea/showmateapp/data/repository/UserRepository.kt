@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.data.repository
 
+import com.andrea.showmateapp.data.local.MediaInteractionDao
 import com.andrea.showmateapp.data.local.ShowDao
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.di.IoDispatcher
@@ -26,6 +27,7 @@ class UserRepository @Inject constructor(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val showDao: ShowDao,
+    private val mediaInteractionDao: MediaInteractionDao,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : IUserRepository {
     private val usersCollection = db.collection("users")
@@ -83,14 +85,17 @@ class UserRepository @Inject constructor(
 
     override suspend fun saveOnboardingInterests(
         genres: List<String>,
-        watchedShowIds: List<Int>,
-        lovedShowIds: List<Int>,
+        watchedShows: List<com.andrea.showmateapp.data.model.MediaContent>,
+        lovedShows: List<com.andrea.showmateapp.data.model.MediaContent>,
         preferShortEpisodes: Boolean?,
         preferFinishedShows: Boolean?,
         preferDubbed: Boolean?
     ) = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
         val userRef = userDoc(uid)
+
+        val watchedShowIds = watchedShows.map { it.id }
+        val lovedShowIds = lovedShows.map { it.id }
 
         db.runTransaction { transaction ->
             val snapshot = transaction.get(userRef)
@@ -119,6 +124,13 @@ class UserRepository @Inject constructor(
                     onboardingCompleted = true
                 )
             )
+
+            watchedShows.forEach { show ->
+                transaction.set(userRef.collection("watched").document(show.id.toString()), show)
+            }
+            lovedShows.forEach { show ->
+                transaction.set(userRef.collection("favorites").document(show.id.toString()), show)
+            }
         }.await()
         getUserProfile()
     }
@@ -222,32 +234,59 @@ class UserRepository @Inject constructor(
         val uid = auth.currentUser?.uid ?: return@withContext
         val userRef = userDoc(uid)
 
-        db.runTransaction { transaction ->
-            val snapshot = transaction.get(userRef)
-            val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
+        try {
+            showDao.clearUserData()
+            mediaInteractionDao.deleteAll()
 
-            transaction.set(
-                userRef,
-                profile.copy(
-                    genreScores = emptyMap(),
-                    genreScoreDates = emptyMap(),
-                    preferredKeywords = emptyMap(),
-                    keywordScoreDates = emptyMap(),
-                    preferredActors = emptyMap(),
-                    actorScoreDates = emptyMap(),
-                    narrativeStyleScores = emptyMap(),
-                    narrativeStyleDates = emptyMap(),
-                    preferredCreators = emptyMap(),
-                    creatorScoreDates = emptyMap(),
-                    likedMediaIds = emptyList(),
-                    essentialMediaIds = emptyList(),
-                    dislikedMediaIds = emptyList(),
-                    ratings = emptyMap(),
-                    watchedEpisodes = emptyMap()
-                )
+            // Reiniciamos solo lo relacionado con el algoritmo y preferencias
+            val resetData = mapOf(
+                "onboardingCompleted" to false,
+                "genreScores" to emptyMap<String, Float>(),
+                "genreScoreDates" to emptyMap<String, Long>(),
+                "preferredKeywords" to emptyMap<String, Float>(),
+                "keywordScoreDates" to emptyMap<String, Long>(),
+                "preferredActors" to emptyMap<String, Float>(),
+                "actorScoreDates" to emptyMap<String, Long>(),
+                "narrativeStyleScores" to emptyMap<String, Float>(),
+                "narrativeStyleDates" to emptyMap<String, Long>(),
+                "preferredCreators" to emptyMap<String, Float>(),
+                "creatorScoreDates" to emptyMap<String, Long>(),
+                "likedMediaIds" to emptyList<Int>(),
+                "essentialMediaIds" to emptyList<Int>(),
+                "dislikedMediaIds" to emptyList<Int>(),
+                "ratings" to emptyMap<String, Float>(),
+                "watchedEpisodes" to emptyMap<String, List<Int>>(),
+                "mediaReviews" to emptyMap<String, String>(),
+                "viewingHistory" to emptyList<String>(),
+                "customLists" to emptyMap<String, List<Int>>(),
+                "preferShortEpisodes" to null,
+                "preferFinishedShows" to null,
+                "preferDubbed" to null
             )
-        }.await()
-        getUserProfile()
+
+            // Usamos update para no tocar campos protegidos como xp o friendIds
+            userRef.update(resetData).await()
+
+            // Borrado de subcolecciones con manejo de errores individual
+            val collections = listOf("watched", "favorites", "watchlist", "disliked", "ratings", "history", "recommendations")
+            collections.forEach { coll ->
+                try {
+                    val snapshot = userRef.collection(coll).limit(20).get().await()
+                    if (!snapshot.isEmpty) {
+                        val batch = db.batch()
+                        snapshot.documents.forEach { batch.delete(it.reference) }
+                        batch.commit().await()
+                    }
+                } catch (e: Exception) {
+                    Timber.w("No se pudo limpiar la subcolección $coll (probablemente por reglas de seguridad): ${e.message}")
+                }
+            }
+
+        } catch (e: Exception) {
+            Timber.e(e, "Error crítico al reiniciar datos del algoritmo")
+            if (e is CancellationException) throw e
+            throw e
+        }
     }
 
     override suspend fun clearUserCache() = withContext(ioDispatcher) {
@@ -300,3 +339,4 @@ class UserRepository @Inject constructor(
         auth.currentUser?.delete()?.await()
     }
 }
+

@@ -19,7 +19,7 @@ class GetProfileStatsUseCaseTest {
     @Test
     fun `returns zero stats for empty watched list and null profile`() {
         val stats = useCase.execute(emptyList(), null)
-        assertEquals(0, stats.totalWatchedHours)
+        assertEquals(0, stats.totalHours)
         assertEquals(0, stats.watchedCount)
         assertEquals("Ninguno", stats.topGenre)
     }
@@ -30,7 +30,7 @@ class GetProfileStatsUseCaseTest {
         val profile = UserProfile(watchedEpisodes = mapOf("1" to listOf(101, 102, 103, 104)))
         val stats = useCase.execute(listOf(show), profile)
         // 4 episodes × 45 min = 180 min = 3 hours
-        assertEquals(3, stats.totalWatchedHours)
+        assertEquals(3, stats.totalHours)
     }
 
     @Test
@@ -39,7 +39,7 @@ class GetProfileStatsUseCaseTest {
         val profile = UserProfile(watchedEpisodes = mapOf("1" to listOf(1, 2)))
         val stats = useCase.execute(listOf(show), profile)
         // 2 episodes × 45 min = 90 min = 1 hour
-        assertEquals(1, stats.totalWatchedHours)
+        assertEquals(1, stats.totalHours)
     }
 
     @Test
@@ -47,7 +47,7 @@ class GetProfileStatsUseCaseTest {
         val show = MediaContent(id = 1, name = "Show", episodeRunTime = null)
         val profile = UserProfile(watchedEpisodes = mapOf("1" to listOf(1, 2)))
         val stats = useCase.execute(listOf(show), profile)
-        assertEquals(1, stats.totalWatchedHours)
+        assertEquals(1, stats.totalHours)
     }
 
     @Test
@@ -82,7 +82,7 @@ class GetProfileStatsUseCaseTest {
         val show = MediaContent(id = 1, episodeRunTime = listOf(60))
         val profile = UserProfile(watchedEpisodes = mapOf("1" to emptyList()))
         val stats = useCase.execute(listOf(show), profile)
-        assertEquals(0, stats.totalWatchedHours)
+        assertEquals(0, stats.totalHours)
     }
 
     @Test

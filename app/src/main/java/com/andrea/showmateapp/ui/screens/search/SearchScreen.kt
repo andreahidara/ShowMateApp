@@ -34,6 +34,9 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.TheaterComedy
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -80,18 +83,20 @@ fun SearchScreen(
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val trendingShows by viewModel.trendingShows.collectAsStateWithLifecycle()
     val trendingPeople by viewModel.trendingPeople.collectAsStateWithLifecycle()
+    val personSearchResults by viewModel.personSearchResults.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isFilterActive by viewModel.isFilterActive.collectAsStateWithLifecycle()
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
 
-    // Paging 3 — solo activo en modo TITLE con texto
     val pagingItems = viewModel.searchPagingData.collectAsLazyPagingItems()
     val usePaging = query.isNotBlank() && searchMode == SearchMode.TITLE && !isFilterActive
 
-    // Modo persona (Actor/Director) sin query: mostrar trending people
     val showTrendingPeople = query.isBlank() && !isFilterActive &&
+        (searchMode == SearchMode.ACTOR || searchMode == SearchMode.CREATOR)
+
+    val showPersonResults = query.isNotBlank() && !isFilterActive &&
         (searchMode == SearchMode.ACTOR || searchMode == SearchMode.CREATOR)
 
     var showFilters by remember { mutableStateOf(false) }
@@ -118,7 +123,6 @@ fun SearchScreen(
                     .background(MaterialTheme.colorScheme.background)
                     .padding(top = 12.dp)
             ) {
-                // Título de la pantalla
                 val gradientColors = listOf(PrimaryPurple, com.andrea.showmateapp.ui.theme.PrimaryMagenta)
                 Text(
                     text = stringResource(R.string.nav_search),
@@ -301,7 +305,12 @@ fun SearchScreen(
                                     },
                                     RoundedCornerShape(20.dp)
                                 )
-                                .clickable { viewModel.setSearchMode(mode) }
+                                .clickable {
+                                    viewModel.setSearchMode(mode)
+                                    if (query.isNotBlank()) {
+                                        viewModel.searchMedia(query)
+                                    }
+                                }
                                 .padding(horizontal = 12.dp, vertical = 5.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -384,7 +393,6 @@ fun SearchScreen(
                 }
 
                 if (usePaging) {
-                    // ── Modo paginado (Paging 3) para búsqueda por título ──────────────
                     val isPagingLoading = pagingItems.loadState.refresh is LoadState.Loading
                     val isPagingError = pagingItems.loadState.refresh is LoadState.Error
 
@@ -471,8 +479,46 @@ fun SearchScreen(
                             else -> NoResultsState(query)
                         }
                     }
+                } else if (showPersonResults) {
+                    val personLabel =
+                        if (searchMode == SearchMode.ACTOR) "ACTORES ENCONTRADOS" else "DIRECTORES ENCONTRADOS"
+                    Column {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(modifier = Modifier.size(6.dp).background(PrimaryPurple, CircleShape))
+                            Text(
+                                text = personLabel,
+                                color = TextGray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.5.sp
+                            )
+                        }
+                        if (isLoading) {
+                            SearchGridSkeleton()
+                        } else if (personSearchResults.isEmpty()) {
+                            NoResultsState(query)
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 100.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(personSearchResults, key = { it.id }) { person ->
+                                    TrendingPersonCard(
+                                        person = person,
+                                        onClick = { globalNavController.navigate(Screen.Actor(person.id, person.name)) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 } else if (showTrendingPeople) {
-                    // ── Trending Actores / Directores (sin query) ──────────────────────
                     val personLabel =
                         if (searchMode == SearchMode.ACTOR) "ACTORES EN TENDENCIA" else "DIRECTORES EN TENDENCIA"
                     Column {
@@ -515,7 +561,6 @@ fun SearchScreen(
                         }
                     }
                 } else {
-                    // ── Modo estándar (Actor, Creator, filtros) ───────────────────────
                     AnimatedContent(
                         targetState = when {
                             isLoading -> "loading"
@@ -588,17 +633,13 @@ fun SearchScreen(
                             }
 
                             "empty" -> {
-                                if (searchMode != SearchMode.TITLE && query.isNotBlank()) {
-                                    SearchModeComingSoon(searchMode)
-                                } else {
-                                    NoResultsState(query)
-                                }
+                                NoResultsState(query)
                             }
 
                             else -> {}
                         }
                     }
-                } // fin else modo estándar
+                }
             }
 
             AnimatedVisibility(
@@ -659,7 +700,7 @@ fun SearchScreen(
                     }
                 }
             }
-        } // close Box
+        }
     }
 
     if (showFilters) {
@@ -1064,7 +1105,11 @@ fun NoResultsState(query: String) {
 }
 
 @Composable
-fun TrendingPersonCard(person: com.andrea.showmateapp.data.network.PersonSearchResult, onClick: () -> Unit) {
+fun TrendingPersonCard(person: com.andrea.showmateapp.data.model.PersonSearchResult, onClick: () -> Unit) {
+    val isActor = person.knownForDepartment?.lowercase() == "acting"
+    val accentColor = if (isActor) PrimaryPurple else AccentBlue
+    val icon = if (isActor) Icons.Default.TheaterComedy else Icons.Default.Movie
+
     Column(
         modifier = Modifier
             .clickable { onClick() }
@@ -1076,6 +1121,7 @@ fun TrendingPersonCard(person: com.andrea.showmateapp.data.network.PersonSearchR
                 .size(90.dp)
                 .clip(CircleShape)
                 .background(SurfaceDark)
+                .border(2.dp, accentColor.copy(alpha = 0.5f), CircleShape)
         ) {
             if (person.profilePath != null) {
                 com.andrea.showmateapp.ui.components.premium.TmdbImage(
@@ -1086,7 +1132,7 @@ fun TrendingPersonCard(person: com.andrea.showmateapp.data.network.PersonSearchR
                 )
             } else {
                 Icon(
-                    Icons.Default.Search,
+                    Icons.Default.Person,
                     contentDescription = null,
                     tint = TextGray,
                     modifier = Modifier
@@ -1094,30 +1140,41 @@ fun TrendingPersonCard(person: com.andrea.showmateapp.data.network.PersonSearchR
                         .align(Alignment.Center)
                 )
             }
+
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(accentColor)
+                    .border(2.dp, Color(0xFF1A1A2A), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             text = person.name,
             color = Color.White,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            maxLines = 2,
+            maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
-        person.knownForDepartment?.let { dept ->
-            Text(
-                text = when (dept.lowercase()) {
-                    "acting" -> "Actor"
-                    "directing" -> "Director"
-                    "writing" -> "Guionista"
-                    "production" -> "Productor"
-                    else -> dept
-                },
-                color = TextGray,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center
-            )
-        }
+        Text(
+            text = if (isActor) "Actor / Actriz" else "Director / Staff",
+            color = accentColor.copy(alpha = 0.8f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
     }
 }

@@ -1,10 +1,5 @@
 package com.andrea.showmateapp.ui.screens.profile.settings
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -34,25 +29,22 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.andrea.showmateapp.ui.components.premium.PrimaryButton
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.HeartRed
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
+import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.SurfaceVariantDark
 import com.andrea.showmateapp.ui.theme.TextGray
 import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = hiltViewModel()) {
-    val isDarkTheme by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val loggedOut by viewModel.loggedOut.collectAsStateWithLifecycle()
     val accountDeleted by viewModel.accountDeleted.collectAsStateWithLifecycle()
     val currentEmail by viewModel.currentEmail.collectAsStateWithLifecycle()
     val notifEnabled by viewModel.notifEnabled.collectAsStateWithLifecycle()
-    val notifNewEpisodes by viewModel.notifNewEpisodes.collectAsStateWithLifecycle()
-    val notifFriends by viewModel.notifFriends.collectAsStateWithLifecycle()
-    val notifRecommendations by viewModel.notifRecommendations.collectAsStateWithLifecycle()
+    val isResetting by viewModel.isResetting.collectAsStateWithLifecycle()
 
     LaunchedEffect(loggedOut) {
         if (loggedOut) navController.navigate(Screen.Login) { popUpTo(0) { inclusive = true } }
@@ -63,23 +55,21 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
 
     SettingsScreenContent(
         onBackClick = { navController.popBackStack() },
-        isDarkMode = isDarkTheme,
-        onDarkModeChange = viewModel::setDarkTheme,
         currentEmail = currentEmail,
-        onLogout = viewModel::logout,
         onUpdateDisplayName = { name, cb -> viewModel.updateDisplayName(name, cb) },
         onSendPasswordReset = { cb -> viewModel.sendPasswordReset(cb) },
         notifEnabled = notifEnabled,
         onNotifEnabledChange = viewModel::setNotifEnabled,
-        notifNewEpisodes = notifNewEpisodes,
-        onNotifNewEpisodesChange = viewModel::setNotifNewEpisodes,
-        notifFriends = notifFriends,
-        onNotifFriendsChange = viewModel::setNotifFriends,
-        notifRecommendations = notifRecommendations,
-        onNotifRecommendationsChange = viewModel::setNotifRecommendations,
         onDeleteAccount = { cb -> viewModel.deleteAccount(cb) },
-        onExportData = { format, cb -> viewModel.exportData(format, cb) },
-        onRestoreData = { uri, cb -> viewModel.restoreData(uri, cb) }
+        onResetAlgorithm = { onResult ->
+            viewModel.resetAlgorithmData { success ->
+                if (success) {
+                    navController.navigate(Screen.Onboarding) { popUpTo(0) { inclusive = true } }
+                }
+                onResult(success)
+            }
+        },
+        isResetting = isResetting
     )
 }
 
@@ -87,76 +77,28 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
 @Composable
 fun SettingsScreenContent(
     onBackClick: () -> Unit,
-    isDarkMode: Boolean = true,
-    onDarkModeChange: (Boolean) -> Unit = {},
     currentEmail: String = "",
-    onLogout: () -> Unit = {},
     onUpdateDisplayName: (String, (Boolean) -> Unit) -> Unit = { _, _ -> },
     onSendPasswordReset: ((Boolean) -> Unit) -> Unit = {},
     notifEnabled: Boolean = true,
     onNotifEnabledChange: (Boolean) -> Unit = {},
-    notifNewEpisodes: Boolean = true,
-    onNotifNewEpisodesChange: (Boolean) -> Unit = {},
-    notifFriends: Boolean = true,
-    onNotifFriendsChange: (Boolean) -> Unit = {},
-    notifRecommendations: Boolean = false,
-    onNotifRecommendationsChange: (Boolean) -> Unit = {},
     onDeleteAccount: ((Boolean) -> Unit) -> Unit = {},
-    onExportData: (String, (Boolean, android.net.Uri?) -> Unit) -> Unit = { _, _ -> },
-    onRestoreData: (android.net.Uri, (Boolean, String) -> Unit) -> Unit = { _, _ -> }
+    onResetAlgorithm: ((Boolean) -> Unit) -> Unit = {},
+    isResetting: Boolean = false
 ) {
-    val notificationsEnabled = notifEnabled
-    var showNotifExpanded by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
     var editNameValue by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
-    var restoreLoading by remember { mutableStateOf(false) }
-    val restoreLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null && !restoreLoading) {
-            restoreLoading = true
-            onRestoreData(uri) { success, message ->
-                restoreLoading = false
-                scope.launch {
-                    snackbarHostState.currentSnackbarData?.dismiss()
-                    snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
-                }
-            }
-        }
-    }
 
     fun showFeedback(message: String) {
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
         }
-    }
-
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            containerColor = Color(0xFF1A1A2E),
-            title = { Text("Cerrar sesión", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = { Text("¿Seguro que quieres salir de ShowMate?", color = TextGray) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLogoutDialog = false
-                        onLogout()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = HeartRed)
-                ) { Text("Salir", fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar", color = TextGray) }
-            }
-        )
     }
 
     if (showDeleteDialog) {
@@ -177,8 +119,7 @@ fun SettingsScreenContent(
             },
             text = {
                 Text(
-                    "Se enviará una solicitud de borrado. Tus datos serán eliminados " +
-                        "permanentemente en un plazo de 30 días conforme al RGPD.",
+                    "Tu cuenta y todos tus datos personales asociados serán eliminados permanentemente.",
                     color = TextGray,
                     lineHeight = 20.sp
                 )
@@ -200,6 +141,60 @@ fun SettingsScreenContent(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar", color = TextGray) }
+            }
+        )
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isResetting) showResetDialog = false },
+            containerColor = Color(0xFF1A1A2E),
+            title = { Text("Reiniciar gustos", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Esto borrará todos los datos de tu cuenta (preferencias, amigos, experiencia) y tendrás que volver a pasar por el onboarding para empezar de nuevo.",
+                        color = TextGray
+                    )
+                    if (isResetting) {
+                        Spacer(Modifier.height(16.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            color = PrimaryPurple
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onResetAlgorithm { success ->
+                            if (success) {
+                                showResetDialog = false
+                            } else {
+                                showFeedback("Error al reiniciar los datos. Comprueba tu conexión.")
+                                // También cerramos el diálogo en caso de error para que no se quede bloqueado,
+                                // o podríamos dejarlo abierto para reintentar.
+                                // Por simplicidad y consistencia con showFeedback, lo cerramos.
+                                showResetDialog = false
+                            }
+                        }
+                    },
+                    enabled = !isResetting,
+                    colors = ButtonDefaults.buttonColors(containerColor = HeartRed)
+                ) {
+                    if (isResetting) {
+                        Text("Reiniciando...", fontWeight = FontWeight.Bold)
+                    } else {
+                        Text("Reiniciar", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showResetDialog = false },
+                    enabled = !isResetting
+                ) { Text("Cancelar", color = TextGray) }
             }
         )
     }
@@ -323,9 +318,9 @@ fun SettingsScreenContent(
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
                                         if (success) {
-                                            "Email de recuperación enviado a $currentEmail. Revisa tu bandeja."
+                                            "Email de recuperación enviado a $currentEmail."
                                         } else {
-                                            "Error al enviar el email. Inténtalo de nuevo."
+                                            "Error al enviar el email."
                                         }
                                     )
                                 }
@@ -336,102 +331,18 @@ fun SettingsScreenContent(
             }
 
             item {
-                SettingsSection(title = "Apariencia") {
-                    SettingsItemSwitch(
-                        title = "Tema oscuro",
-                        subtitle = if (isDarkMode) "Fondo negro · Activo" else "Fondo índigo · Activo",
-                        icon = Icons.Default.DarkMode,
-                        iconTint = Color(0xFFFFB300),
-                        checked = isDarkMode,
-                        onCheckedChange = {
-                            onDarkModeChange(it)
-                            showFeedback(if (it) "Tema negro activado" else "Tema índigo activado")
-                        }
-                    )
-                    SettingsDivider()
-                    var showLanguageDialog by remember { mutableStateOf(false) }
-                    SettingsItem(
-                        title = "Idioma",
-                        icon = Icons.Default.Language,
-                        iconTint = Color(0xFF00BCD4),
-                        value = "Español",
-                        onClick = { showLanguageDialog = true }
-                    )
-
-                    if (showLanguageDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showLanguageDialog = false },
-                            title = { Text("Seleccionar idioma") },
-                            text = {
-                                Column {
-                                    TextButton(onClick = {
-                                        showFeedback("Idioma cambiado a Español")
-                                        showLanguageDialog = false
-                                    }) { Text("Español") }
-                                    TextButton(onClick = {
-                                        showFeedback("English selection (Coming soon)")
-                                        showLanguageDialog = false
-                                    }) { Text("English") }
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(onClick = { showLanguageDialog = false }) { Text("Cerrar") }
-                            }
-                        )
-                    }
-                }
-            }
-
-            item {
                 SettingsSection(title = "Notificaciones") {
                     SettingsItemSwitch(
                         title = "Notificaciones push",
-                        subtitle = if (notificationsEnabled) "Activas · Toca para ver canales" else "Desactivadas",
+                        subtitle = if (notifEnabled) "Activas" else "Desactivadas",
                         icon = Icons.Default.Notifications,
                         iconTint = Color(0xFFE91E63),
-                        checked = notificationsEnabled,
+                        checked = notifEnabled,
                         onCheckedChange = {
                             onNotifEnabledChange(it)
-                            if (!it) showNotifExpanded = false
                             showFeedback(if (it) "Notificaciones activadas" else "Notificaciones desactivadas")
                         }
                     )
-
-                    AnimatedVisibility(
-                        visible = notificationsEnabled,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column {
-                            SettingsDivider()
-                            SettingsItemSwitch(
-                                title = "Nuevos episodios",
-                                subtitle = "Aviso cuando salga un nuevo episodio",
-                                icon = Icons.Default.Tv,
-                                iconTint = PrimaryPurple.copy(alpha = 0.7f),
-                                checked = notifNewEpisodes,
-                                onCheckedChange = { onNotifNewEpisodesChange(it) }
-                            )
-                            SettingsDivider()
-                            SettingsItemSwitch(
-                                title = "Actividad de amigos",
-                                subtitle = "Cuando un amigo marca algo como visto",
-                                icon = Icons.Default.People,
-                                iconTint = PrimaryPurple.copy(alpha = 0.7f),
-                                checked = notifFriends,
-                                onCheckedChange = { onNotifFriendsChange(it) }
-                            )
-                            SettingsDivider()
-                            SettingsItemSwitch(
-                                title = "Recomendaciones",
-                                subtitle = "Descubrimientos semanales personalizados",
-                                icon = Icons.Default.AutoAwesome,
-                                iconTint = PrimaryPurple.copy(alpha = 0.7f),
-                                checked = notifRecommendations,
-                                onCheckedChange = { onNotifRecommendationsChange(it) }
-                            )
-                        }
-                    }
                 }
             }
 
@@ -439,93 +350,19 @@ fun SettingsScreenContent(
                 val context = androidx.compose.ui.platform.LocalContext.current
                 SettingsSection(title = "Soporte") {
                     SettingsItem(
-                        title = "Enviar feedback",
-                        subtitle = "Sugerencias o problemas con la app",
-                        icon = Icons.Default.Feedback,
-                        iconTint = Color(0xFF00BCD4),
-                        onClick = {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                                data = android.net.Uri.parse("mailto:soporte@showmate.app")
-                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback ShowMate")
-                            }
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                showFeedback("No hay apps de correo instaladas")
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsItem(
                         title = "Reportar un problema",
+                        subtitle = "Sugerencias o errores",
                         icon = Icons.Default.BugReport,
                         iconTint = Color(0xFFFF5722),
                         onClick = {
                             val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                                data = android.net.Uri.parse("mailto:soporte@showmate.app")
-                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Reporte de error ShowMate")
+                                val uriString = "mailto:soporte@showmate.app?subject=Reporte ShowMate"
+                                data = android.net.Uri.parse(uriString)
                             }
                             try {
                                 context.startActivity(intent)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 showFeedback("No hay apps de correo instaladas")
-                            }
-                        }
-                    )
-                }
-            }
-
-            item {
-                var exportLoading by remember { mutableStateOf(false) }
-                SettingsSection(title = "Datos y privacidad") {
-                    SettingsItem(
-                        title = "Exportar mis datos (JSON)",
-                        subtitle = "Descarga tu historial y preferencias completas",
-                        icon = Icons.Default.Download,
-                        iconTint = Color(0xFF4CAF50),
-                        onClick = {
-                            if (!exportLoading) {
-                                exportLoading = true
-                                onExportData("json") { success, _ ->
-                                    exportLoading = false
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            if (success) "Datos exportados a Descargas" else "Error al exportar"
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = "Exportar mis datos (CSV)",
-                        subtitle = "Historial de visualización en formato tabla",
-                        icon = Icons.Default.TableChart,
-                        iconTint = Color(0xFF2196F3),
-                        onClick = {
-                            if (!exportLoading) {
-                                exportLoading = true
-                                onExportData("csv") { success, _ ->
-                                    exportLoading = false
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            if (success) "Datos exportados a Descargas" else "Error al exportar"
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = if (restoreLoading) "Restaurando…" else "Restaurar copia de seguridad",
-                        subtitle = "Importa un archivo JSON exportado previamente",
-                        icon = Icons.Default.UploadFile,
-                        iconTint = Color(0xFFFF9800),
-                        onClick = {
-                            if (!restoreLoading) {
-                                restoreLauncher.launch(arrayOf("application/json", "text/plain"))
                             }
                         }
                     )
@@ -535,8 +372,16 @@ fun SettingsScreenContent(
             item {
                 SettingsSection(title = "Zona de riesgo") {
                     SettingsItem(
+                        title = "Reiniciar mis gustos",
+                        subtitle = "Borra todos tus datos y reinicia tu cuenta",
+                        icon = Icons.Default.Update,
+                        iconTint = PrimaryPurpleLight,
+                        onClick = { showResetDialog = true }
+                    )
+                    SettingsDivider()
+                    SettingsItem(
                         title = "Eliminar cuenta",
-                        subtitle = "Conforme al RGPD — acción irreversible",
+                        subtitle = "Acción irreversible",
                         icon = Icons.Default.DeleteForever,
                         iconTint = HeartRed,
                         showChevron = false,
@@ -555,15 +400,6 @@ fun SettingsScreenContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    PrimaryButton(
-                        text = "Cerrar Sesión",
-                        onClick = { showLogoutDialog = true },
-                        colorOverride = HeartRed,
-                        modifier = Modifier
-                            .widthIn(max = 320.dp)
-                            .fillMaxWidth()
-                    )
-
                     Text(
                         text = "ShowMate · Versión 1.0.0",
                         color = TextGray.copy(alpha = 0.5f),

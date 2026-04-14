@@ -36,11 +36,10 @@ class ShowRepositoryTest {
         repository = ShowRepository(apiService, showDao)
     }
 
-    // ── searchShows ────────────────────────────────────────────────────────────
 
     @Test
     fun `searchShows returns success when API responds`() = runTest {
-        whenever(apiService.searchMedia(any(), any())).thenReturn(
+        whenever(apiService.searchMedia(any(), any(), any())).thenReturn(
             fakeResponse(MediaContent(id = 1, name = "Breaking Bad"))
         )
 
@@ -52,14 +51,13 @@ class ShowRepositoryTest {
 
     @Test
     fun `searchShows returns error when API throws`() = runTest {
-        whenever(apiService.searchMedia(any(), any())).thenAnswer { throw IOException("No network") }
+        whenever(apiService.searchMedia(any(), any(), any())).thenAnswer { throw IOException("No network") }
 
         val result = repository.searchShows("anything")
 
         assertTrue(result is Resource.Error)
     }
 
-    // ── getPopularShows ────────────────────────────────────────────────────────
 
     @Test
     fun `getPopularShows returns cached data when network fails`() = runTest {
@@ -85,7 +83,6 @@ class ShowRepositoryTest {
         assertTrue(result is Resource.Error)
     }
 
-    // ── getShowDetails ─────────────────────────────────────────────────────────
 
     @Test
     fun `getShowDetails returns success and caches result`() = runTest {
@@ -103,8 +100,8 @@ class ShowRepositoryTest {
     @Test
     fun `getShowDetails falls back to Room when network fails`() = runTest {
         whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenAnswer { throw IOException("offline") }
-        val cached = MediaEntity(id = 42, name = "Cached Detail", overview = "", posterPath = "", category = "details")
-        whenever(showDao.getShowById(42)).thenReturn(cached)
+        val cached = MediaEntity(id = 42, name = "Cached Detail", overview = "", posterPath = "", category = "liked")
+        whenever(showDao.getLikedShowById(42)).thenReturn(cached)
 
         val result = repository.getShowDetails(42)
 
@@ -115,7 +112,8 @@ class ShowRepositoryTest {
     @Test
     fun `getShowDetails returns error when network fails and cache is empty`() = runTest {
         whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenAnswer { throw IOException("offline") }
-        whenever(showDao.getShowById(99)).thenReturn(null)
+        whenever(showDao.getLikedShowById(99)).thenReturn(null)
+        whenever(showDao.getWatchedShowById(99)).thenReturn(null)
 
         val result = repository.getShowDetails(99)
 

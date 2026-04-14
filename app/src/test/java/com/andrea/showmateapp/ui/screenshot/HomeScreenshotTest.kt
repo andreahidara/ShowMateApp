@@ -13,13 +13,6 @@ import com.andrea.showmateapp.util.MainDispatcherRule
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Screenshot tests for [HomeScreenContent] using Paparazzi.
- * Each test captures a pixel-perfect snapshot — failures indicate visual regressions.
- *
- * Run: ./gradlew recordPaparazziDebug   (record new golden images)
- *       ./gradlew verifyPaparazziDebug  (compare against golden images)
- */
 @OptIn(ExperimentalSharedTransitionApi::class)
 class HomeScreenshotTest {
 
@@ -80,9 +73,7 @@ class HomeScreenshotTest {
                             newReleasesShows = emptyList(),
                             actionShows = sampleShows,
                             comedyShows = sampleShows,
-                            mysteryShows = sampleShows,
                             dramaShows = emptyList(),
-                            scifiShows = emptyList(),
                             thisWeekShows = sampleShows,
                             selectedPlatform = null,
                             platformShows = emptyMap(),
@@ -125,9 +116,7 @@ class HomeScreenshotTest {
                             newReleasesShows = emptyList(),
                             actionShows = emptyList(),
                             comedyShows = emptyList(),
-                            mysteryShows = emptyList(),
                             dramaShows = emptyList(),
-                            scifiShows = emptyList(),
                             thisWeekShows = emptyList(),
                             selectedPlatform = null,
                             platformShows = emptyMap(),

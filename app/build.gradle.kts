@@ -163,7 +163,7 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
-// ── detekt ─────────────────────────────────────────────────────────────────────
+
 detekt {
     config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
     buildUponDefaultConfig = true
@@ -171,7 +171,7 @@ detekt {
     parallel = true
 }
 
-// ── ktlint ─────────────────────────────────────────────────────────────────────
+
 ktlint {
     android.set(true)
     outputColorName.set("RED")

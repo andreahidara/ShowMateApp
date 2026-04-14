@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 
 @Entity(
     tableName = "media_content",
@@ -22,7 +22,10 @@ data class MediaEntity(
     val category: String,
     val genreIds: String = "",
     @ColumnInfo(defaultValue = "0")
-    val cachedAt: Long = 0L
+    val cachedAt: Long = 0L,
+    val status: String? = null,
+    val numberOfSeasons: Int? = null,
+    val firstAirDate: String? = null
 )
 
 fun MediaContent.toEntity(category: String): MediaEntity {
@@ -35,7 +38,10 @@ fun MediaContent.toEntity(category: String): MediaEntity {
         backdropPath = this.backdropPath,
         category = category,
         genreIds = this.safeGenreIds.joinToString(","),
-        cachedAt = System.currentTimeMillis()
+        cachedAt = System.currentTimeMillis(),
+        status = this.status,
+        numberOfSeasons = this.numberOfSeasons,
+        firstAirDate = this.firstAirDate
     )
 }
 
@@ -51,6 +57,10 @@ fun MediaEntity.toDomain(): MediaContent {
         posterPath = this.posterPath.ifEmpty { null },
         voteAverage = this.voteAverage,
         backdropPath = this.backdropPath,
-        genreIds = parsedGenreIds
+        genreIds = parsedGenreIds,
+        status = this.status,
+        numberOfSeasons = this.numberOfSeasons,
+        firstAirDate = this.firstAirDate
     )
 }
+

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Update
+import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -53,7 +54,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.*
 import com.andrea.showmateapp.domain.usecase.GetProfileStatsUseCase
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.components.premium.shimmerBrush
@@ -76,6 +77,7 @@ fun ProfileScreen(
     val userName by viewModel.displayName.collectAsStateWithLifecycle()
     val watchedShows by viewModel.watchedShows.collectAsStateWithLifecycle()
     val likedShows by viewModel.likedShows.collectAsStateWithLifecycle()
+    val watchlistShows by viewModel.watchlistShows.collectAsStateWithLifecycle()
     val stats by viewModel.stats.collectAsStateWithLifecycle()
     val userLevel by viewModel.userLevel.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
@@ -89,7 +91,6 @@ fun ProfileScreen(
 
     var showColorPicker by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) }
     var showAvatarOptions by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -103,7 +104,6 @@ fun ProfileScreen(
         if (scrollToTopTrigger > 0) listState.animateScrollToItem(0)
     }
 
-    // Sync Firestore → Room when profile tab becomes visible again
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         var isFirstResume = true
@@ -219,19 +219,7 @@ fun ProfileScreen(
         )
     }
 
-    if (showResetDialog) {
-        ResetAlgorithmDialog(
-            onConfirm = {
-                showResetDialog = false
-                viewModel.resetAlgorithmData(onComplete = {
-                    globalNavController.navigate(Screen.Onboarding) {
-                        popUpTo(Screen.Main) { inclusive = true }
-                    }
-                })
-            },
-            onDismiss = { showResetDialog = false }
-        )
-    }
+
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background, contentWindowInsets = WindowInsets(0.dp)) { padding ->
         if (isLoading) {
@@ -291,6 +279,18 @@ fun ProfileScreen(
                     }
 
                     item {
+                        FavoritesInlineSection(
+                            title = "Pendientes",
+                            items = watchlistShows,
+                            onShowClick = { id -> globalNavController.navigate(Screen.Detail(id)) },
+                            onViewAll = { globalNavController.navigate(Screen.AllShows("watchlist")) },
+                            accentColor = PrimaryPurple,
+                            emptyMessage = "Aún no tienes series en tu lista de pendientes",
+                            icon = Icons.Default.WatchLater
+                        )
+                    }
+
+                    item {
                         CustomListsInlineSection(
                             lists = customLists,
                             posterPaths = posterPaths,
@@ -302,7 +302,6 @@ fun ProfileScreen(
                     item {
                         SettingsSectionPremium(
                             onSettingsClick = { globalNavController.navigate(Screen.Settings) },
-                            onResetClick = { showResetDialog = true },
                             onLogoutClick = { showLogoutDialog = true },
                             onAboutClick = { globalNavController.navigate(Screen.About) }
                         )
@@ -533,7 +532,6 @@ fun ProfileHeaderPremium(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Quick stats strip
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -665,6 +663,7 @@ fun WatchedShowsSection(
                         posterPath = item.show.posterPath,
                         name = item.show.name,
                         onClick = { onShowClick(item.show.id) },
+                        modifier = Modifier.animateItem(),
                         showTitle = true
                     ) {
                         val badgeText = if (item.episodesWatched > 0) "${item.episodesWatched} ep" else "Vista ✓"
@@ -721,10 +720,11 @@ private fun PosterCard(
     posterPath: String?,
     name: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     showTitle: Boolean = false,
     badge: @Composable BoxScope.() -> Unit = {}
 ) {
-    Column(modifier = Modifier.width(110.dp)) {
+    Column(modifier = modifier.width(110.dp)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1002,12 +1002,16 @@ fun FavoritesInlineSection(
     items: List<MediaContent>,
     onShowClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    onViewAll: (() -> Unit)? = null
+    onViewAll: (() -> Unit)? = null,
+    title: String = "Favoritos",
+    accentColor: Color = Color(0xFFE91E63),
+    emptyMessage: String = "Aún no tienes series favoritas",
+    icon: ImageVector = Icons.Default.Favorite
 ) {
     Column(modifier = modifier.padding(top = 32.dp)) {
         ProfileSectionHeader(
-            title = "Favoritos",
-            accentColor = Color(0xFFE91E63),
+            title = title,
+            accentColor = accentColor,
             count = items.size,
             onViewAll = onViewAll
         )
@@ -1015,8 +1019,8 @@ fun FavoritesInlineSection(
 
         if (items.isEmpty()) {
             EmptySectionPlaceholder(
-                message = "Aún no tienes series favoritas",
-                icon = Icons.Default.Favorite
+                message = emptyMessage,
+                icon = icon
             )
         } else {
             LazyRow(
@@ -1028,6 +1032,7 @@ fun FavoritesInlineSection(
                         posterPath = media.posterPath,
                         name = media.name,
                         onClick = { onShowClick(media.id) },
+                        modifier = Modifier.animateItem(),
                         showTitle = true
                     ) {
                         if (media.voteAverage > 0) {
@@ -1361,7 +1366,6 @@ private fun StatMiniCard(value: String, label: String, modifier: Modifier = Modi
 @Composable
 fun SettingsSectionPremium(
     onSettingsClick: () -> Unit,
-    onResetClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onAboutClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -1399,11 +1403,6 @@ fun SettingsSectionPremium(
         ) {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 SettingsItemPremium(Icons.Default.Settings, "Configuración", onSettingsClick)
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    color = Color.White.copy(alpha = 0.05f)
-                )
-                SettingsItemPremium(Icons.Default.Update, "Reiniciar mis gustos", onResetClick, isAction = true)
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     color = Color.White.copy(alpha = 0.05f)
@@ -1710,3 +1709,4 @@ fun AchievementsEntryButton(onClick: () -> Unit, unlockedCount: Int = 0, totalCo
         }
     }
 }
+

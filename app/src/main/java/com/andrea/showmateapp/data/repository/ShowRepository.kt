@@ -1,12 +1,13 @@
 package com.andrea.showmateapp.data.repository
 
 import com.andrea.showmateapp.data.local.ShowDao
+import com.andrea.showmateapp.data.model.PersonResponse
+import com.andrea.showmateapp.data.model.SeasonResponse
 import com.andrea.showmateapp.data.model.toDomain
 import com.andrea.showmateapp.data.model.toEntity
-import com.andrea.showmateapp.data.network.MediaContent
-import com.andrea.showmateapp.data.network.PersonResponse
-import com.andrea.showmateapp.data.network.SeasonResponse
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.network.TmdbApiService
+import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.safeApiCall
@@ -15,15 +16,18 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 @Singleton
 class ShowRepository @Inject constructor(
     private val api: TmdbApiService,
-    private val dao: ShowDao
+    private val dao: ShowDao,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : IShowRepository {
 
     private companion object {
@@ -35,25 +39,29 @@ class ShowRepository @Inject constructor(
         const val CAT_RECOMMENDED = "recommended"
     }
 
-    override suspend fun getShowDetails(showId: Int): Resource<MediaContent> {
+    override suspend fun getShowDetails(showId: Int): Resource<MediaContent> = withContext(ioDispatcher) {
         val network = safeApiCall {
             withTimeoutOrNull(TIMEOUT) { api.getMediaDetails(showId) } ?: throw IOException("Timeout")
         }
-        return when (network) {
+        when (network) {
             is Resource.Success -> {
                 dao.insertShows(listOf(network.data.toEntity(CAT_DETAILS)))
                 network
             }
-            is Resource.Error -> dao.getShowById(showId)?.toDomain()?.let { Resource.Success(it) } ?: network
+            is Resource.Error -> {
+                dao.getLikedShowById(showId)?.toDomain()?.let { Resource.Success(it) }
+                    ?: dao.getWatchedShowById(showId)?.toDomain()?.let { Resource.Success(it) }
+                    ?: network
+            }
             else -> network
         }
     }
 
-    override suspend fun getSeasonDetails(showId: Int, seasonNumber: Int): Resource<SeasonResponse> {
+    override suspend fun getSeasonDetails(showId: Int, seasonNumber: Int): Resource<SeasonResponse> = withContext(ioDispatcher) {
         dao.getSeason(showId, seasonNumber)?.takeIf { System.currentTimeMillis() - it.cachedAt < CACHE_TTL }?.let {
-            return Resource.Success(it.toDomain())
+            return@withContext Resource.Success(it.toDomain())
         }
-        return safeApiCall {
+        safeApiCall {
             withTimeoutOrNull(TIMEOUT) { api.getSeasonDetails(showId, seasonNumber) }?.also {
                 dao.insertSeason(it.toEntity(showId))
             } ?: throw IOException("Timeout")
@@ -63,14 +71,16 @@ class ShowRepository @Inject constructor(
     override suspend fun discoverShows(
         genreId: String?, year: Int?, minRating: Float?, sortBy: String, keywords: String?,
         watchRegion: String?, withCast: String?, withCrew: String?, providers: String?,
-        firstAirDateGte: String?, firstAirDateLte: String?, excludedIds: List<Int>
+        firstAirDateGte: String?, firstAirDateLte: String?, airDateGte: String?, airDateLte: String?,
+        excludedIds: List<Int>
     ): Resource<List<MediaContent>> = safeApiCall(retries = 1) {
         val results = api.discoverMedia(
             genreId = genreId, year = year, minRating = minRating,
-            minVoteCount = if (firstAirDateGte != null) 0 else 50,
+            minVoteCount = if (firstAirDateGte != null || airDateGte != null) 0 else 50,
             sortBy = sortBy, keywords = keywords, watchRegion = watchRegion,
             withCast = withCast, withCrew = withCrew, watchProviders = providers,
-            firstAirDateGte = firstAirDateGte, firstAirDateLte = firstAirDateLte
+            firstAirDateGte = firstAirDateGte, firstAirDateLte = firstAirDateLte,
+            airDateGte = airDateGte, airDateLte = airDateLte
         ).results
         if (excludedIds.isEmpty()) results else results.filter { it.id !in excludedIds }
     }
@@ -84,9 +94,9 @@ class ShowRepository @Inject constructor(
         (cast + crew).distinctBy { it.id }.sortedByDescending { it.voteAverage }.take(40)
     }
 
-    private suspend fun fetchCached(cat: String, excluded: List<Int>, apiCall: suspend () -> List<MediaContent>): Resource<List<MediaContent>> {
+    private suspend fun fetchCached(cat: String, excluded: List<Int>, apiCall: suspend () -> List<MediaContent>): Resource<List<MediaContent>> = withContext(ioDispatcher) {
         val result = safeApiCall(retries = 1) { withTimeoutOrNull(TIMEOUT) { apiCall() } ?: throw IOException("Timeout") }
-        return when (result) {
+        when (result) {
             is Resource.Success -> {
                 dao.replaceCategory(cat, result.data.map { it.toEntity(cat) })
                 if (excluded.isNotEmpty()) Resource.Success(result.data.filter { it.id !in excluded }) else result
@@ -119,14 +129,20 @@ class ShowRepository @Inject constructor(
     }
 
     override suspend fun getShowsOnTheAir(providers: String): Resource<List<MediaContent>> {
-        val today = LocalDate.now()
-        val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-        return safeApiCall {
-            api.discoverMedia(airDateGte = today.format(fmt), airDateLte = today.plusDays(7).format(fmt), minVoteCount = 0, watchProviders = providers, watchRegion = "ES", sortBy = "popularity.desc").results
-        }
+        val today = LocalDate.now().toString()
+        val nextWeek = LocalDate.now().plusDays(7).toString()
+        return discoverShows(
+            providers = providers,
+            watchRegion = "ES",
+            sortBy = "popularity.desc",
+            airDateGte = today,
+            airDateLte = nextWeek
+        )
     }
 
     override suspend fun searchShows(query: String) = safeApiCall { api.searchMedia(query).results }
+
+    override suspend fun searchPerson(query: String) = safeApiCall { api.searchPerson(query).results }
 
     override suspend fun searchByPerson(query: String, isCreator: Boolean): Resource<List<MediaContent>> = safeApiCall {
         val people = api.searchPerson(query).results
@@ -144,3 +160,4 @@ class ShowRepository @Inject constructor(
 
     override suspend fun getSimilarShows(showId: Int): List<MediaContent> = (safeApiCall { api.getRecommendationsByShow(showId).results } as? Resource.Success)?.data ?: emptyList()
 }
+

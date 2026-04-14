@@ -3,10 +3,6 @@ package com.andrea.showmateapp.util
 import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.perf.metrics.Trace
 
-/**
- * A wrapper for Firebase Performance to avoid UninitializedPropertyAccessException in tests
- * and provide a safe no-op fallback when Firebase is not available.
- */
 object PerfTracer {
 
     private fun getFirebaseInstance(): FirebasePerformance? = runCatching {

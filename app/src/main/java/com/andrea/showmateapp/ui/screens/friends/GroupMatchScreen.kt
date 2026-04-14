@@ -48,7 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.data.model.GroupFilters
 import com.andrea.showmateapp.data.model.MemberVoteDoc
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.TmdbImage
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
@@ -603,11 +603,13 @@ private fun MatchFoundContent(
 
         Spacer(Modifier.height(28.dp))
 
-        if (media?.watchProviders?.results?.get("ES")?.flatrate?.isNotEmpty() == true) {
+        val mediaProviders = media?.watchProviders
+        val esProviders = mediaProviders?.results?.get("ES")
+        if (esProviders?.flatrate?.isNotEmpty() == true) {
             Text("Disponible en:", color = TextGray, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(media.watchProviders.results["ES"]?.flatrate ?: emptyList()) { provider ->
+                items(esProviders.flatrate ?: emptyList()) { provider ->
                     TmdbImage(
                         path = provider.logoPath,
                         contentDescription = provider.providerName,
@@ -723,7 +725,7 @@ private fun NoMatchContent(uiState: GroupMatchUiState, viewModel: GroupMatchView
         )
         Spacer(Modifier.height(32.dp))
         Button(
-            onClick = { /* Parent reinitiates */ },
+            onClick = { },
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
@@ -1366,3 +1368,4 @@ private fun ActiveFiltersBanner(filters: GroupFilters, modifier: Modifier = Modi
 
 private fun Modifier.shadow(elevation: androidx.compose.ui.unit.Dp, shape: RoundedCornerShape) =
     this.then(Modifier.graphicsLayer { shadowElevation = elevation.value })
+

@@ -126,6 +126,24 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    private val _isResetting = MutableStateFlow(false)
+    val isResetting: StateFlow<Boolean> = _isResetting.asStateFlow()
+
+    fun resetAlgorithmData(onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            _isResetting.value = true
+            try {
+                userRepository.resetAlgorithmData()
+                onComplete(true)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onComplete(false)
+            } finally {
+                _isResetting.value = false
+            }
+        }
+    }
+
     fun sendPasswordReset(onComplete: (Boolean) -> Unit) {
         val email = _currentEmail.value.takeIf { it.isNotBlank() }
             ?: userRepository.getCurrentUserEmail()

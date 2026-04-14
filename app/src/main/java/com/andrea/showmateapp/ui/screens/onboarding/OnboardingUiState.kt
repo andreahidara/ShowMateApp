@@ -1,7 +1,7 @@
 package com.andrea.showmateapp.ui.screens.onboarding
 
 import androidx.compose.runtime.Immutable
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 
 enum class EpisodeLengthPref(val label: String, val description: String) {
     SHORT("Cortos · ~20 min", "Perfectos para un descanso rápido"),
@@ -130,3 +130,4 @@ data class OnboardingUiState(
     val isLoading: Boolean = false,
     val isComplete: Boolean = false
 )
+

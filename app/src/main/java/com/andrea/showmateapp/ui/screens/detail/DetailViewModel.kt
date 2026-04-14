@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.data.network.MediaContent
-import com.andrea.showmateapp.data.network.SeasonResponse
+import com.andrea.showmateapp.data.model.MediaContent
+import com.andrea.showmateapp.data.model.SeasonResponse
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -557,3 +557,4 @@ class DetailViewModel @Inject constructor(
         )
     }
 }
+

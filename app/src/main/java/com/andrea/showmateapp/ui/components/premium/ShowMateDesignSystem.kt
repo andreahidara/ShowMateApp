@@ -52,7 +52,7 @@ import coil.request.ImageRequest
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.ReasonType
 import com.andrea.showmateapp.data.model.RecommendationReason
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.SurfaceDark
@@ -195,9 +195,7 @@ fun ShowCard(
             }
             .clickable(
                 interactionSource = interactionSource,
-                // handled by pressScale above
                 indication = null,
-                // accessibility: screen reader announces the show name
                 onClickLabel = media.name
             ) { onClick(media, tag) }
     ) {
@@ -340,7 +338,7 @@ fun ReasonPill(reason: RecommendationReason, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(text = reason.iconEmoji, fontSize = 11.sp)
+
         Text(
             text = reason.description,
             color = Color.White.copy(alpha = 0.92f),
@@ -399,7 +397,7 @@ fun ShowSection(
             if (onSeeAll != null) {
                 Box(
                     modifier = Modifier
-                        .heightIn(min = ShowMateSpacing.xxxl) // ≥ 48dp touch target
+                        .heightIn(min = ShowMateSpacing.xxxl)
                         .clickable(
                             onClickLabel = "Ver todos",
                             role = Role.Button
@@ -450,6 +448,7 @@ fun ShowSection(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     onClick = onItemClick,
+                    modifier = Modifier.animateItem(),
                     tag = tag
                 )
             }
@@ -522,7 +521,6 @@ fun ErrorView(message: String, onRetry: () -> Unit, modifier: Modifier = Modifie
     ) {
         Icon(
             imageVector = Icons.Default.Warning,
-            // decorative; headline below conveys the meaning
             contentDescription = null,
             tint = PrimaryPurple.copy(alpha = 0.8f),
             modifier = Modifier.size(64.dp)
@@ -546,7 +544,7 @@ fun ErrorView(message: String, onRetry: () -> Unit, modifier: Modifier = Modifie
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
-                .heightIn(min = ShowMateSpacing.xxxl) // ≥ 48dp — WCAG AA touch target
+                .heightIn(min = ShowMateSpacing.xxxl)
                 .defaultMinSize(minWidth = 160.dp),
             contentPadding = PaddingValues(horizontal = ShowMateSpacing.xxl, vertical = ShowMateSpacing.m)
         ) {
@@ -807,3 +805,4 @@ fun GlassHeader(
         }
     }
 }
+
