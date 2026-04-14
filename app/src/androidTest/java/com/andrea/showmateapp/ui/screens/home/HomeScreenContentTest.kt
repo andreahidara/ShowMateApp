@@ -6,16 +6,12 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.util.ErrorType
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * UI tests for [HomeScreenContent].
- * Wrapped with SharedTransitionLayout + AnimatedContent because HomeScreenContent
- * requires both SharedTransitionScope and AnimatedVisibilityScope.
- */
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 class HomeScreenContentTest {
 
@@ -67,7 +63,6 @@ class HomeScreenContentTest {
         }
     }
 
-    // ── Loading state ─────────────────────────────────────────────────────────
 
     @Test
     fun givenIsLoadingTrueAndNoShows_whenRendered_thenProgressIndicatorIsVisible() {
@@ -78,7 +73,6 @@ class HomeScreenContentTest {
             .assertIsDisplayed()
     }
 
-    // ── Error state ───────────────────────────────────────────────────────────
 
     @Test
     fun givenNetworkError_whenRendered_thenErrorTitleIsDisplayed() {
@@ -121,7 +115,6 @@ class HomeScreenContentTest {
             .assertIsDisplayed()
     }
 
-    // ── Data loaded state ─────────────────────────────────────────────────────
 
     @Test
     fun givenShowsLoaded_whenRendered_thenTrendingShowNameIsDisplayed() {
@@ -151,7 +144,6 @@ class HomeScreenContentTest {
             .assertDoesNotExist()
     }
 
-    // ── Pull-to-refresh ───────────────────────────────────────────────────────
 
     @Test
     fun givenIsRefreshingTrue_whenRendered_thenRefreshIndicatorIsVisible() {
@@ -161,7 +153,6 @@ class HomeScreenContentTest {
             trendingShows = sampleShows
         )
 
-        // The pull-to-refresh indicator uses a circular progress bar
         composeTestRule
             .onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate))
             .assertIsDisplayed()

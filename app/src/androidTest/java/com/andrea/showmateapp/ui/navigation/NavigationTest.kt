@@ -15,19 +15,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Navigation tests verifying screen routing and destination transitions.
- *
- * Uses [TestNavHostController] to inspect the current destination without
- * needing a real Activity or Hilt. Screen composables are stubbed with minimal
- * content so the graph can be assembled without their ViewModels.
- */
+
 class NavigationTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private lateinit var navController: TestNavHostController
 
@@ -62,7 +54,6 @@ class NavigationTest {
         }
     }
 
-    // ── Start destination ─────────────────────────────────────────────────────
 
     @Test
     fun givenLoginRoute_whenGraphStarts_thenCurrentDestinationIsLogin() {
@@ -73,7 +64,6 @@ class NavigationTest {
         }
     }
 
-    // ── Login screen visible ──────────────────────────────────────────────────
 
     @Test
     fun givenLoginDestination_whenRendered_thenLoginTitleIsDisplayed() {
@@ -89,7 +79,6 @@ class NavigationTest {
         composeTestRule.onNodeWithText("Iniciar Sesión").assertIsDisplayed()
     }
 
-    // ── Navigate login → signup ───────────────────────────────────────────────
 
     @Test
     fun givenLoginScreen_whenRegisterClicked_thenNavigatesToSignup() {
@@ -102,7 +91,6 @@ class NavigationTest {
         }
     }
 
-    // ── Back stack ────────────────────────────────────────────────────────────
 
     @Test
     fun givenSignupDestination_whenBackPressed_thenReturnsToLogin() {
@@ -122,7 +110,6 @@ class NavigationTest {
         }
     }
 
-    // ── Programmatic navigation ───────────────────────────────────────────────
 
     @Test
     fun givenLoginScreen_whenNavigatingToMain_thenCurrentDestinationIsMain() {

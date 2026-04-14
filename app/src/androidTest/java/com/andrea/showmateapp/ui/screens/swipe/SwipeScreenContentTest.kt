@@ -3,15 +3,11 @@ package com.andrea.showmateapp.ui.screens.swipe
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.andrea.showmateapp.data.network.MediaContent
-import com.andrea.showmateapp.ui.screens.swipe.SwipeUiState
+import com.andrea.showmateapp.data.model.MediaContent
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * UI tests for [SwipeScreenContent].
- * No Hilt needed — SwipeScreenContent is a stateless composable.
- */
+
 class SwipeScreenContentTest {
 
     @get:Rule
@@ -22,7 +18,6 @@ class SwipeScreenContentTest {
         MediaContent(id = 2, name = "The Wire", overview = "Crime drama")
     )
 
-    // ── Loading state ─────────────────────────────────────────────────────────
 
     @Test
     fun givenIsLoadingTrue_whenRendered_thenProgressIndicatorIsVisible() {
@@ -66,7 +61,6 @@ class SwipeScreenContentTest {
             .assertDoesNotExist()
     }
 
-    // ── Error state ───────────────────────────────────────────────────────────
 
     @Test
     fun givenErrorMessage_whenRendered_thenErrorTextIsDisplayed() {
@@ -90,7 +84,6 @@ class SwipeScreenContentTest {
             .assertIsDisplayed()
     }
 
-    // ── Empty state ───────────────────────────────────────────────────────────
 
     @Test
     fun givenEmptyShowsAndRatedCount10_whenRendered_thenDoneMessageIsVisible() {
@@ -108,13 +101,11 @@ class SwipeScreenContentTest {
             )
         }
 
-        // The screen shows a "completed" message when all shows have been rated
         composeTestRule
             .onNodeWithContentDescription("Me gusta")
             .assertDoesNotExist()
     }
 
-    // ── Shows loaded ──────────────────────────────────────────────────────────
 
     @Test
     fun givenShowsLoaded_whenRendered_thenLikeButtonIsVisible() {
@@ -206,7 +197,6 @@ class SwipeScreenContentTest {
         assert(skipCallCount == 1) { "onSkipShow should have been called once" }
     }
 
-    // ── Undo button ───────────────────────────────────────────────────────────
 
     @Test
     fun givenLastRemovedShowIsNull_whenRendered_thenUndoButtonIsNotEnabled() {
@@ -224,7 +214,6 @@ class SwipeScreenContentTest {
             )
         }
 
-        // Undo button exists but is disabled when no show has been removed
         composeTestRule
             .onNodeWithContentDescription("Deshacer")
             .assertIsNotEnabled()
@@ -254,7 +243,6 @@ class SwipeScreenContentTest {
         assert(undoCallCount == 1) { "onUndoAction should have been called once" }
     }
 
-    // ── Accessibility ─────────────────────────────────────────────────────────
 
     @Test
     fun givenShowsLoaded_whenAccessibilityCheck_thenAllButtonsHaveContentDescriptions() {

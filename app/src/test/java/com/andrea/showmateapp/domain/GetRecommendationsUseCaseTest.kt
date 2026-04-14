@@ -1,7 +1,7 @@
 package com.andrea.showmateapp.domain
 
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -145,7 +145,7 @@ class GetRecommendationsUseCaseTest {
 
         val result = useCase.execute()
 
-        assertTrue(result.isNotEmpty() || result.isEmpty())
+        assertTrue(result.isNotEmpty())
     }
 
     @Test
@@ -548,7 +548,7 @@ class GetRecommendationsUseCaseTest {
 
         val bingeShowScore = result.first { it.id == 1 }.affinityScore
         val endedShowScore = result.first { it.id == 2 }.affinityScore
-        assertTrue(bingeShowScore > 0f)
+        assertTrue(bingeShowScore > endedShowScore)
     }
 
     @Test

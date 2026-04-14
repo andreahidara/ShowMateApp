@@ -1,12 +1,13 @@
 package com.andrea.showmateapp.data.repository
 
 import com.andrea.showmateapp.data.local.ShowDao
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.model.MediaEntity
 import com.andrea.showmateapp.data.model.MediaResponse
-import com.andrea.showmateapp.data.network.MediaContent
 import com.andrea.showmateapp.data.network.TmdbApiService
 import com.andrea.showmateapp.util.Resource
 import java.io.IOException
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -22,6 +23,7 @@ class ShowRepositoryTest {
 
     private val apiService: TmdbApiService = mock()
     private val showDao: ShowDao = mock()
+    private val testDispatcher = StandardTestDispatcher()
     private lateinit var repository: ShowRepository
 
     private fun fakeResponse(vararg items: MediaContent) = MediaResponse(
@@ -33,12 +35,11 @@ class ShowRepositoryTest {
 
     @Before
     fun setup() {
-        repository = ShowRepository(apiService, showDao)
+        repository = ShowRepository(apiService, showDao, testDispatcher)
     }
 
-
     @Test
-    fun `searchShows returns success when API responds`() = runTest {
+    fun `searchShows returns success when API responds`() = runTest(testDispatcher) {
         whenever(apiService.searchMedia(any(), any(), any())).thenReturn(
             fakeResponse(MediaContent(id = 1, name = "Breaking Bad"))
         )
@@ -50,7 +51,7 @@ class ShowRepositoryTest {
     }
 
     @Test
-    fun `searchShows returns error when API throws`() = runTest {
+    fun `searchShows returns error when API throws`() = runTest(testDispatcher) {
         whenever(apiService.searchMedia(any(), any(), any())).thenAnswer { throw IOException("No network") }
 
         val result = repository.searchShows("anything")
@@ -58,9 +59,8 @@ class ShowRepositoryTest {
         assertTrue(result is Resource.Error)
     }
 
-
     @Test
-    fun `getPopularShows returns cached data when network fails`() = runTest {
+    fun `getPopularShows returns cached data when network fails`() = runTest(testDispatcher) {
         whenever(apiService.getPopularMedia(any(), any())).thenAnswer { throw IOException("timeout") }
         val cached = listOf(
             MediaEntity(id = 5, name = "Cached Show", overview = "", posterPath = "", category = "popular")
@@ -74,7 +74,7 @@ class ShowRepositoryTest {
     }
 
     @Test
-    fun `getPopularShows returns error when cache is also empty`() = runTest {
+    fun `getPopularShows returns error when cache is also empty`() = runTest(testDispatcher) {
         whenever(apiService.getPopularMedia(any(), any())).thenAnswer { throw IOException("timeout") }
         whenever(showDao.getShowsByCategory("popular")).thenReturn(emptyList())
 
@@ -83,9 +83,8 @@ class ShowRepositoryTest {
         assertTrue(result is Resource.Error)
     }
 
-
     @Test
-    fun `getShowDetails returns success and caches result`() = runTest {
+    fun `getShowDetails returns success and caches result`() = runTest(testDispatcher) {
         val detail = MediaContent(id = 42, name = "Stranger Things")
         whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenReturn(detail)
         whenever(showDao.insertShows(any())).thenReturn(Unit)
@@ -98,7 +97,7 @@ class ShowRepositoryTest {
     }
 
     @Test
-    fun `getShowDetails falls back to Room when network fails`() = runTest {
+    fun `getShowDetails falls back to Room when network fails`() = runTest(testDispatcher) {
         whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenAnswer { throw IOException("offline") }
         val cached = MediaEntity(id = 42, name = "Cached Detail", overview = "", posterPath = "", category = "liked")
         whenever(showDao.getLikedShowById(42)).thenReturn(cached)
@@ -110,7 +109,7 @@ class ShowRepositoryTest {
     }
 
     @Test
-    fun `getShowDetails returns error when network fails and cache is empty`() = runTest {
+    fun `getShowDetails returns error when network fails and cache is empty`() = runTest(testDispatcher) {
         whenever(apiService.getMediaDetails(any(), any(), anyOrNull())).thenAnswer { throw IOException("offline") }
         whenever(showDao.getLikedShowById(99)).thenReturn(null)
         whenever(showDao.getWatchedShowById(99)).thenReturn(null)

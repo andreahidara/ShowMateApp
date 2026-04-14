@@ -7,10 +7,7 @@ import com.andrea.showmateapp.util.UiText
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * UI tests for [LoginScreenContent].
- * Stateless composable — no Hilt needed.
- */
+
 class LoginScreenContentTest {
 
     @get:Rule
@@ -40,7 +37,6 @@ class LoginScreenContentTest {
         }
     }
 
-    // ── Initial state ─────────────────────────────────────────────────────────
 
     @Test
     fun givenInitialState_whenRendered_thenWelcomeTextIsDisplayed() {
@@ -84,7 +80,6 @@ class LoginScreenContentTest {
         composeTestRule.onNodeWithText("Regístrate").assertIsDisplayed()
     }
 
-    // ── Callbacks ─────────────────────────────────────────────────────────────
 
     @Test
     fun givenLoginButton_whenClicked_thenOnLoginClickIsCalled() {
@@ -106,7 +101,6 @@ class LoginScreenContentTest {
         assert(called) { "onNavigateToSignUp should have been called" }
     }
 
-    // ── Error state ───────────────────────────────────────────────────────────
 
     @Test
     fun givenErrorState_whenRendered_thenErrorMessageIsDisplayed() {
@@ -124,7 +118,6 @@ class LoginScreenContentTest {
         composeTestRule.onNodeWithText("Credenciales incorrectas").assertDoesNotExist()
     }
 
-    // ── Loading state ─────────────────────────────────────────────────────────
 
     @Test
     fun givenIsLoadingTrue_whenRendered_thenProgressIndicatorIsVisible() {
@@ -144,7 +137,6 @@ class LoginScreenContentTest {
             .assertDoesNotExist()
     }
 
-    // ── Accessibility ─────────────────────────────────────────────────────────
 
     @Test
     fun givenLoginScreen_whenAccessibilityCheck_thenLogoHasContentDescription() {
