@@ -4,6 +4,7 @@
 local.properties
 .externalNativeBuild/
 .cxx/
+.kotlin/
 
 # --- BUILD OUTPUT ---
 build/
@@ -12,11 +13,17 @@ build/
 out/
 *.log
 /*.txt
+*.apk
+*.aar
+*.ap_
+*.dex
 
 # --- IDEA / ANDROID STUDIO ---
 .idea/
 *.iws
 *.ipr
+*.atlassian
+/atlassian-ide-plugin.xml
 
 # --- OS SPECIFIC ---
 .DS_Store
@@ -31,3 +38,6 @@ secret.properties
 .env
 CLAUDE.md
 .claude
+
+# --- OTHER ---
+*.hprof
