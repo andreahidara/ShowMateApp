@@ -4,7 +4,7 @@
 
 [![CI — Main](https://github.com/andreahidara/ShowMateApp/actions/workflows/main.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/main.yml)
 [![PR Checks](https://github.com/andreahidara/ShowMateApp/actions/workflows/pr.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/pr.yml)
-[![Release](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml)
+[![Release Status](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml)
 
 ![Android](https://img.shields.io/badge/Android-API%2026%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
@@ -20,19 +20,20 @@ ShowMate resuelve la **sobrecarga de elección** en las plataformas de streaming
 
 ---
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades (Versión 1.0)
 
-- **Onboarding con selección de géneros** — establece tu perfil desde el primer uso
-- **Swipe de calibración** — desliza tarjetas para afinar el algoritmo al instante
-- **Recomendaciones personalizadas** — pantalla Home y sección Discover con tu match %
-- **Sección Up Next** — seguimiento de series y episodios que estás viendo
-- **Recomendaciones explicables (XAI)** — el sistema te muestra por qué te recomienda cada título
-- **Red Social P2P (Friends)** — feed en tiempo real de lo que ven tus amigos y cálculo de compatibilidad 'Match'
-- **Dashboard Estadístico Nativo** — visualiza tus estadísticas con gráficas renderizadas puramente en `Canvas` (cero dependencias externas)
-- **Búsqueda y Filtros** — búsqueda ágil con chips dinámicos
-- **Detalle completo con Shared Transitions** — animaciones fluidas Material 3 desde la portada hasta el detalle de la serie
-- **Tráileres integrados** — reproductor de YouTube in-app
-- **Gestión Offline First** — funciona sin conexión gracias a RoomDatabase acoplada a Single Source of Truth
+- **Onboarding con selección de géneros** — establece tu perfil desde el primer uso.
+- **Swipe de calibración** — desliza tarjetas para afinar el algoritmo al instante.
+- **Recomendaciones personalizadas** — pantalla Home y sección Discover con tu match % calculado en tiempo real.
+- **Sección Up Next** — seguimiento inteligente de series y episodios que estás viendo.
+- **Recomendaciones explicables (XAI)** — el sistema te muestra por qué te recomienda cada título basándose en tus intereses.
+- **Red Social P2P (Friends)** — feed en tiempo real de lo que ven tus amigos y cálculo de compatibilidad 'Match'.
+- **Dashboard Estadístico Nativo** — visualiza tus estadísticas con gráficas avanzadas renderizadas en `Canvas`.
+- **Búsqueda y Filtros** — búsqueda ágil con chips dinámicos y autocompletado.
+- **Detalle completo con Shared Transitions** — animaciones fluidas Material 3 para una experiencia premium.
+- **Tráileres integrados** — reproductor de YouTube in-app sin salir de la ficha.
+- **Gestión Offline First** — soporte completo sin conexión gracias a RoomDatabase.
+- **Notificaciones Inteligentes** — recordatorios de nuevos episodios y recomendaciones semanales (WorkManager + FCM).
 
 ---
 
@@ -58,45 +59,32 @@ Los pesos se actualizan con cada interacción:
 | Marcar como vista | +3 pts |
 | Valorar (1–5 estrellas) | adaptativo |
 
-Los títulos ya vistos o rechazados **nunca vuelven a aparecer** en las recomendaciones gracias al filtrado excluyente en la capa de datos. Además, el motor incluye **Machine Learning ligero** identificando Patrones Temporales (si el usuario es *Binge-Watcher* o *Espectador Casual*).
+---
+
+## 🏗️ Arquitectura y Calidad de Código
+
+ShowMate sigue **MVI (Model-View-Intent) + Clean Architecture** con un enfoque en la mantenibilidad:
+
+- **Type-safe Navigation**: Implementación robusta de navegación entre pantallas.
+- **Hilt Dependency Injection**: Desacoplamiento total de componentes.
+- **Static Analysis**: Configurado con `Detekt` y `Ktlint` para asegurar la calidad del código según los estándares de Kotlin.
+- **Paging 3**: Carga eficiente de grandes listas de películas y series desde TMDB.
+- **Single Source of Truth**: Room actúa como caché local, garantizando que la UI sea siempre reactiva.
 
 ---
 
-## 🏗️ Arquitectura
-
-ShowMate sigue **MVI (Model-View-Intent) + Clean Architecture** con tres capas bien separadas:
-
-```
-📦 ShowMateApp
- ┣ 📂 data/          → Repositories · TMDB API (Retrofit) · Room · Firebase
- ┣ 📂 domain/        → Use Cases (algoritmo de recomendación, estadísticas, intereses)
- ┗ 📂 ui/            → Pantallas Compose + ViewModels (MVI: State, Events, Effects)
-```
-
-- Interfaz 100% declarativa dividida en micro-funciones `@Composable` (State Hoisting)
-- Navegación moderna con animaciones experimentales de **SharedTransitionScope**
-- Red de datos segura: Interceptores de red (`HttpLoggingInterceptor`) restringidos solo a compilaciones `DEBUG` para proteger las credenciales en Producción.
-- Carga de UI concurrente (*Concurrent Fetching*) a través de **Coroutines async/awaitAll()** para no bloquear el Hilo Principal.
-- **Single Source of Truth**: Room hace de caché local para que la UI jamás espere pasivamente a la red.
-
----
-
-## 🛠️ Stack tecnológico
+## 🛠️ Stack tecnológico (Actualizado)
 
 | Tecnología | Uso |
 |---|---|
-| **Kotlin 2.0** | Lenguaje principal |
-| **Jetpack Compose + Material 3** | UI declarativa |
-| **Firebase Authentication** | Registro e inicio de sesión |
-| **Firebase Firestore** | Perfil de usuario y pesos del algoritmo en la nube |
-| **Firebase Cloud Messaging** | Notificaciones push |
-| **Room 2.6** | Caché local para modo offline |
-| **Retrofit 2 + OkHttp** | Consumo de la API de TMDB |
+| **Kotlin 2.0.21** | Lenguaje moderno y eficiente |
+| **Jetpack Compose (BOM 2024.10.00)** | UI declarativa con Material 3 |
+| **Firebase Suite** | Auth, Firestore, Messaging, Crashlytics, Performance |
+| **Room 2.6.1** | Persistencia local segura |
+| **Retrofit 2 + OkHttp** | Comunicación con la API de TMDB |
 | **Hilt 2.52** | Inyección de dependencias |
-| **Coil 2.7** | Carga asíncrona de imágenes fluidas |
-| **Navigation Compose 2.8** | Navegación type-safe |
-| **Coroutines + Flow** | Operaciones asíncronas concurrentes |
-| **Mockito** | Tests unitarios |
+| **WorkManager** | Tareas en segundo plano (Recomendaciones periódicas) |
+| **Coil 2.7** | Carga de imágenes con soporte para SVGs y Blur |
 
 ---
 
@@ -104,9 +92,9 @@ ShowMate sigue **MVI (Model-View-Intent) + Clean Architecture** con tres capas b
 
 ### Requisitos previos
 
-- Android Studio Hedgehog o superior
-- JDK 17
-- Cuenta en [Firebase](https://firebase.google.com) (plan Spark gratuito)
+- Android Studio Koala o superior
+- JDK 17 o 21
+- Cuenta en [Firebase](https://firebase.google.com)
 - Token de API de [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api)
 
 ### 1. Clonar el repositorio
@@ -124,53 +112,18 @@ Crea el archivo `secret.properties` en la raíz del proyecto:
 TMDB_API_TOKEN=<tu_token_aqui>
 ```
 
-> **Nota:** Introduce solo el "API Read Access Token" largo. El sistema añadirá automáticamente el prefijo "Bearer".
-
-> `secret.properties` está en `.gitignore` y nunca se sube al repositorio.
-
 ### 3. Conectar Firebase
 
-1. Ve a [Firebase Console](https://console.firebase.google.com) y crea un nuevo proyecto
-2. Añade una app Android con el package name `com.example.showmateapp`
-3. Descarga `google-services.json` y colócalo en `app/`
-4. Activa **Authentication** → método Email/Contraseña
-5. Activa **Firestore Database** en modo de prueba
-
-### 4. Ejecutar
-
-Abre el proyecto en Android Studio, sincroniza Gradle y ejecuta en un emulador o dispositivo físico con **Android 8.0 (API 26) o superior**.
-
----
-
-## 📂 Estructura de datos en Firestore
-
-```
-users/
-  {uid}/
-    ├── displayName
-    ├── email
-    ├── genreScores        → { "18": 25, "35": 15, ... }
-    ├── preferredKeywords  → { "detective": 10, ... }
-    ├── preferredActors    → { "actor_id": 8, ... }
-    ├── likedMediaIds      → [1234, 5678, ...]
-    ├── dislikedMediaIds   → [9012, ...]
-    ├── favorites/
-    │     {showId} → datos básicos del título
-    ├── views/
-    │     {showId} → datos básicos del título
-    └── ratings/
-          {showId} → { rating: 4, timestamp: ... }
-```
+1. Descarga `google-services.json` desde Firebase Console y colócalo en la carpeta `app/`.
+2. Habilita Email Auth y Firestore en el proyecto.
 
 ---
 
 ## 🧪 Tests
 
-Los tests unitarios cubren `GetRecommendationsUseCase` y el sistema de pesos del algoritmo:
-
 ```bash
-./gradlew test                   # Tests unitarios
-./gradlew connectedAndroidTest   # Tests instrumentados (requiere dispositivo/emulador)
+./gradlew test                   # Tests unitarios de lógica de negocio
+./gradlew paparazziDebugCheck    # Snapshot tests de UI (Paparazzi)
 ```
 
 ---
@@ -186,5 +139,4 @@ Tutor: José Manuel Villar Ferradal
 
 ## 📄 Licencia
 
-Proyecto académico. Los datos de series y películas son propiedad de [The Movie Database (TMDB)](https://www.themoviedb.org).
-Este producto usa la API de TMDB pero no está respaldado ni certificado por TMDB.
+Proyecto académico. Los datos son propiedad de TMDB. No apto para uso comercial sin autorización de los propietarios de los datos.
