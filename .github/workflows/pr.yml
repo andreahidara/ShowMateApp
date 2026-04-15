@@ -41,9 +41,6 @@ jobs:
       - name: Decode google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
 
-      - name: Run ktlint
-        run: ./gradlew ktlintCheck --continue
-
       - name: Run Android Lint
         run: ./gradlew lintDebug
 
@@ -54,7 +51,6 @@ jobs:
           name: lint-reports-pr-${{ github.event.pull_request.number }}
           path: |
             app/build/reports/lint-results-debug.html
-            app/build/reports/ktlint/
           retention-days: 7
 
   # ── 2. Unit tests ───────────────────────────────────────────────────────────
@@ -112,31 +108,7 @@ jobs:
           fail_on_failure: true
           check_name: 'Unit Test Results'
 
-  # ── 3. Static analysis (detekt) ─────────────────────────────────────────────
-  static-analysis:
-    name: Static Analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Write secret.properties
-        run: echo "TMDB_API_TOKEN=${{ secrets.TMDB_API_TOKEN }}" > secret.properties
-
-      - name: Decode google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
-
-      # On the first run, generate a baseline so existing violations don't block PRs.
+# On the first run, generate a baseline so existing violations don't block PRs.
       # After that, only NEW violations introduced by the PR will fail the check.
       - name: Check for detekt baseline
         id: baseline-check

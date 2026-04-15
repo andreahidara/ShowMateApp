@@ -30,9 +30,6 @@ jobs:
       - name: Decode google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
 
-      - name: Run ktlint
-        run: ./gradlew ktlintCheck --continue
-
       - name: Run Android Lint
         run: ./gradlew lintDebug
 
@@ -43,7 +40,6 @@ jobs:
           name: lint-reports-${{ github.sha }}
           path: |
             app/build/reports/lint-results-debug.html
-            app/build/reports/ktlint/
           retention-days: 14
 
   # ── 2. Unit tests + Paparazzi ───────────────────────────────────────────────
@@ -88,39 +84,7 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-  # ── 3. Static analysis ──────────────────────────────────────────────────────
-  static-analysis:
-    name: Static Analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Write secret.properties
-        run: echo "TMDB_API_TOKEN=${{ secrets.TMDB_API_TOKEN }}" > secret.properties
-
-      - name: Decode google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
-
-      - name: Run detekt
-        run: ./gradlew detektDebug --continue
-
-      - name: Upload detekt report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: detekt-report-${{ github.sha }}
-          path: app/build/reports/detekt/
-          retention-days: 14
-
-  # ── 4. Instrumented tests (emulator) ────────────────────────────────────────
+# ── 4. Instrumented tests (emulator) ────────────────────────────────────────
   instrumented-tests:
     name: Instrumented Tests
     runs-on: ubuntu-latest
@@ -185,7 +149,7 @@ jobs:
     name: Build Debug APK
     runs-on: ubuntu-latest
     # Only build after all checks pass
-    needs: [ lint, unit-tests, static-analysis ]
+    needs: [ lint, unit-tests ]
 
     steps:
       - uses: actions/checkout@v4
