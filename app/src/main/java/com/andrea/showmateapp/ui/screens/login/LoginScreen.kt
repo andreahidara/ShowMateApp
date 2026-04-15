@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.andrea.showmateapp.ui.screens.login
 
 import android.app.Activity

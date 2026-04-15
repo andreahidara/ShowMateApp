@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -637,7 +638,7 @@ private fun MatchFoundContent(
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
             ) {
                 Icon(
-                    if (watchLink != null) Icons.Default.Launch else Icons.Default.PlayCircle,
+                    if (watchLink != null) Icons.AutoMirrored.Filled.Launch else Icons.Default.PlayCircle,
                     null,
                     modifier = Modifier.size(20.dp)
                 )

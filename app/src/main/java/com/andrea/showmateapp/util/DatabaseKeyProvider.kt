@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.andrea.showmateapp.util
 
 import android.content.Context
