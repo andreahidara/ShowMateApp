@@ -12,11 +12,13 @@ build/
 /captures/
 out/
 *.log
-/*.txt
+*.txt
 *.apk
 *.aar
 *.ap_
+*.aab
 *.dex
+*.class
 
 # --- IDEA / ANDROID STUDIO ---
 .idea/
@@ -27,17 +29,25 @@ out/
 
 # --- OS SPECIFIC ---
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Trashes
+__MACOSX/
 Thumbs.db
+ehthumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
-# --- SECRETS ---
+# --- SECRETS & KEYS ---
 secret.properties
 *.jks
 *.keystore
 **/google-services.json
 .env
+
+# --- AI & MISC ---
 CLAUDE.md
 .claude
-
-# --- OTHER ---
 *.hprof
