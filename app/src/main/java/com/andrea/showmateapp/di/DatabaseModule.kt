@@ -30,8 +30,8 @@ object DatabaseModule {
         return Room.databaseBuilder(context, AppDatabase::class.java, "showmate_database_v2")
             .openHelperFactory(factory)
             .addMigrations(*DatabaseMigrations.ALL)
-            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            .fallbackToDestructiveMigrationOnDowngrade()
+            .fallbackToDestructiveMigration()
             .build()
     }
 

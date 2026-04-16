@@ -1,7 +1,7 @@
 package com.andrea.showmateapp.ui.screens.discover
 
 import android.content.Context
-import com.andrea.showmateapp.data.network.MediaContent
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
@@ -37,6 +37,7 @@ class DiscoverViewModelTest {
     private val userRepository: IUserRepository = mockk(relaxed = true)
     private val getRecommendationsUseCase: GetRecommendationsUseCase = mockk(relaxed = true)
     private val networkMonitor: NetworkMonitor = mockk()
+    private val interactionRepository: com.andrea.showmateapp.domain.repository.IInteractionRepository = mockk(relaxed = true)
     private val context: Context = mockk(relaxed = true)
 
     private val mockMedia = listOf(
@@ -72,6 +73,7 @@ class DiscoverViewModelTest {
     private fun createViewModel() = DiscoverViewModel(
         repository = repository,
         userRepository = userRepository,
+        interactionRepository = interactionRepository,
         getRecommendationsUseCase = getRecommendationsUseCase,
         networkMonitor = networkMonitor,
         context = context

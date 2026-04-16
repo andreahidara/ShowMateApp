@@ -76,7 +76,7 @@ fun FeaturedBanner(
                         } else {
                             with(sharedTransitionScope) {
                                 Modifier.sharedElement(
-                                    state = rememberSharedContentState(key = "image-${media.id}-$tag"),
+                                    sharedContentState = rememberSharedContentState(key = "image-${media.id}-$tag"),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }

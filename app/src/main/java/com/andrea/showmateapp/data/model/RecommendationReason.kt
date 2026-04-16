@@ -1,6 +1,7 @@
 package com.andrea.showmateapp.data.model
 
 import androidx.compose.runtime.Immutable
+import com.andrea.showmateapp.util.UiText
 
 enum class ReasonType {
     GENRE,
@@ -18,6 +19,6 @@ enum class ReasonType {
 data class RecommendationReason(
     val type: ReasonType,
     val weight: Float,
-    val description: String,
+    val description: UiText,
     val iconEmoji: String
 )

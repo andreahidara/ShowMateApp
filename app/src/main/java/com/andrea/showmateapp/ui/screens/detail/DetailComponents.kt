@@ -1042,7 +1042,7 @@ fun WhyRecommendedDialog(factors: List<RecommendationReason>, onDismiss: () -> U
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text(
-                                    text = reason.description,
+                                    text = reason.description.asString(),
                                     color = Color.White,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,

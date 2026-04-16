@@ -336,11 +336,6 @@ class HomeViewModel @Inject constructor(
 
                 try {
                     val profile = userRepository.getUserProfile()
-                    if (profile == null) {
-                        _uiState.update { it.copy(isLoading = false, isRefreshing = false, upNextShows = emptyList()) }
-                        return@withContext
-                    }
-
                     fetchPhase1(profile)
                     fetchPhase2()
                 } catch (e: Exception) {

@@ -2,12 +2,8 @@
 
 > Aplicación Android nativa que aprende de tus gustos para recomendarte exactamente lo que te va a gustar ver.
 
-[![CI — Main](https://github.com/andreahidara/ShowMateApp/actions/workflows/main.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/main.yml)
-[![PR Checks](https://github.com/andreahidara/ShowMateApp/actions/workflows/pr.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/pr.yml)
-[![Release Status](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml/badge.svg)](https://github.com/andreahidara/ShowMateApp/actions/workflows/release.yml)
-
 ![Android](https://img.shields.io/badge/Android-API%2026%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
-![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-FFCA28?style=flat-square&logo=firebase&logoColor=black)
 ![TMDB](https://img.shields.io/badge/TMDB-API%20v3-01B4E4?style=flat-square)
@@ -77,12 +73,12 @@ ShowMate sigue **MVI (Model-View-Intent) + Clean Architecture** con un enfoque e
 
 | Tecnología | Uso |
 |---|---|
-| **Kotlin 2.0.21** | Lenguaje moderno y eficiente |
-| **Jetpack Compose (BOM 2024.10.00)** | UI declarativa con Material 3 |
+| **Kotlin 2.1.10** | Lenguaje moderno y eficiente |
+| **Jetpack Compose (BOM 2024.10.01)** | UI declarativa con Material 3 |
 | **Firebase Suite** | Auth, Firestore, Messaging, Crashlytics, Performance |
-| **Room 2.6.1** | Persistencia local segura |
+| **Room 2.8.4** | Persistencia local segura |
 | **Retrofit 2 + OkHttp** | Comunicación con la API de TMDB |
-| **Hilt 2.52** | Inyección de dependencias |
+| **Hilt 2.56** | Inyección de dependencias |
 | **WorkManager** | Tareas en segundo plano (Recomendaciones periódicas) |
 | **Coil 2.7** | Carga de imágenes con soporte para SVGs y Blur |
 
@@ -92,8 +88,8 @@ ShowMate sigue **MVI (Model-View-Intent) + Clean Architecture** con un enfoque e
 
 ### Requisitos previos
 
-- Android Studio Koala o superior
-- JDK 17 o 21
+- Android Studio Ladybug o superior
+- JDK 21
 - Cuenta en [Firebase](https://firebase.google.com)
 - Token de API de [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api)
 
@@ -123,7 +119,6 @@ TMDB_API_TOKEN=<tu_token_aqui>
 
 ```bash
 ./gradlew test                   # Tests unitarios de lógica de negocio
-./gradlew paparazziDebugCheck    # Snapshot tests de UI (Paparazzi)
 ```
 
 ---

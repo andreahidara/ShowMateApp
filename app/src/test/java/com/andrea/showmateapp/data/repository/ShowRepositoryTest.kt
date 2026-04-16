@@ -29,8 +29,8 @@ class ShowRepositoryTest {
     private fun fakeResponse(vararg items: MediaContent) = MediaResponse(
         page = 1,
         results = items.toList(),
-        total_pages = 1,
-        total_results = items.size
+        totalPages = 1,
+        totalResults = items.size
     )
 
     @Before

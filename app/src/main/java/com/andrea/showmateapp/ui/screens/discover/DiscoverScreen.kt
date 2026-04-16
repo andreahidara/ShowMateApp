@@ -598,7 +598,7 @@ fun DiscoverHeroSection(
                             it
                         } else {
                             it.sharedElement(
-                                state = rememberSharedContentState(key = "image-${media.id}-$tag"),
+                                sharedContentState = rememberSharedContentState(key = "image-${media.id}-$tag"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
                         }

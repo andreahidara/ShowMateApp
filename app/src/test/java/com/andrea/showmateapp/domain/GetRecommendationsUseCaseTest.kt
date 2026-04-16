@@ -53,6 +53,7 @@ class GetRecommendationsUseCaseTest {
         every { ExplorationEngine.unexploredGenres(any(), any()) } returns emptySet()
 
         coEvery { collabUseCase.execute(any()) } returns emptyMap()
+        coEvery { interactionRepository.getExcludedMediaIds() } returns emptySet()
 
         useCase = GetRecommendationsUseCase(
             userRepository, interactionRepository, showRepository, collabUseCase
@@ -206,7 +207,7 @@ class GetRecommendationsUseCaseTest {
 
         val popularScore = result.first { it.id == 1 }.affinityScore
         val obscureScore = result.first { it.id == 2 }.affinityScore
-        assertTrue(
+        assertTrue("Popular score ($popularScore) should be > obscure score ($obscureScore)",
             popularScore > obscureScore
         )
     }
@@ -221,7 +222,7 @@ class GetRecommendationsUseCaseTest {
 
         val scoreExaggerated = result.first { it.id == 1 }.affinityScore
         val scoreSteady = result.first { it.id == 2 }.affinityScore
-        assertTrue(
+        assertTrue("Steady score ($scoreSteady) should be >= exaggerated score ($scoreExaggerated)",
             scoreSteady >= scoreExaggerated
         )
     }
@@ -242,7 +243,7 @@ class GetRecommendationsUseCaseTest {
 
         val dramaScore = result.first { it.id == 1 }.affinityScore
         val comedyScore = result.first { it.id == 2 }.affinityScore
-        assertTrue(
+        assertTrue("Drama score ($dramaScore) should be > comedy score ($comedyScore) due to decay",
             dramaScore > comedyScore
         )
     }

@@ -44,6 +44,7 @@ class RecommendationRegressionTest {
         every { ExplorationEngine.calculateFactor(any()) } returns ExplorationEngine.MIN_EXPLORATION
         every { ExplorationEngine.unexploredGenres(any(), any()) } returns emptySet()
         coEvery { collabUseCase.execute(any()) } returns emptyMap()
+        coEvery { interactionRepository.getExcludedMediaIds() } returns emptySet()
         coEvery { showRepository.getPopularShows(any()) } returns Resource.Success(emptyList())
 
         useCase = GetRecommendationsUseCase(

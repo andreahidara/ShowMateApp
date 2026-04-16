@@ -224,4 +224,26 @@
     <string name="profile_reset_title">Reiniciar algoritmo</string>
     <string name="profile_reset_confirm">Tus recomendaciones volverán a cero. ¿Deseas continuar?</string>
     <string name="profile_reset_action">Reiniciar</string>
+    <string name="reason_genre">Porque te apasiona el %1$s</string>
+    <string name="reason_actor">Sale %1$s, que sueles disfrutar</string>
+    <string name="reason_creator">Es de %1$s, que ya te ha gustado</string>
+    <string name="reason_collaborative">Les encanta a usuarios con tus mismos gustos</string>
+    <string name="reason_hidden_gem">Joya oculta · %1$d%% de afinidad</string>
+    <string name="reason_binge_long">Perfecta para una sesión larga · %1$d temporadas</string>
+    <string name="reason_binge_short">Corta y perfecta para un maratón</string>
+    <string name="reason_completeness">Serie terminada, puedes ver el final ya</string>
+    <string name="reason_trending">Todo el mundo habla de ella ahora mismo</string>
+
+    <string name="narrative_desc_complex">Tiene esa narrativa compleja que te engancha</string>
+    <string name="narrative_desc_detective">Con ese detective que tanto te gusta</string>
+    <string name="narrative_desc_antihero">Con un anti-héroe que no puedes dejar de ver</string>
+    <string name="narrative_desc_genius">Con ese protagonista brillante que tanto te engancha</string>
+    <string name="narrative_desc_dark">Tiene esa narrativa oscura que te atrapa</string>
+    <string name="narrative_desc_emotional">Te va a llegar al corazón, te lo prometemos</string>
+    <string name="narrative_desc_light">Ligera y perfecta para desconectar</string>
+    <string name="narrative_desc_intense">Ritmo frenético, sin un momento de respiro</string>
+    <string name="narrative_desc_slow">Va de menos a más, justo como a ti te gusta</string>
+    <string name="narrative_desc_episodic">Episodios cortos, ideal para un rato libre</string>
+    <string name="narrative_desc_long">Episodios largos para sumergirte de verdad</string>
+    <string name="narrative_desc_default">Tiene el estilo narrativo que sueles disfrutar</string>
 </resources>

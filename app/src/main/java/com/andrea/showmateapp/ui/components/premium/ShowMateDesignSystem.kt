@@ -227,7 +227,7 @@ fun ShowCard(
                         } else {
                             with(sharedTransitionScope) {
                                 Modifier.sharedElement(
-                                    state = rememberSharedContentState(key = sharedElementKey),
+                                    sharedContentState = rememberSharedContentState(key = sharedElementKey),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }
@@ -340,7 +340,7 @@ fun ReasonPill(reason: RecommendationReason, modifier: Modifier = Modifier) {
     ) {
 
         Text(
-            text = reason.description,
+            text = reason.description.asString(),
             color = Color.White.copy(alpha = 0.92f),
             fontSize = 9.5.sp,
             fontWeight = FontWeight.SemiBold,

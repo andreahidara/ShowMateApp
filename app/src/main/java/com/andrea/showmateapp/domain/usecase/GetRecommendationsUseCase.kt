@@ -14,6 +14,8 @@ import com.andrea.showmateapp.util.MoodContextEngine
 import com.andrea.showmateapp.util.NarrativeStyleMapper
 import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.TemporalPatternAnalyzer
+import com.andrea.showmateapp.util.UiText
+import com.andrea.showmateapp.R
 import javax.inject.Inject
 import kotlin.math.exp
 import kotlin.math.log10
@@ -33,7 +35,7 @@ class GetRecommendationsUseCase @Inject constructor(
         private const val W_GLOBAL = 0.30f
         private const val NARRATIVE_ADDITIVE_MAX = 1.50f
         private const val C = 6.5f
-        private const val M = 150f
+        private const val M = 50f
         private const val DECAY_LAMBDA = 0.0077f
         private const val MAX_GENRE_FRACTION = 0.35f
         private const val SERENDIPITY_FRACTION = 0.15f
@@ -44,12 +46,12 @@ class GetRecommendationsUseCase @Inject constructor(
         private const val NOVELTY_BOOST_3M = 0.20f
         private const val NOVELTY_BOOST_6M = 0.10f
         private const val GENRE_SATURATION_THRESHOLD = 0.45f
-        private const val GENRE_SATURATION_PENALTY = 0.20f
+        private const val GENRE_SATURATION_PENALTY = 2.50f
         private const val HIDDEN_GEM_VOTE_THRESHOLD = 500
         private const val HIDDEN_GEM_MIN_AFFINITY = 6.5f
         private const val HIDDEN_GEM_BOOST = 0.35f
         private const val BINGE_THRESHOLD_EPS = 3.0f
-        private const val BINGE_PROFILE_BOOST = 0.20f
+        private const val BINGE_PROFILE_BOOST = 0.60f
         private const val EXPLORATION_BONUS = 0.30f
 
         private val ALL_GENRE_IDS = setOf(
@@ -122,7 +124,7 @@ class GetRecommendationsUseCase @Inject constructor(
             val userProfile = userRepository.getUserProfile()
             val excludedIds = interactionRepository.getExcludedMediaIds().toList()
 
-            if (userProfile == null || userProfile.genreScores.isEmpty()) {
+            if (userProfile == null || userProfile.genreScores.all { it.value <= 0 }) {
                 val popular = showRepository.getPopularShows(excludedIds)
                 return if (popular is Resource.Success) popular.data else emptyList()
             }
@@ -308,7 +310,7 @@ class GetRecommendationsUseCase @Inject constructor(
     private fun calculateBayesianRating(show: MediaContent): Float {
         val v = show.voteCount.toFloat()
         val r = show.voteAverage
-        return if (v + M > 0) ((v / (v + M)) * r) + ((M / (v + M)) * C) else C
+        return if (v + M > 0) ((v * r) + (M * C)) / (v + M) else C
     }
 
     private fun calculateCompletenessBoost(show: MediaContent): Float {
@@ -366,8 +368,8 @@ class GetRecommendationsUseCase @Inject constructor(
         val isOngoing = show.status in listOf("Returning Series", "In Production")
         val isEnded = show.status == "Ended" || show.status == "Canceled"
         return when {
-            avgEpsPerSession >= BINGE_THRESHOLD_EPS && seasons >= 3 && isOngoing -> BINGE_PROFILE_BOOST
-            avgEpsPerSession < BINGE_THRESHOLD_EPS && seasons <= 2 && isEnded -> BINGE_PROFILE_BOOST
+            avgEpsPerSession >= BINGE_THRESHOLD_EPS && seasons >= 3 && (isOngoing || show.status == null) -> BINGE_PROFILE_BOOST
+            avgEpsPerSession < BINGE_THRESHOLD_EPS && seasons <= 2 && (isEnded || show.status == null) -> BINGE_PROFILE_BOOST
             else -> 0f
         }
     }
@@ -412,7 +414,8 @@ class GetRecommendationsUseCase @Inject constructor(
             val weight = kotlin.math.tanh(genreScore / 20.0).toFloat().coerceIn(0.15f, 1f)
             personal += RecommendationReason(
                 ReasonType.GENRE, weight,
-                "Porque te apasiona el ${GenreMapper.getGenreName(genreId)}", genreEmoji(genreId)
+                UiText.StringResource(R.string.reason_genre, GenreMapper.getGenreName(genreId)),
+                genreEmoji(genreId)
             )
         }
 
@@ -425,7 +428,7 @@ class GetRecommendationsUseCase @Inject constructor(
             if (weight > 0.20f) {
                 personal += RecommendationReason(
                     ReasonType.ACTOR, weight,
-                    "Sale ${actor.name}, que sueles disfrutar", "🎬"
+                    UiText.StringResource(R.string.reason_actor, actor.name), "🎬"
                 )
             }
         }
@@ -455,7 +458,7 @@ class GetRecommendationsUseCase @Inject constructor(
             if (weight > 0.25f) {
                 personal += RecommendationReason(
                     ReasonType.CREATOR, weight,
-                    "Es de ${crew.name}, que ya te ha gustado", "🎯"
+                    UiText.StringResource(R.string.reason_creator, crew.name), "🎯"
                 )
             }
         }
@@ -464,7 +467,7 @@ class GetRecommendationsUseCase @Inject constructor(
             val weight = (collabBoost / 1.20f).coerceIn(0f, 1f)
             personal += RecommendationReason(
                 ReasonType.COLLABORATIVE, weight,
-                "Les encanta a usuarios con tus mismos gustos", "👥"
+                UiText.StringResource(R.string.reason_collaborative), "👥"
             )
         }
 
@@ -472,7 +475,7 @@ class GetRecommendationsUseCase @Inject constructor(
             if (hiddenGemBoost > 0f) {
                 systemic += RecommendationReason(
                     ReasonType.HIDDEN_GEM, 0.70f,
-                    "Joya oculta · ${(cosineSim * 100).toInt()}% de afinidad", "💎"
+                    UiText.StringResource(R.string.reason_hidden_gem, (cosineSim * 100).toInt()), "💎"
                 )
             }
             if (bingeBoost > 0f) {
@@ -480,9 +483,9 @@ class GetRecommendationsUseCase @Inject constructor(
                 systemic += RecommendationReason(
                     ReasonType.BINGE, 0.50f,
                     if (seasons >= 3) {
-                        "Perfecta para una sesión larga · $seasons temporadas"
+                        UiText.StringResource(R.string.reason_binge_long, seasons)
                     } else {
-                        "Corta y perfecta para un maratón"
+                        UiText.StringResource(R.string.reason_binge_short)
                     },
                     "🍿"
                 )
@@ -491,23 +494,22 @@ class GetRecommendationsUseCase @Inject constructor(
                 if (show.status == "Ended" || show.status == "Canceled") {
                     systemic += RecommendationReason(
                         ReasonType.COMPLETENESS, 0.40f,
-                        "Serie terminada, puedes ver el final ya", "✅"
+                        UiText.StringResource(R.string.reason_completeness), "✅"
                     )
                 }
                 if (show.popularity > 100f && show.voteCount > 1000) {
                     systemic += RecommendationReason(
                         ReasonType.TRENDING,
                         (show.popularity / 1000f).coerceIn(0.10f, 0.80f),
-                        "Todo el mundo habla de ella ahora mismo", "🔥"
+                        UiText.StringResource(R.string.reason_trending), "🔥"
                     )
                 }
             }
         }
 
-        return (
-            personal.sortedByDescending { it.weight } +
-                systemic.sortedByDescending { it.weight }
-            ).take(3)
+        val sortedPersonal = personal.sortedByDescending { r: RecommendationReason -> r.weight }
+        val sortedSystemic = systemic.sortedByDescending { r: RecommendationReason -> r.weight }
+        return (sortedPersonal + sortedSystemic).take(3)
     }
 
     private fun genreEmoji(genreId: Int): String = when (genreId) {
@@ -526,19 +528,19 @@ class GetRecommendationsUseCase @Inject constructor(
         else -> "🎬"
     }
 
-    private fun narrativeDescription(style: String): String = when (style) {
-        "narrativa_compleja" -> "Tiene esa narrativa compleja que te engancha"
-        "protagonista_detective" -> "Con ese detective que tanto te gusta"
-        "protagonista_antihero" -> "Con un anti-héroe que no puedes dejar de ver"
-        "protagonista_genio" -> "Con ese protagonist brillante que tanto te engancha"
-        "tono_oscuro" -> "Tiene esa narrativa oscura que te atrapa"
-        "tono_emocional" -> "Te va a llegar al corazón, te lo prometemos"
-        "tono_ligero" -> "Ligera y perfecta para desconectar"
-        "ritmo_intenso" -> "Ritmo frenético, sin un momento de respiro"
-        "ritmo_lento" -> "Va de menos a más, justo como a ti te gusta"
-        "ritmo_episodico" -> "Episodios cortos, ideal para un rato libre"
-        "ritmo_largo" -> "Episodios largos para sumergirte de verdad"
-        else -> "Tiene el estilo narrativo que sueles disfrutar"
+    private fun narrativeDescription(style: String): UiText = when (style) {
+        "narrativa_compleja" -> UiText.StringResource(R.string.narrative_desc_complex)
+        "protagonista_detective" -> UiText.StringResource(R.string.narrative_desc_detective)
+        "protagonista_antihero" -> UiText.StringResource(R.string.narrative_desc_antihero)
+        "protagonista_genio" -> UiText.StringResource(R.string.narrative_desc_genius)
+        "tono_oscuro" -> UiText.StringResource(R.string.narrative_desc_dark)
+        "tono_emocional" -> UiText.StringResource(R.string.narrative_desc_emotional)
+        "tono_ligero" -> UiText.StringResource(R.string.narrative_desc_light)
+        "ritmo_intenso" -> UiText.StringResource(R.string.narrative_desc_intense)
+        "ritmo_lento" -> UiText.StringResource(R.string.narrative_desc_slow)
+        "ritmo_episodico" -> UiText.StringResource(R.string.narrative_desc_episodic)
+        "ritmo_largo" -> UiText.StringResource(R.string.narrative_desc_long)
+        else -> UiText.StringResource(R.string.narrative_desc_default)
     }
 
     private fun narrativeEmoji(style: String): String = when (style) {

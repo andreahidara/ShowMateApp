@@ -48,6 +48,4 @@ secret.properties
 .env
 
 # --- AI & MISC ---
-CLAUDE.md
-.claude
 *.hprof

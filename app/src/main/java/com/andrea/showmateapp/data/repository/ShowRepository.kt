@@ -155,7 +155,7 @@ class ShowRepository @Inject constructor(
     }
 
     override suspend fun discoverShowsPaged(genreId: String?, sortBy: String, page: Int, airDateGte: String?, airDateLte: String?): Resource<Pair<List<MediaContent>, Int>> = safeApiCall {
-        api.discoverMedia(genreId = genreId, sortBy = sortBy, page = page, airDateGte = airDateGte, airDateLte = airDateLte).let { it.results to it.total_pages }
+        api.discoverMedia(genreId = genreId, sortBy = sortBy, page = page, airDateGte = airDateGte, airDateLte = airDateLte).let { it.results to it.totalPages }
     }
 
     override suspend fun getSimilarShows(showId: Int): List<MediaContent> = (safeApiCall { api.getRecommendationsByShow(showId).results } as? Resource.Success)?.data ?: emptyList()

@@ -26,7 +26,7 @@ class TmdbSearchPagingSource(
             LoadResult.Page(
                 data = scored,
                 prevKey = if (page == 1) null else page - 1,
-                nextKey = if (page >= response.total_pages) null else page + 1
+                nextKey = if (page >= response.totalPages) null else page + 1
             )
         } catch (e: Exception) {
             LoadResult.Error(e)

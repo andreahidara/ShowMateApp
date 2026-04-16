@@ -91,7 +91,7 @@ fun UpNextSection(
                                     } else {
                                         with(sharedTransitionScope) {
                                             Modifier.sharedElement(
-                                                state = rememberSharedContentState(key = "image-${show.id}-up_next"),
+                                                sharedContentState = rememberSharedContentState(key = "image-${show.id}-up_next"),
                                                 animatedVisibilityScope = animatedVisibilityScope
                                             )
                                         }
