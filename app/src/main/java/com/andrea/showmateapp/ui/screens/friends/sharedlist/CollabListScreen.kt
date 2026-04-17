@@ -137,7 +137,6 @@ fun CollabListScreen(navController: NavController, listId: String, viewModel: Sh
                 items(state.shows, key = { it.id }) { show ->
                     CollabShowCard(
                         show = show,
-                        listId = listId,
                         onClick = { navController.navigate(Screen.Detail(show.id, null)) },
                         onRemove = { viewModel.removeShowFromList(listId, show.id) }
                     )
@@ -148,7 +147,7 @@ fun CollabListScreen(navController: NavController, listId: String, viewModel: Sh
 }
 
 @Composable
-private fun CollabShowCard(show: MediaContent, listId: String, onClick: () -> Unit, onRemove: () -> Unit) {
+private fun CollabShowCard(show: MediaContent, onClick: () -> Unit, onRemove: () -> Unit) {
     var showRemoveDialog by remember { mutableStateOf(false) }
 
     if (showRemoveDialog) {

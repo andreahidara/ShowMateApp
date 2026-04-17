@@ -24,7 +24,6 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +33,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -93,16 +91,17 @@ class ProfileViewModel @Inject constructor(
     private val _achievementProgress = MutableStateFlow(0 to AchievementDefs.all.size)
     val achievementProgress: StateFlow<Pair<Int, Int>> = _achievementProgress.asStateFlow()
 
-    private val userProfileFlow = userRepository.getUserProfileFlow()
-        .onStart {
-            viewModelScope.launch {
-                try { interactionRepository.syncFavoritesAndWatchedToRoom() } catch (e: Exception) { Timber.e(e) }
-                _xp.value = runCatching { achievementRepository.getXp() }.getOrDefault(0)
-                val unlockedIds = runCatching { achievementRepository.getUnlockedIds() }.getOrDefault(emptyList())
-                _achievementProgress.value = unlockedIds.size to AchievementDefs.all.size
-                _isLoading.value = false
-            }
+    init {
+        viewModelScope.launch {
+            try { interactionRepository.syncFavoritesAndWatchedToRoom() } catch (e: Exception) { Timber.e(e) }
+            _xp.value = runCatching { achievementRepository.getXp() }.getOrDefault(0)
+            val unlockedIds = runCatching { achievementRepository.getUnlockedIds() }.getOrDefault(emptyList())
+            _achievementProgress.value = unlockedIds.size to AchievementDefs.all.size
+            _isLoading.value = false
         }
+    }
+
+    private val userProfileFlow = userRepository.getUserProfileFlow()
         .filterNotNull()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -180,11 +179,11 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 userRepository.clearUserCache()
+                authRepository.signOut()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Timber.e(e)
             }
-            authRepository.signOut()
             onSuccess()
         }
     }

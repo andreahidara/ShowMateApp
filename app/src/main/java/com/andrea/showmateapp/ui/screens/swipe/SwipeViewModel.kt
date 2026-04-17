@@ -65,11 +65,7 @@ class SwipeViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 Timber.e(e, "Error loading shows")
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Hubo un error cargando las series: " +
-                            "${e.localizedMessage ?: "Inténtalo de nuevo"}"
-                    )
+                    it.copy(isLoading = false, errorMessage = "Error al cargar las series. Inténtalo de nuevo.")
                 }
             }
         }
@@ -217,10 +213,15 @@ class SwipeViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
-            if (action.isLike) {
-                interactionRepository.toggleFavorite(action.show, setLiked = false)
-            } else {
-                interactionRepository.toggleDislike(action.show, setDisliked = false)
+            try {
+                if (action.isLike) {
+                    interactionRepository.toggleFavorite(action.show, setLiked = false)
+                } else {
+                    interactionRepository.toggleDislike(action.show, setDisliked = false)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Timber.e(e, "Error undoing swipe action")
             }
         }
     }

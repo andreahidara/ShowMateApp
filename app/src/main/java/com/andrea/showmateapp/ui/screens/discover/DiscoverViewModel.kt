@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.MediaContent
+import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
@@ -76,14 +77,11 @@ data class DiscoverUiState(
 class DiscoverViewModel @Inject constructor(
     private val repository: IShowRepository,
     private val userRepository: IUserRepository,
-    private val interactionRepository: com.andrea.showmateapp.domain.repository.IInteractionRepository,
+    private val interactionRepository: IInteractionRepository,
     private val getRecommendationsUseCase: GetRecommendationsUseCase,
     private val networkMonitor: NetworkMonitor,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
-
-    companion object {
-    }
 
     private val _uiState = MutableStateFlow(DiscoverUiState())
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
@@ -102,31 +100,36 @@ class DiscoverViewModel @Inject constructor(
 
     private fun observeInteractions() {
         viewModelScope.launch {
-            interactionRepository.getInteractedMediaIdsFlow().collect { interactedIds ->
-                if (interactedIds.isEmpty()) return@collect
-                
-                _uiState.update { state ->
-                    state.copy(
-                        heroShow = state.heroShow?.takeIf { it.id !in interactedIds },
-                        topGenreShows = state.topGenreShows.filter { it.id !in interactedIds },
-                        secondGenreShows = state.secondGenreShows.filter { it.id !in interactedIds },
-                        thirdGenreShows = state.thirdGenreShows.filter { it.id !in interactedIds },
-                        similarShows = state.similarShows.filter { it.id !in interactedIds },
-                        actorShows = state.actorShows.filter { it.id !in interactedIds },
-                        secondActorShows = state.secondActorShows.filter { it.id !in interactedIds },
-                        topRatedShows = state.topRatedShows.filter { it.id !in interactedIds },
-                        topKeywordShows = state.topKeywordShows.filter { it.id !in interactedIds },
-                        contextPicksShows = state.contextPicksShows.filter { it.id !in interactedIds },
-                        dayOfWeekShows = state.dayOfWeekShows.filter { it.id !in interactedIds },
-                        narrativeStyleShows = state.narrativeStyleShows.filter { it.id !in interactedIds },
-                        hiddenGemShows = state.hiddenGemShows.filter { it.id !in interactedIds },
-                        moodSectionShows = state.moodSectionShows.filter { it.id !in interactedIds },
-                        creatorShows = state.creatorShows.filter { it.id !in interactedIds },
-                        collaborativeShows = state.collaborativeShows.filter { it.id !in interactedIds },
-                        explorationShows = state.explorationShows.filter { it.id !in interactedIds },
-                        timeTravelShows = state.timeTravelShows.filter { it.id !in interactedIds }
-                    )
+            try {
+                interactionRepository.getInteractedMediaIdsFlow().collect { interactedIds ->
+                    if (interactedIds.isEmpty()) return@collect
+
+                    _uiState.update { state ->
+                        state.copy(
+                            heroShow = state.heroShow?.takeIf { it.id !in interactedIds },
+                            topGenreShows = state.topGenreShows.filter { it.id !in interactedIds },
+                            secondGenreShows = state.secondGenreShows.filter { it.id !in interactedIds },
+                            thirdGenreShows = state.thirdGenreShows.filter { it.id !in interactedIds },
+                            similarShows = state.similarShows.filter { it.id !in interactedIds },
+                            actorShows = state.actorShows.filter { it.id !in interactedIds },
+                            secondActorShows = state.secondActorShows.filter { it.id !in interactedIds },
+                            topRatedShows = state.topRatedShows.filter { it.id !in interactedIds },
+                            topKeywordShows = state.topKeywordShows.filter { it.id !in interactedIds },
+                            contextPicksShows = state.contextPicksShows.filter { it.id !in interactedIds },
+                            dayOfWeekShows = state.dayOfWeekShows.filter { it.id !in interactedIds },
+                            narrativeStyleShows = state.narrativeStyleShows.filter { it.id !in interactedIds },
+                            hiddenGemShows = state.hiddenGemShows.filter { it.id !in interactedIds },
+                            moodSectionShows = state.moodSectionShows.filter { it.id !in interactedIds },
+                            creatorShows = state.creatorShows.filter { it.id !in interactedIds },
+                            collaborativeShows = state.collaborativeShows.filter { it.id !in interactedIds },
+                            explorationShows = state.explorationShows.filter { it.id !in interactedIds },
+                            timeTravelShows = state.timeTravelShows.filter { it.id !in interactedIds }
+                        )
+                    }
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Timber.e(e, "observeInteractions flow failed")
             }
         }
     }
@@ -430,9 +433,10 @@ class DiscoverViewModel @Inject constructor(
                 val (dayTitle, dayShows) = buildDayOfWeekSection(recommendations)
 
                 val narrativeStyleLabel = if (topNarrativeStyle != null) {
-                    "Porque te gusta: ${NarrativeStyleMapper.getStyleLabel(
-                        topNarrativeStyle.key
-                    )}"
+                    context.getString(
+                        R.string.discover_narrative_style_prefix,
+                        NarrativeStyleMapper.getStyleLabel(topNarrativeStyle.key)
+                    )
                 } else {
                     ""
                 }
@@ -473,7 +477,8 @@ class DiscoverViewModel @Inject constructor(
 
                 val isOnline = networkMonitor.isOnline.firstOrNull() ?: true
                 _uiState.update { current ->
-                    val hasContent = hero != null || topGenreShows.isNotEmpty()
+                    val hasContent = hero != null || topGenreShows.isNotEmpty() ||
+                        secondGenreShows.isNotEmpty() || topRatedShows.isNotEmpty()
                     current.copy(
                         isLoading = false,
                         isRefreshing = false,
@@ -521,7 +526,7 @@ class DiscoverViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorMessage = "Error al cargar el contenido: ${e.localizedMessage ?: "Comprueba tu conexión"}"
+                        errorMessage = "Error al cargar el contenido. Comprueba tu conexión e inténtalo de nuevo."
                     )
                 }
             }

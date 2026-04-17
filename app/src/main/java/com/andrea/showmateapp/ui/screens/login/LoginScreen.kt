@@ -55,10 +55,15 @@ fun LoginScreen(navController: NavController, viewModel: LoginViewModel = hiltVi
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            runCatching {
-                val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            val account = runCatching {
+                GoogleSignIn.getSignedInAccountFromIntent(result.data)
                     .getResult(ApiException::class.java)
-                account.idToken?.let { viewModel.signInWithGoogle(it) }
+            }.getOrNull()
+            val idToken = account?.idToken
+            if (idToken != null) {
+                viewModel.signInWithGoogle(idToken)
+            } else {
+                viewModel.onGoogleSignInFailed()
             }
         }
     }
@@ -164,7 +169,7 @@ fun LoginScreenContent(
                         }
                     }
                     state.resetError?.let { err ->
-                        Text(err, color = Color(0xFFFF5252), fontSize = 13.sp)
+                        Text(err.asString(), color = Color(0xFFFF5252), fontSize = 13.sp)
                     }
                 }
             },

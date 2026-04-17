@@ -207,6 +207,7 @@ class FriendsViewModel @Inject constructor(
     }
 
     fun loadFeed() {
+        if (_uiState.value.isFeedLoading) return
         viewModelScope.launch {
             _uiState.update { it.copy(isFeedLoading = true) }
             try {

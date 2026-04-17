@@ -55,6 +55,13 @@ private fun accentForName(name: String): Color = ListAccentColors[Math.abs(name.
 fun CustomListsScreen(navController: NavController, viewModel: CustomListsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var listToDelete by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        val msg = uiState.error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(msg)
+        viewModel.dismissError()
+    }
 
     if (uiState.showCreateDialog) {
         AlertDialog(
@@ -142,6 +149,7 @@ fun CustomListsScreen(navController: NavController, viewModel: CustomListsViewMo
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {

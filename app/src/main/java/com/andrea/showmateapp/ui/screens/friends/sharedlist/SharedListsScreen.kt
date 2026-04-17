@@ -38,8 +38,8 @@ fun SharedListsScreen(navController: NavController, viewModel: SharedListViewMod
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
 
-    uiState.successMessage?.let {
-        LaunchedEffect(it) {
+    LaunchedEffect(uiState.successMessage) {
+        if (uiState.successMessage != null) {
             kotlinx.coroutines.delay(2000)
             viewModel.dismissSuccess()
         }

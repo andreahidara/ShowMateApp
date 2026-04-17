@@ -8,6 +8,7 @@ import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.andrea.showmateapp.util.ErrorType
+import com.andrea.showmateapp.util.NarrativeStyleMapper
 import com.andrea.showmateapp.util.PerfTracer
 import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.SnackbarManager
@@ -56,29 +57,49 @@ class HomeViewModel @Inject constructor(
 
     private fun observeInteractions() {
         viewModelScope.launch {
-            interactionRepository.getInteractedMediaIdsFlow().collect { interactedIds ->
-                if (interactedIds.isEmpty()) return@collect
+            try {
+                interactionRepository.getInteractedMediaIdsFlow().collect { interactedIds ->
+                    if (interactedIds.isEmpty()) return@collect
 
-                _uiState.update { state ->
-                    state.copy(
-                        upNextShows = state.upNextShows.filter { it.id !in interactedIds },
-                        trendingShows = state.trendingShows.filter { it.id !in interactedIds },
-                        top10Shows = state.top10Shows.filter { it.id !in interactedIds },
-                        newReleasesShows = state.newReleasesShows.filter { it.id !in interactedIds },
-                        thisWeekShows = state.thisWeekShows.filter { it.id !in interactedIds },
-                        genres = state.genres.copy(
-                            action = state.genres.action.filter { it.id !in interactedIds },
-                            comedy = state.genres.comedy.filter { it.id !in interactedIds },
-                            drama = state.genres.drama.filter { it.id !in interactedIds },
-                            sciFi = state.genres.sciFi.filter { it.id !in interactedIds },
-                            mystery = state.genres.mystery.filter { it.id !in interactedIds }
-                        ),
-                        platformShows = state.platformShows.mapValues { (_, shows) -> shows.filter { it.id !in interactedIds } },
-                        whatToWatchToday = state.whatToWatchToday?.takeIf { it.id !in interactedIds }
-                    )
+                    _uiState.update { state ->
+                        state.copy(
+                            upNextShows = state.upNextShows.filter { it.id !in interactedIds },
+                            trendingShows = state.trendingShows.filter { it.id !in interactedIds },
+                            top10Shows = state.top10Shows.filter { it.id !in interactedIds },
+                            newReleasesShows = state.newReleasesShows.filter { it.id !in interactedIds },
+                            thisWeekShows = state.thisWeekShows.filter { it.id !in interactedIds },
+                            genres = state.genres.copy(
+                                action = state.genres.action.filter { it.id !in interactedIds },
+                                comedy = state.genres.comedy.filter { it.id !in interactedIds },
+                                drama = state.genres.drama.filter { it.id !in interactedIds },
+                                sciFi = state.genres.sciFi.filter { it.id !in interactedIds },
+                                mystery = state.genres.mystery.filter { it.id !in interactedIds }
+                            ),
+                            platformShows = state.platformShows.mapValues { (_, shows) -> shows.filter { it.id !in interactedIds } },
+                            whatToWatchToday = state.whatToWatchToday?.takeIf { it.id !in interactedIds }
+                        )
+                    }
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Timber.e(e, "observeInteractions flow failed")
             }
         }
+    }
+
+    private fun findShowInState(mediaId: Int): com.andrea.showmateapp.data.model.MediaContent? {
+        val state = _uiState.value
+        return state.trendingShows.find { it.id == mediaId }
+            ?: state.top10Shows.find { it.id == mediaId }
+            ?: state.newReleasesShows.find { it.id == mediaId }
+            ?: state.thisWeekShows.find { it.id == mediaId }
+            ?: state.genres.action.find { it.id == mediaId }
+            ?: state.genres.comedy.find { it.id == mediaId }
+            ?: state.genres.drama.find { it.id == mediaId }
+            ?: state.genres.sciFi.find { it.id == mediaId }
+            ?: state.genres.mystery.find { it.id == mediaId }
+            ?: state.whatToWatchToday?.takeIf { it.id == mediaId }
+            ?: state.platformShows.values.flatten().find { it.id == mediaId }
     }
 
     fun onAction(action: HomeAction) {
@@ -118,16 +139,19 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun handleSwipeLeft(mediaId: Int) {
+        val show = findShowInState(mediaId)
         removeShowFromState(mediaId)
         viewModelScope.launch {
             try {
                 interactionRepository.trackMediaInteraction(
                     mediaId = mediaId,
-                    genres = emptyList(),
-                    keywords = emptyList(),
-                    actors = emptyList(),
-                    narrativeStyles = emptyMap(),
-                    creators = emptyList(),
+                    genres = show?.safeGenreIds?.map { it.toString() } ?: emptyList(),
+                    keywords = show?.keywordNames ?: emptyList(),
+                    actors = show?.credits?.cast?.map { it.id } ?: emptyList(),
+                    narrativeStyles = show?.let {
+                        NarrativeStyleMapper.extractStyles(it.keywordNames, it.episodeRunTime?.firstOrNull())
+                    } ?: emptyMap(),
+                    creators = show?.creatorIds ?: emptyList(),
                     interactionType = IInteractionRepository.InteractionType.Dislike
                 )
             } catch (e: Exception) {
@@ -137,16 +161,19 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun handleMarkAsWatched(mediaId: Int) {
+        val show = findShowInState(mediaId)
         removeShowFromState(mediaId)
         viewModelScope.launch {
             try {
                 interactionRepository.trackMediaInteraction(
                     mediaId = mediaId,
-                    genres = emptyList(),
-                    keywords = emptyList(),
-                    actors = emptyList(),
-                    narrativeStyles = emptyMap(),
-                    creators = emptyList(),
+                    genres = show?.safeGenreIds?.map { it.toString() } ?: emptyList(),
+                    keywords = show?.keywordNames ?: emptyList(),
+                    actors = show?.credits?.cast?.map { it.id } ?: emptyList(),
+                    narrativeStyles = show?.let {
+                        NarrativeStyleMapper.extractStyles(it.keywordNames, it.episodeRunTime?.firstOrNull())
+                    } ?: emptyMap(),
+                    creators = show?.creatorIds ?: emptyList(),
                     interactionType = IInteractionRepository.InteractionType.Watched
                 )
             } catch (e: Exception) {
@@ -471,17 +498,17 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchPhase2() {
+    private suspend fun fetchPhase2() = withContext(ioDispatcher) {
         PerfTracer.trace("home_phase2_fetch") { trace ->
             val excludedIds = interactionRepository.getExcludedMediaIds()
             val threeMonthsAgo = LocalDate.now().minusMonths(3).toString()
             val defs = mapOf(
-                "new" to viewModelScope.async { repository.discoverShows(firstAirDateGte = threeMonthsAgo, sortBy = "popularity.desc") },
-                "10759" to viewModelScope.async { repository.discoverShows(genreId = "10759") },
-                "35" to viewModelScope.async { repository.discoverShows(genreId = "35") },
-                "18" to viewModelScope.async { repository.discoverShows(genreId = "18") },
-                "10765" to viewModelScope.async { repository.discoverShows(genreId = "10765") },
-                "9648" to viewModelScope.async { repository.discoverShows(genreId = "9648") }
+                "new" to async { repository.discoverShows(firstAirDateGte = threeMonthsAgo, sortBy = "popularity.desc") },
+                "10759" to async { repository.discoverShows(genreId = "10759") },
+                "35" to async { repository.discoverShows(genreId = "35") },
+                "18" to async { repository.discoverShows(genreId = "18") },
+                "10765" to async { repository.discoverShows(genreId = "10765") },
+                "9648" to async { repository.discoverShows(genreId = "9648") }
             )
 
             val results = defs.mapValues { it.value.await() }

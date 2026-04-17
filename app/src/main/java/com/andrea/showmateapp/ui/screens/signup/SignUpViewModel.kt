@@ -62,6 +62,23 @@ class SignUpViewModel @Inject constructor(
         _uiState.update { it.copy(isConfirmPasswordVisible = !it.isConfirmPasswordVisible) }
     }
 
+    private fun mapFirebaseAuthError(throwable: Throwable): UiText {
+        val msg = throwable.message?.lowercase() ?: ""
+        return when {
+            "email_already_in_use" in msg || "already in use" in msg ->
+                UiText.StringResource(R.string.error_signup_email_in_use)
+            "weak_password" in msg ->
+                UiText.StringResource(R.string.error_signup_weak_password)
+            "invalid_email" in msg ->
+                UiText.StringResource(R.string.error_invalid_email)
+            "network" in msg ->
+                UiText.StringResource(R.string.error_no_connection)
+            "too_many_requests" in msg || "too many" in msg ->
+                UiText.StringResource(R.string.error_login_too_many_attempts)
+            else -> UiText.StringResource(R.string.error_signup_failed)
+        }
+    }
+
     fun onSignUpClick() {
         val state = _uiState.value
 
@@ -69,6 +86,14 @@ class SignUpViewModel @Inject constructor(
             state.username.isBlank() || state.confirmPassword.isBlank()
         ) {
             _uiState.update { it.copy(error = UiText.StringResource(R.string.error_empty_fields)) }
+            return
+        }
+        if (state.username.length < 3 || state.username.length > 20) {
+            _uiState.update { it.copy(error = UiText.StringResource(R.string.error_username_length)) }
+            return
+        }
+        if (!state.username.matches(Regex("^[a-zA-Z0-9_]+$"))) {
+            _uiState.update { it.copy(error = UiText.StringResource(R.string.error_username_format)) }
             return
         }
         if (!Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
@@ -97,16 +122,19 @@ class SignUpViewModel @Inject constructor(
 
             authRepository.signUp(state.email, state.password)
                 .onSuccess {
-                    userRepository.initUserProfile(state.username)
+                    runCatching { userRepository.initUserProfile(state.username) }
+                        .onFailure {
+                            _uiState.update {
+                                it.copy(isLoading = false, isSuccess = true,
+                                    error = UiText.StringResource(R.string.error_profile_init))
+                            }
+                            return@launch
+                        }
                     _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 .onFailure { throwable ->
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = throwable.message?.let { UiText.DynamicString(it) }
-                                ?: UiText.StringResource(R.string.error_signup_failed)
-                        )
+                        it.copy(isLoading = false, error = mapFirebaseAuthError(throwable))
                     }
                 }
         }

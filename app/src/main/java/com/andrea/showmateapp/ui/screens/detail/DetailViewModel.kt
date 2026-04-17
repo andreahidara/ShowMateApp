@@ -288,6 +288,7 @@ class DetailViewModel @Inject constructor(
     fun toggleEpisodeWatched(episodeId: Int, markPrevious: Boolean = false) {
         val showId = _uiState.value.media?.id ?: return
         val currentWatched = _uiState.value.watchedEpisodes.toMutableList()
+        val oldWatchedCount = currentWatched.size
         val season = _uiState.value.selectedSeason
 
         if (markPrevious && season != null) {
@@ -306,9 +307,8 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (markPrevious && season != null) {
-                    val prevCount = _uiState.value.watchedEpisodes.size
                     interactionRepository.setAllEpisodesWatched(showId, currentWatched)
-                    val delta = currentWatched.size - prevCount
+                    val delta = currentWatched.size - oldWatchedCount
                     if (delta > 0) runCatching { userRepository.recordViewingSession(showId, delta) }
                 } else {
                     if (interactionRepository.toggleEpisodeWatched(showId, episodeId)) {
@@ -449,6 +449,7 @@ class DetailViewModel @Inject constructor(
                 interactionRepository.saveReview(showId, text)
                 _uiState.update { it.copy(isReviewSaved = true) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(actionError = UiText.StringResource(R.string.error_save_review_failed)) }
             } finally {
                 _uiState.update { it.copy(isSavingReview = false) }
@@ -463,6 +464,7 @@ class DetailViewModel @Inject constructor(
             try {
                 interactionRepository.saveReview(showId, "")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(actionError = UiText.StringResource(R.string.error_delete_review_failed)) }
             }
         }
@@ -478,6 +480,7 @@ class DetailViewModel @Inject constructor(
                 trackInteraction(currentShow, IInteractionRepository.InteractionType.Rate(rating))
                 launchAchievementEvaluate()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(actionError = UiText.StringResource(R.string.error_rate_failed)) }
             }
         }
@@ -491,6 +494,7 @@ class DetailViewModel @Inject constructor(
             try {
                 interactionRepository.deleteRating(currentShow.id)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(userRating = previousRating) }
             }
         }

@@ -209,7 +209,12 @@ class GroupMatchViewModel @Inject constructor(
     fun startVoting() {
         viewModelScope.launch {
             sessionId?.let { id ->
-                groupSessionRepository.updateSessionStatus(id, GroupSession.STATUS_VOTING)
+                try {
+                    groupSessionRepository.updateSessionStatus(id, GroupSession.STATUS_VOTING)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    _uiState.update { it.copy(errorMessage = "Error al iniciar la votación") }
+                }
             }
         }
     }
@@ -236,7 +241,11 @@ class GroupMatchViewModel @Inject constructor(
 
         viewModelScope.launch {
             sessionId?.let { id ->
-                groupSessionRepository.submitVote(id, email, candidate.id, type)
+                try {
+                    groupSessionRepository.submitVote(id, email, candidate.id, type)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                }
             }
         }
 
@@ -261,7 +270,13 @@ class GroupMatchViewModel @Inject constructor(
         if (_uiState.value.myVetoUsed) return
 
         viewModelScope.launch {
-            sessionId?.let { id -> groupSessionRepository.submitVeto(id, email, candidate.id) }
+            sessionId?.let { id ->
+                try {
+                    groupSessionRepository.submitVeto(id, email, candidate.id)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                }
+            }
         }
         _uiState.update { it.copy(myVetoUsed = true, currentIndex = it.currentIndex + 1) }
     }
@@ -326,7 +341,13 @@ class GroupMatchViewModel @Inject constructor(
     fun saveNightTitle(title: String) {
         _uiState.update { it.copy(nightTitle = title, showNightTitleDialog = false) }
         viewModelScope.launch {
-            sessionId?.let { id -> groupSessionRepository.saveNightTitle(id, title) }
+            sessionId?.let { id ->
+                try {
+                    groupSessionRepository.saveNightTitle(id, title)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                }
+            }
         }
     }
 

@@ -15,5 +15,5 @@ data class LoginUiState(
     val isNewGoogleUser: Boolean = false,
     val isOnboardingCompleted: Boolean = false,
     val resetEmailSent: Boolean = false,
-    val resetError: String? = null
+    val resetError: UiText? = null
 )

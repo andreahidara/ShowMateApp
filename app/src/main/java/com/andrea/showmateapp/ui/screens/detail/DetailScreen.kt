@@ -60,15 +60,6 @@ fun DetailScreen(
     val showWhyDialog by viewModel.showWhyDialog.collectAsStateWithLifecycle()
     val whyFactors by viewModel.whyFactors.collectAsStateWithLifecycle()
 
-    var localWatched by remember { mutableStateOf(false) }
-    var localLiked by remember { mutableStateOf(false) }
-    var localEssential by remember { mutableStateOf(false) }
-    var localWatchlist by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.isWatched) { localWatched = uiState.isWatched }
-    LaunchedEffect(uiState.isLiked) { localLiked = uiState.isLiked }
-    LaunchedEffect(uiState.isEssential) { localEssential = uiState.isEssential }
-    LaunchedEffect(uiState.isInWatchlist) { localWatchlist = uiState.isInWatchlist }
-
     LaunchedEffect(showId) {
         viewModel.loadShowDetails(showId)
     }
@@ -85,27 +76,15 @@ fun DetailScreen(
 
     DetailScreenContent(
         uiState = uiState,
-        localWatched = localWatched,
-        localLiked = localLiked,
-        localEssential = localEssential,
-        localWatchlist = localWatchlist,
+        localWatched = uiState.isWatched,
+        localLiked = uiState.isLiked,
+        localEssential = uiState.isEssential,
+        localWatchlist = uiState.isInWatchlist,
         onBackClick = { navController.popBackStack() },
-        onLikeClick = {
-            localLiked = !localLiked
-            viewModel.toggleLiked()
-        },
-        onEssentialClick = {
-            localEssential = !localEssential
-            viewModel.toggleEssential()
-        },
-        onWatchedClick = {
-            localWatched = !localWatched
-            viewModel.toggleWatched()
-        },
-        onWatchlistClick = {
-            localWatchlist = !localWatchlist
-            viewModel.toggleWatchlist()
-        },
+        onLikeClick = { viewModel.toggleLiked() },
+        onEssentialClick = { viewModel.toggleEssential() },
+        onWatchedClick = { viewModel.toggleWatched() },
+        onWatchlistClick = { viewModel.toggleWatchlist() },
         onRateClick = { viewModel.rateShow(it) },
         onClearRateClick = { viewModel.clearRating() },
         onRetry = { viewModel.loadShowDetails(showId) },
@@ -184,11 +163,15 @@ fun DetailScreenContent(
     val context = LocalContext.current
     LaunchedEffect(uiState.actionError) {
         uiState.actionError?.let { error ->
-            val message = error.asString(context)
-            scope.launch {
-                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
-                onClearActionError()
-            }
+            snackbarHostState.showSnackbar(error.asString(context), duration = SnackbarDuration.Short)
+            onClearActionError()
+        }
+    }
+
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg.asString(context), duration = SnackbarDuration.Short)
+            viewModel.clearSnackbarMessage()
         }
     }
 

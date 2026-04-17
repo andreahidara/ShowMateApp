@@ -138,8 +138,12 @@ class SearchViewModel @Inject constructor(
     init {
         loadTrendingShows()
         viewModelScope.launch {
-            val raw = dataStore.data.map { it[KEY_RECENT] ?: "" }.first()
-            _recentSearches.value = if (raw.isBlank()) emptyList() else raw.split("|||").filter { it.isNotBlank() }
+            try {
+                val raw = dataStore.data.map { it[KEY_RECENT] ?: "" }.first()
+                _recentSearches.value = if (raw.isBlank()) emptyList() else raw.split("|||").filter { it.isNotBlank() }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -181,8 +185,6 @@ class SearchViewModel @Inject constructor(
             if (mode == SearchMode.ACTOR || mode == SearchMode.CREATOR) {
                 loadTrendingPeople(mode)
             }
-
-            val currentQuery = _pagingQuery.value.ifBlank { "" }
         }
     }
 

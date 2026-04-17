@@ -151,6 +151,20 @@ fun ListDetailScreen(navController: NavController, viewModel: ListDetailViewMode
                 }
             }
 
+            uiState.error != null -> {
+                Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(uiState.error ?: "", color = TextGray, fontSize = 14.sp)
+                        TextButton(onClick = { navController.popBackStack() }) {
+                            Text("Volver", color = PrimaryPurple)
+                        }
+                    }
+                }
+            }
+
             uiState.shows.isEmpty() -> {
                 ListDetailEmptyState(
                     modifier = Modifier.fillMaxSize().padding(paddingValues),

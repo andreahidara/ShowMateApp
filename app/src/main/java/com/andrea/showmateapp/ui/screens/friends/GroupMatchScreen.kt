@@ -83,7 +83,7 @@ fun GroupMatchScreen(
                 GroupPhase.LOBBY -> LobbyContent(uiState, viewModel, navController)
                 GroupPhase.VOTING -> VotingContent(uiState, viewModel)
                 GroupPhase.MATCH_FOUND -> MatchFoundContent(uiState, viewModel, navController)
-                GroupPhase.NO_MATCH -> NoMatchContent(uiState, viewModel)
+                GroupPhase.NO_MATCH -> NoMatchContent(uiState, viewModel, navController)
             }
         }
 
@@ -543,11 +543,13 @@ private fun MatchFoundContent(
     val media = uiState.matchedMedia
     val context = LocalContext.current
 
-    val scale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "scale"
-    )
+    val scale = remember { androidx.compose.animation.core.Animatable(0.8f) }
+    LaunchedEffect(Unit) {
+        scale.animateTo(
+            1f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -565,8 +567,8 @@ private fun MatchFoundContent(
             Box(
                 modifier = Modifier
                     .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
+                        scaleX = scale.value
+                        scaleY = scale.value
                     }
                     .width(200.dp)
                     .aspectRatio(2f / 3f)
@@ -701,7 +703,7 @@ private fun MatchFoundContent(
 }
 
 @Composable
-private fun NoMatchContent(uiState: GroupMatchUiState, viewModel: GroupMatchViewModel) {
+private fun NoMatchContent(uiState: GroupMatchUiState, viewModel: GroupMatchViewModel, navController: NavController) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -726,7 +728,7 @@ private fun NoMatchContent(uiState: GroupMatchUiState, viewModel: GroupMatchView
         )
         Spacer(Modifier.height(32.dp))
         Button(
-            onClick = { },
+            onClick = { navController.popBackStack() },
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)

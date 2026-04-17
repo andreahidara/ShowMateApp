@@ -88,7 +88,7 @@ fun GroupNightsScreen(navController: NavController, viewModel: GroupNightsViewMo
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    itemsIndexed(entries) { index, entry ->
+                    itemsIndexed(entries, key = { _, entry -> entry.session.id }) { index, entry ->
                         var visible by remember { mutableStateOf(false) }
                         LaunchedEffect(Unit) {
                             kotlinx.coroutines.delay(index * 60L)

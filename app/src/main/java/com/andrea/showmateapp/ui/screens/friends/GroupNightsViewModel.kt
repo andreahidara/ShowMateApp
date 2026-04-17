@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.friends
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.GroupSession
@@ -11,11 +12,14 @@ import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+@Immutable
 data class NightEntry(
     val session: GroupSession,
     val matchedMedia: MediaContent?
@@ -42,13 +46,17 @@ class GroupNightsViewModel @Inject constructor(
             }
             try {
                 val sessions = groupSessionRepository.getPastNights(email)
-                _entries.value = sessions.map { session ->
-                    val media = if (session.matchedMediaId != 0) {
-                        (showRepository.getShowDetails(session.matchedMediaId) as? Resource.Success)?.data
-                    } else {
-                        null
-                    }
-                    NightEntry(session, media)
+                _entries.value = coroutineScope {
+                    sessions.map { session ->
+                        async {
+                            val media = if (session.matchedMediaId != 0) {
+                                (showRepository.getShowDetails(session.matchedMediaId) as? Resource.Success)?.data
+                            } else {
+                                null
+                            }
+                            NightEntry(session, media)
+                        }
+                    }.map { it.await() }
                 }
             } catch (e: CancellationException) {
                 throw e

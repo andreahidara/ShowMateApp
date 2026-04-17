@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,7 +33,7 @@ import java.util.Calendar
 
 @Composable
 fun greeting(): String {
-    val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
+    val hour by remember { derivedStateOf { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) } }
     return when {
         hour < 12 -> stringResource(R.string.home_greeting_morning)
         hour < 20 -> stringResource(R.string.home_greeting_afternoon)

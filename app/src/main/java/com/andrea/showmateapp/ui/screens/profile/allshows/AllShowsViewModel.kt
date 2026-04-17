@@ -23,12 +23,14 @@ class AllShowsViewModel @Inject constructor(
 
     val type: String = savedStateHandle.toRoute<Screen.AllShows>().type
 
-    val shows: StateFlow<List<MediaContent>> = if (type == "watched") {
-        interactionRepository.getWatchedShowsFlow()
+    val shows: StateFlow<List<MediaContent>> = when (type) {
+        "watched" -> interactionRepository.getWatchedShowsFlow()
             .map { entities -> entities.map { it.toDomain() } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    } else {
-        interactionRepository.getLikedShowsFlow()
+        "watchlist" -> interactionRepository.getWatchlistShowsFlow()
+            .map { entities -> entities.map { it.toDomain() } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        else -> interactionRepository.getLikedShowsFlow()
             .map { entities -> entities.map { it.toDomain() } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     }

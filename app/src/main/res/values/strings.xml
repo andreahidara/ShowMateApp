@@ -181,6 +181,17 @@
     <string name="error_passwords_dont_match">Las contraseñas no coinciden</string>
     <string name="error_signup_failed">Error al crear la cuenta</string>
     <string name="error_google_signin">No se pudo iniciar sesión con Google</string>
+    <string name="error_login_wrong_credentials">Email o contraseña incorrectos</string>
+    <string name="error_login_user_not_found">No existe ninguna cuenta con este email</string>
+    <string name="error_login_user_disabled">Esta cuenta ha sido desactivada</string>
+    <string name="error_login_too_many_attempts">Demasiados intentos. Espera un momento e inténtalo de nuevo</string>
+    <string name="error_signup_email_in_use">Este email ya está registrado</string>
+    <string name="error_signup_weak_password">La contraseña es demasiado débil</string>
+    <string name="error_reset_blank_email">Introduce tu email primero</string>
+    <string name="error_reset_failed">No se pudo enviar el correo. Inténtalo de nuevo</string>
+    <string name="error_profile_init">Cuenta creada. Inicia sesión para continuar</string>
+    <string name="error_username_length">El nombre de usuario debe tener entre 3 y 20 caracteres</string>
+    <string name="error_username_format">Solo letras, números y guiones bajos (_)</string>
 
 
     <string name="google_web_client_id">992885817745-3qrbpnce23kttdet8gehrn7teu7tvo2b.apps.googleusercontent.com</string>
@@ -246,4 +257,16 @@
     <string name="narrative_desc_episodic">Episodios cortos, ideal para un rato libre</string>
     <string name="narrative_desc_long">Episodios largos para sumergirte de verdad</string>
     <string name="narrative_desc_default">Tiene el estilo narrativo que sueles disfrutar</string>
+
+    <!-- Discover -->
+    <string name="discover_narrative_style_prefix">Porque te gusta: %1$s</string>
+
+    <!-- Feedback de recomendaciones -->
+    <string name="feedback_sheet_title">¿Qué quieres hacer con esta serie?</string>
+    <string name="feedback_not_interested">No me interesa</string>
+    <string name="feedback_not_interested_desc">La eliminaremos de tus recomendaciones</string>
+    <string name="feedback_already_watched">Ya la vi</string>
+    <string name="feedback_already_watched_desc">La marcaremos como vista</string>
+    <string name="feedback_dismissed">Listo, ajustamos tus recomendaciones</string>
+    <string name="feedback_marked_watched">Serie marcada como vista</string>
 </resources>

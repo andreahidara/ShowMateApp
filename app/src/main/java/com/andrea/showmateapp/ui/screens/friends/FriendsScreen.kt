@@ -59,10 +59,16 @@ private val socialGradient = listOf(PrimaryPurple, PillGenre)
 fun FriendsScreen(globalNavController: NavController, viewModel: FriendsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    uiState.successMessage?.let { msg ->
-        LaunchedEffect(msg) {
+    LaunchedEffect(uiState.successMessage) {
+        if (uiState.successMessage != null) {
             kotlinx.coroutines.delay(2500)
             viewModel.dismissSuccess()
+        }
+    }
+    LaunchedEffect(uiState.errorMessage) {
+        if (uiState.errorMessage != null) {
+            kotlinx.coroutines.delay(3000)
+            viewModel.dismissError()
         }
     }
 

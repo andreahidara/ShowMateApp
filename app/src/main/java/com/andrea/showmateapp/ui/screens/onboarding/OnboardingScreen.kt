@@ -638,12 +638,6 @@ private val analysisPhrases = listOf(
 @Composable
 private fun AnalysisStep(state: OnboardingUiState) {
     val infiniteTransition = rememberInfiniteTransition(label = "analysis")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(1800, easing = LinearEasing)),
-        label = "spin"
-    )
     val pulse by infiniteTransition.animateFloat(
         initialValue = 0.92f,
         targetValue = 1.08f,

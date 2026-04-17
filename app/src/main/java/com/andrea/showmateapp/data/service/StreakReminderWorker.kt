@@ -89,7 +89,7 @@ class StreakReminderWorker @AssistedInject constructor(
     private fun computeStreak(profile: UserProfile): Int {
         val fmt = DateTimeFormatter.ISO_LOCAL_DATE
         val activeDays = profile.viewingHistory
-            .mapNotNull { raw -> runCatching { LocalDate.parse(raw.split(":")[0], fmt) }.getOrNull() }
+            .mapNotNull { raw -> runCatching { LocalDate.parse(raw.split(":").first(), fmt) }.getOrNull() }
             .toSet()
         var streak = 0
         var day = LocalDate.now().minusDays(1)

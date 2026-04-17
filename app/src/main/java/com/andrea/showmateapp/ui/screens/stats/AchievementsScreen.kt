@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -401,6 +402,4 @@ private fun LeaderboardRow(position: Int, entry: IAchievementRepository.Leaderbo
     }
 }
 
-private fun Modifier.graphicsLayerAlpha(alpha: Float): Modifier = this.then(
-    Modifier
-)
+private fun Modifier.graphicsLayerAlpha(alpha: Float): Modifier = graphicsLayer { this.alpha = alpha }

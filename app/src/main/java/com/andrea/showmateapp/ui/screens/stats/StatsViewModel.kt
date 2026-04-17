@@ -16,6 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -48,17 +49,21 @@ class StatsViewModel @Inject constructor(
 
     private fun observeProfile() {
         viewModelScope.launch {
-            userRepository.getUserProfileFlow().collect { profile ->
-                if (profile != null) {
-                    processProfileData(profile)
+            try {
+                userRepository.getUserProfileFlow().collectLatest { profile ->
+                    if (profile != null) {
+                        processProfileData(profile)
+                    }
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
-    private fun processProfileData(profile: UserProfile) {
-        viewModelScope.launch {
-            try {
+    private suspend fun processProfileData(profile: UserProfile) {
+        try {
                 val history = profile.viewingHistory
 
                 data class Entry(val date: LocalDate, val showId: String, val count: Int)
@@ -137,10 +142,9 @@ class StatsViewModel @Inject constructor(
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoading = false) }
-            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 }

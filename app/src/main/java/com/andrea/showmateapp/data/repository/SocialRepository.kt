@@ -202,7 +202,7 @@ class SocialRepository @Inject constructor(
             if (friendUids.isEmpty()) return@withContext emptyList()
 
             coroutineScope {
-                friendUids.map { uid ->
+                friendUids.take(30).map { uid ->
                     async {
                         val p = users.document(uid).get().await().toObject(UserProfile::class.java)
                         val compat = if (myProfile != null && p != null) {

@@ -118,6 +118,15 @@ fun SignUpScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    Text(
+                        text = "3–20 caracteres, solo letras, números y _",
+                        color = TextGray.copy(alpha = 0.7f),
+                        fontSize = 11.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, top = 4.dp)
+                    )
+
                     Spacer(modifier = Modifier.height(12.dp))
 
                     PrimaryTextField(
@@ -171,8 +180,7 @@ fun SignUpScreen(
                     if (state.password.isNotEmpty()) {
                         val strength = when {
                             state.password.length < 8 -> 0
-                            state.password.length < 10 ||
-                                (!state.password.any { it.isUpperCase() } || !state.password.any { it.isDigit() }) -> 1
+                            !state.password.any { it.isUpperCase() } || !state.password.any { it.isDigit() } -> 1
                             state.password.any { !it.isLetterOrDigit() } -> 3
                             else -> 2
                         }

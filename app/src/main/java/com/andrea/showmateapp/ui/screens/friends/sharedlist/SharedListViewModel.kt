@@ -16,8 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Immutable
 data class SharedListsUiState(
@@ -69,17 +71,28 @@ class SharedListViewModel @Inject constructor(
 
     fun createList(name: String, memberUids: List<String>, memberUsernames: List<String>) {
         viewModelScope.launch {
-            val listId = sharedListRepo.createSharedList(name, memberUids, memberUsernames)
-            if (listId != null) {
-                _uiState.value = _uiState.value.copy(successMessage = "Lista \"$name\" creada")
-            } else {
+            try {
+                val listId = sharedListRepo.createSharedList(name, memberUids, memberUsernames)
+                if (listId != null) {
+                    _uiState.value = _uiState.value.copy(successMessage = "Lista \"$name\" creada")
+                } else {
+                    _uiState.value = _uiState.value.copy(error = "Error al crear la lista")
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.value = _uiState.value.copy(error = "Error al crear la lista")
             }
         }
     }
 
     fun deleteList(listId: String) {
-        viewModelScope.launch { sharedListRepo.deleteSharedList(listId) }
+        viewModelScope.launch {
+            try {
+                sharedListRepo.deleteSharedList(listId)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
     }
 
     fun dismissSuccess() {
@@ -90,7 +103,12 @@ class SharedListViewModel @Inject constructor(
         _collabState.value = CollabListUiState(isLoading = true)
         viewModelScope.launch {
             try {
-                val list = myLists.value.find { it.listId == listId }
+                val lists = if (myLists.value.isNotEmpty()) {
+                    myLists.value
+                } else {
+                    withTimeoutOrNull(5000L) { myLists.first { it.isNotEmpty() } } ?: emptyList()
+                }
+                val list = lists.find { it.listId == listId }
                 if (list != null) {
                     val shows = if (list.showIds.isNotEmpty()) {
                         showRepository.getShowDetailsInParallel(list.showIds.map { it.toInt() })
@@ -109,10 +127,16 @@ class SharedListViewModel @Inject constructor(
     }
 
     fun removeShowFromList(listId: String, showId: Int) {
-        viewModelScope.launch { sharedListRepo.removeShowFromSharedList(listId, showId) }
-        _collabState.value = _collabState.value.copy(
-            shows = _collabState.value.shows.filter { it.id != showId }
-        )
+        val previous = _collabState.value.shows
+        _collabState.value = _collabState.value.copy(shows = previous.filter { it.id != showId })
+        viewModelScope.launch {
+            try {
+                sharedListRepo.removeShowFromSharedList(listId, showId)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _collabState.value = _collabState.value.copy(shows = previous)
+            }
+        }
     }
 
     fun setNowWatching(showId: Int, showName: String, posterPath: String?) {

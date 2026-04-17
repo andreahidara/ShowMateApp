@@ -42,9 +42,14 @@ class CustomListsViewModel @Inject constructor(
 
     fun loadLists() {
         viewModelScope.launch {
-            interactionRepository.getCustomListsFlow().collect { lists ->
-                _uiState.update { it.copy(lists = lists, isLoading = false) }
-                loadPosters(lists)
+            try {
+                interactionRepository.getCustomListsFlow().collect { lists ->
+                    _uiState.update { it.copy(lists = lists, isLoading = false) }
+                    loadPosters(lists)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(isLoading = false, error = "Error al cargar las listas") }
             }
         }
     }
@@ -85,22 +90,36 @@ class CustomListsViewModel @Inject constructor(
         val name = _uiState.value.newListName.trim()
         if (name.isBlank()) return
         viewModelScope.launch {
-            interactionRepository.createCustomList(name)
-            _uiState.update {
-                it.copy(
-                    lists = it.lists + (name to emptyList()),
-                    posterPaths = it.posterPaths + (name to null),
-                    showCreateDialog = false,
-                    newListName = ""
-                )
+            try {
+                interactionRepository.createCustomList(name)
+                _uiState.update {
+                    it.copy(
+                        lists = it.lists + (name to emptyList()),
+                        posterPaths = it.posterPaths + (name to null),
+                        showCreateDialog = false,
+                        newListName = ""
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(error = "Error al crear la lista") }
             }
         }
     }
 
     fun deleteList(name: String) {
         viewModelScope.launch {
-            interactionRepository.deleteCustomList(name)
-            loadLists()
+            try {
+                interactionRepository.deleteCustomList(name)
+                _uiState.update { it.copy(lists = it.lists - name, posterPaths = it.posterPaths - name) }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(error = "Error al eliminar la lista") }
+            }
         }
+    }
+
+    fun dismissError() {
+        _uiState.update { it.copy(error = null) }
     }
 }

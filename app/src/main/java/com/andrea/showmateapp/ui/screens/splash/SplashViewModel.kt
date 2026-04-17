@@ -7,6 +7,7 @@ import com.andrea.showmateapp.data.repository.SessionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -23,19 +24,24 @@ class SplashViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val sessionValid = sessionRepository.checkSessionAndLogoutIfExpired()
-            val user = authRepository.getCurrentUser()
-            val loggedIn = sessionValid && user != null
+            try {
+                val sessionValid = sessionRepository.checkSessionAndLogoutIfExpired()
+                val user = authRepository.getCurrentUser()
+                val loggedIn = sessionValid && user != null
 
-            if (loggedIn) {
-                sessionRepository.updateLastActivity()
-                val profile = userRepository.getUserProfile()
-                if (profile?.onboardingCompleted == true) {
-                    _authDecision.value = SplashDestination.HOME
+                if (loggedIn) {
+                    sessionRepository.updateLastActivity()
+                    val profile = userRepository.getUserProfile()
+                    if (profile?.onboardingCompleted == true) {
+                        _authDecision.value = SplashDestination.HOME
+                    } else {
+                        _authDecision.value = SplashDestination.ONBOARDING
+                    }
                 } else {
-                    _authDecision.value = SplashDestination.ONBOARDING
+                    _authDecision.value = SplashDestination.LOGIN
                 }
-            } else {
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _authDecision.value = SplashDestination.LOGIN
             }
         }

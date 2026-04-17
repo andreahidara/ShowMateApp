@@ -104,6 +104,7 @@ class UserInteractionRepository @Inject constructor(
     ) {
         if (setWatched) {
             showDao.insertShows(listOf(media.toEntity("watched")))
+            showDao.deleteWatchlistShow(media.id)
             runCatching {
                 userDoc()?.collection("watchlist")?.document(media.id.toString())?.delete()?.await()
             }
@@ -132,7 +133,16 @@ class UserInteractionRepository @Inject constructor(
         }
     }
 
-    override suspend fun toggleWatchlist(media: MediaContent, add: Boolean) = toggleBase(media, "watchlist", add, { it.copy(isInWatchlist = add) })
+    override suspend fun toggleWatchlist(media: MediaContent, add: Boolean) = toggleBase(
+        media, "watchlist", add,
+        updateDao = { it.copy(isInWatchlist = add) }
+    ) {
+        if (add) {
+            showDao.insertShows(listOf(media.toEntity("watchlist")))
+        } else {
+            showDao.deleteWatchlistShow(media.id)
+        }
+    }
     override suspend fun toggleDislike(media: MediaContent, setDisliked: Boolean) = toggleBase(media, "disliked", setDisliked, { it.copy(isDisliked = setDisliked) })
 
     override suspend fun isInWatchlist(mediaId: Int) = interactionDao.getById(mediaId)?.isInWatchlist ?: false

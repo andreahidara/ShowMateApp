@@ -5,9 +5,11 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -146,7 +148,7 @@ fun TmdbImage(
     )
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun ShowCard(
     media: MediaContent,
@@ -156,7 +158,8 @@ fun ShowCard(
     modifier: Modifier = Modifier,
     width: Dp = 110.dp,
     showTitle: Boolean = true,
-    tag: String = "list"
+    tag: String = "list",
+    onLongPress: ((MediaContent) -> Unit)? = null
 ) {
     val sharedElementKey = "image-${media.id}-$tag"
 
@@ -193,11 +196,13 @@ fun ShowCard(
                 scaleX = pressScale
                 scaleY = pressScale
             }
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClickLabel = media.name
-            ) { onClick(media, tag) }
+                onClickLabel = media.name,
+                onLongClick = { onLongPress?.invoke(media) },
+                onClick = { onClick(media, tag) }
+            )
     ) {
         Box(
             modifier = Modifier
@@ -368,7 +373,8 @@ fun ShowSection(
     onSeeAll: (() -> Unit)? = null,
     listState: LazyListState = rememberLazyListState(),
     onLoadMore: (() -> Unit)? = null,
-    isLoadingMore: Boolean = false
+    isLoadingMore: Boolean = false,
+    onItemLongPress: ((MediaContent) -> Unit)? = null
 ) {
     Column(modifier = modifier) {
         Row(
@@ -449,7 +455,8 @@ fun ShowSection(
                     animatedVisibilityScope = animatedVisibilityScope,
                     onClick = onItemClick,
                     modifier = Modifier.animateItem(),
-                    tag = tag
+                    tag = tag,
+                    onLongPress = onItemLongPress
                 )
             }
             if (isLoadingMore) {

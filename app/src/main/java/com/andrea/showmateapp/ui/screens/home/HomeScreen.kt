@@ -4,11 +4,14 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -17,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,6 +33,9 @@ import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.premium.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.screens.home.components.*
+import com.andrea.showmateapp.ui.theme.PrimaryPurple
+import com.andrea.showmateapp.ui.theme.SurfaceDark
+import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.ErrorType
 import com.andrea.showmateapp.util.SnackbarManager
 
@@ -68,6 +75,10 @@ fun HomeScreen(
         { platform -> viewModel.onAction(HomeAction.SelectPlatform(platform)) }
     }
 
+    var feedbackMedia by remember { mutableStateOf<MediaContent?>(null) }
+    val dismissedMsg = stringResource(R.string.feedback_dismissed)
+    val watchedMsg = stringResource(R.string.feedback_marked_watched)
+
     Box(modifier = Modifier.fillMaxSize()) {
         HomeScreenContent(
             userName = uiState.userName,
@@ -93,6 +104,7 @@ fun HomeScreen(
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
             onMediaClick = onMediaClick,
+            onMediaLongPress = { media -> feedbackMedia = media },
             onRetry = onRetry,
             onRefresh = onRefresh,
             onPickWhatToWatch = onPickWhatToWatch,
@@ -109,6 +121,23 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
+        )
+    }
+
+    feedbackMedia?.let { media ->
+        RecommendationFeedbackSheet(
+            media = media,
+            onDismiss = { feedbackMedia = null },
+            onNotInterested = {
+                feedbackMedia = null
+                viewModel.onAction(HomeAction.SwipeLeft(media.id))
+                SnackbarManager.showMessage(dismissedMsg)
+            },
+            onAlreadyWatched = {
+                feedbackMedia = null
+                viewModel.onAction(HomeAction.MarkAsWatched(media.id))
+                SnackbarManager.showMessage(watchedMsg)
+            }
         )
     }
 
@@ -157,6 +186,7 @@ fun HomeScreenContent(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onMediaClick: (MediaContent, String) -> Unit,
+    onMediaLongPress: ((MediaContent) -> Unit)? = null,
     onRetry: () -> Unit,
     onRefresh: () -> Unit,
     onPickWhatToWatch: () -> Unit = {},
@@ -289,7 +319,8 @@ fun HomeScreenContent(
                         subtitle = stringResource(R.string.home_trending_desc),
                         listState = trendingListState,
                         onLoadMore = onLoadMoreTrending,
-                        isLoadingMore = isLoadingMoreTrending
+                        isLoadingMore = isLoadingMoreTrending,
+                        onItemLongPress = onMediaLongPress
                     )
                 }
 
@@ -314,7 +345,8 @@ fun HomeScreenContent(
                             onItemClick = onMediaClick,
                             tag = "new_releases",
                             subtitle = stringResource(R.string.home_new_releases_desc),
-                            listState = newReleasesListState
+                            listState = newReleasesListState,
+                            onItemLongPress = onMediaLongPress
                         )
                     }
                 }
@@ -345,7 +377,8 @@ fun HomeScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "action",
-                            listState = actionListState
+                            listState = actionListState,
+                            onItemLongPress = onMediaLongPress
                         )
                     }
                 }
@@ -359,7 +392,8 @@ fun HomeScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "comedy",
-                            listState = comedyListState
+                            listState = comedyListState,
+                            onItemLongPress = onMediaLongPress
                         )
                     }
                 }
@@ -374,7 +408,8 @@ fun HomeScreenContent(
                             onItemClick = onMediaClick,
                             tag = "drama",
                             subtitle = stringResource(R.string.home_drama_desc),
-                            listState = dramaListState
+                            listState = dramaListState,
+                            onItemLongPress = onMediaLongPress
                         )
                     }
                 }
@@ -389,7 +424,8 @@ fun HomeScreenContent(
                             onItemClick = onMediaClick,
                             tag = "scifi",
                             subtitle = stringResource(R.string.home_scifi_desc),
-                            listState = sciFiListState
+                            listState = sciFiListState,
+                            onItemLongPress = onMediaLongPress
                         )
                     }
                 }
@@ -403,7 +439,8 @@ fun HomeScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "mystery",
-                            listState = mysteryListState
+                            listState = mysteryListState,
+                            onItemLongPress = onMediaLongPress
                         )
                     }
                 }
@@ -416,5 +453,108 @@ fun HomeScreenContent(
 
 private fun navigateToDetail(navController: NavController, media: MediaContent, tag: String) {
     navController.navigate(Screen.Detail(media.id, tag))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecommendationFeedbackSheet(
+    media: MediaContent,
+    onDismiss: () -> Unit,
+    onNotInterested: () -> Unit,
+    onAlreadyWatched: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceDark,
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = media.name,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Text(
+                text = stringResource(R.string.feedback_sheet_title),
+                color = TextGray,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            FeedbackOption(
+                icon = Icons.Default.ThumbDown,
+                title = stringResource(R.string.feedback_not_interested),
+                subtitle = stringResource(R.string.feedback_not_interested_desc),
+                iconTint = Color(0xFFE57373),
+                onClick = onNotInterested
+            )
+
+            FeedbackOption(
+                icon = Icons.Default.CheckCircle,
+                title = stringResource(R.string.feedback_already_watched),
+                subtitle = stringResource(R.string.feedback_already_watched_desc),
+                iconTint = PrimaryPurple,
+                onClick = onAlreadyWatched
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    color = TextGray,
+                    fontSize = 15.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedbackOption(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(24.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+            Text(
+                text = subtitle,
+                color = TextGray,
+                fontSize = 12.sp
+            )
+        }
+    }
 }
 

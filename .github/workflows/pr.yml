@@ -1,0 +1,62 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Create secret.properties
+        run: echo 'TMDB_API_TOKEN="NO_TOKEN"' > secret.properties
+
+      - name: Create google-services.json placeholder
+        run: |
+          cat > app/google-services.json << 'EOF'
+          {
+            "project_info": { "project_id": "showmate-placeholder" },
+            "client": [{
+              "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000" },
+              "api_key": [{ "current_key": "placeholder" }],
+              "services": {}
+            }],
+            "configuration_version": "1"
+          }
+          EOF
+
+      - name: Run ktlint
+        run: ./gradlew ktlintCheck --continue
+
+      - name: Run detekt
+        run: ./gradlew detekt --continue
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-pr
+          path: app/build/reports/tests/testDebugUnitTest/
+          retention-days: 7

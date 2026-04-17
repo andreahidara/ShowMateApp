@@ -1,6 +1,5 @@
 package com.andrea.showmateapp.ui.screens.login
 
-import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
@@ -21,6 +20,8 @@ class LoginViewModel @Inject constructor(
     private val userRepository: IUserRepository
 ) : ViewModel() {
 
+    private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
@@ -38,14 +39,20 @@ class LoginViewModel @Inject constructor(
 
     fun sendPasswordReset(email: String) {
         if (email.isBlank()) {
-            _uiState.update { it.copy(resetError = "Introduce tu email primero") }
+            _uiState.update { it.copy(resetError = UiText.StringResource(R.string.error_reset_blank_email)) }
             return
         }
         viewModelScope.launch {
             authRepository.sendPasswordResetEmail(email.trim())
                 .onSuccess { _uiState.update { it.copy(resetEmailSent = true, resetError = null) } }
-                .onFailure { e -> _uiState.update { it.copy(resetError = e.message ?: "No se pudo enviar el correo") } }
+                .onFailure { e ->
+                    _uiState.update { it.copy(resetError = mapFirebaseAuthError(e, forLogin = true)) }
+                }
         }
+    }
+
+    fun onGoogleSignInFailed() {
+        _uiState.update { it.copy(error = UiText.StringResource(R.string.error_google_signin)) }
     }
 
     fun dismissResetDialog() {
@@ -81,7 +88,7 @@ class LoginViewModel @Inject constructor(
             return
         }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
+        if (!emailRegex.matches(state.email)) {
             _uiState.update { it.copy(error = UiText.StringResource(R.string.error_invalid_email_format)) }
             return
         }
@@ -104,10 +111,28 @@ class LoginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = UiText.DynamicString(throwable.message ?: "Error desconocido")
+                            error = mapFirebaseAuthError(throwable, forLogin = true)
                         )
                     }
                 }
+        }
+    }
+
+    private fun mapFirebaseAuthError(throwable: Throwable, forLogin: Boolean): UiText {
+        val msg = throwable.message?.lowercase() ?: ""
+        return when {
+            "wrong_password" in msg || "invalid_credential" in msg || "invalid credential" in msg ->
+                UiText.StringResource(R.string.error_login_wrong_credentials)
+            "user_not_found" in msg || "no user record" in msg ->
+                UiText.StringResource(R.string.error_login_user_not_found)
+            "user_disabled" in msg ->
+                UiText.StringResource(R.string.error_login_user_disabled)
+            "too_many_requests" in msg || "too many" in msg ->
+                UiText.StringResource(R.string.error_login_too_many_attempts)
+            "network" in msg ->
+                UiText.StringResource(R.string.error_no_connection)
+            forLogin -> UiText.StringResource(R.string.error_login_wrong_credentials)
+            else -> UiText.StringResource(R.string.error_reset_failed)
         }
     }
 }

@@ -173,26 +173,33 @@ class OnboardingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             val state = _uiState.value
 
-            userRepository.saveOnboardingInterests(
-                genres = state.selectedGenres.toList(),
-                watchedShows = state.popularShows.filter { it.id in state.watchedShowIds },
-                lovedShows = state.popularShows.filter { it.id in state.lovedShowIds },
-                preferShortEpisodes = when (state.episodeLengthPref) {
-                    EpisodeLengthPref.SHORT -> true
-                    EpisodeLengthPref.LONG -> false
-                    else -> null
-                },
-                preferFinishedShows = when (state.statusPref) {
-                    StatusPref.FINISHED -> true
-                    StatusPref.ONGOING -> false
-                    else -> null
-                },
-                preferDubbed = when (state.dubbedPref) {
-                    DubbedPref.DUBBED -> true
-                    DubbedPref.VO -> false
-                    else -> null
-                }
-            )
+            val saved = runCatching {
+                userRepository.saveOnboardingInterests(
+                    genres = state.selectedGenres.toList(),
+                    watchedShows = state.popularShows.filter { it.id in state.watchedShowIds },
+                    lovedShows = state.popularShows.filter { it.id in state.lovedShowIds },
+                    preferShortEpisodes = when (state.episodeLengthPref) {
+                        EpisodeLengthPref.SHORT -> true
+                        EpisodeLengthPref.LONG -> false
+                        else -> null
+                    },
+                    preferFinishedShows = when (state.statusPref) {
+                        StatusPref.FINISHED -> true
+                        StatusPref.ONGOING -> false
+                        else -> null
+                    },
+                    preferDubbed = when (state.dubbedPref) {
+                        DubbedPref.DUBBED -> true
+                        DubbedPref.VO -> false
+                        else -> null
+                    }
+                )
+            }
+
+            if (saved.isFailure) {
+                _uiState.update { it.copy(isLoading = false, isComplete = true) }
+                return@launch
+            }
 
             runCatching {
                 val token = FirebaseMessaging.getInstance().token.await()

@@ -11,6 +11,7 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.GenreMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -66,35 +67,41 @@ class FriendCompareViewModel @Inject constructor(
                     compatibilityScore = null
                 )
             }
+            try {
+                val myProfileDeferred = async { userRepository.getUserProfile() }
+                val friendProfileDeferred = async { userRepository.getFriendProfile(email) }
+                val myProfile = myProfileDeferred.await()
+                val friendProfile = friendProfileDeferred.await()
 
-            val myProfileDeferred = async { userRepository.getUserProfile() }
-            val friendProfileDeferred = async { userRepository.getFriendProfile(email) }
-            val myProfile = myProfileDeferred.await()
-            val friendProfile = friendProfileDeferred.await()
-
-            if (friendProfile == null) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        hasSearched = true,
-                        error = "No se encontró ningún usuario con ese email"
-                    )
+                if (friendProfile == null) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            hasSearched = true,
+                            error = "No se encontró ningún usuario con ese email"
+                        )
+                    }
+                    return@launch
                 }
-                return@launch
-            }
 
-            val commonIds = run {
-                val myLiked = myProfile?.likedMediaIds?.toSet() ?: emptySet()
-                val friendLiked = friendProfile.likedMediaIds.toSet()
-                (myLiked intersect friendLiked).toList()
-            }
+                val commonIds = run {
+                    val myLiked = myProfile?.likedMediaIds?.toSet() ?: emptySet()
+                    val friendLiked = friendProfile.likedMediaIds.toSet()
+                    (myLiked intersect friendLiked).toList()
+                }
 
-            val compatibility = if (myProfile != null) calculateCompatibility(myProfile, friendProfile) else null
+                val compatibility = if (myProfile != null) calculateCompatibility(myProfile, friendProfile) else null
 
-            val shows = showRepository.getShowDetailsInParallel(commonIds)
+                val shows = if (commonIds.isNotEmpty()) showRepository.getShowDetailsInParallel(commonIds) else emptyList()
 
-            _uiState.update {
-                it.copy(isLoading = false, hasSearched = true, commonShows = shows, compatibilityScore = compatibility)
+                _uiState.update {
+                    it.copy(isLoading = false, hasSearched = true, commonShows = shows, compatibilityScore = compatibility)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(isLoading = false, hasSearched = true, error = "Error al comparar. Revisa tu conexión.")
+                }
             }
         }
     }
