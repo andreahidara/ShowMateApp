@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.*
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
+import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
 
@@ -1005,11 +1005,6 @@ fun WhyRecommendedDialog(factors: List<RecommendationReason>, onDismiss: () -> U
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    text = "El algoritmo de ShowMate ha cruzado tu historial visual interactivo, tus géneros guardados y la afinidad de otros usuarios similares para calcular tu nivel de afinidad con este título.",
-                    color = TextGray,
-                    fontSize = 13.sp,
-                )
                 if (factors.isEmpty()) {
                     Text(
                         stringResource(R.string.detail_why_recommended_empty),
@@ -1059,15 +1054,15 @@ fun WhyRecommendedDialog(factors: List<RecommendationReason>, onDismiss: () -> U
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(5.dp)
-                                    .clip(RoundedCornerShape(3.dp))
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(5.dp))
                                     .background(Color.White.copy(alpha = 0.08f))
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth(animatedFraction)
-                                        .height(5.dp)
-                                        .clip(RoundedCornerShape(3.dp))
+                                        .height(10.dp)
+                                        .clip(RoundedCornerShape(5.dp))
                                         .background(
                                             Brush.linearGradient(
                                                 listOf(barColor.copy(alpha = 0.6f), barColor)

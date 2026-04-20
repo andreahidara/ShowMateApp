@@ -34,9 +34,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.ui.components.premium.AuthBackground
-import com.andrea.showmateapp.ui.components.premium.PrimaryButton
-import com.andrea.showmateapp.ui.components.premium.PrimaryTextField
+import com.andrea.showmateapp.ui.components.AuthBackground
+import com.andrea.showmateapp.ui.components.PrimaryButton
+import com.andrea.showmateapp.ui.components.PrimaryTextField
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
 import com.andrea.showmateapp.ui.theme.PrimaryPurple

@@ -309,11 +309,15 @@ class DetailViewModel @Inject constructor(
                 if (markPrevious && season != null) {
                     interactionRepository.setAllEpisodesWatched(showId, currentWatched)
                     val delta = currentWatched.size - oldWatchedCount
-                    if (delta > 0) runCatching { userRepository.recordViewingSession(showId, delta) }
+                    if (delta > 0) {
+                        runCatching { userRepository.recordViewingSession(showId, delta) }
+                        checkAutoMarkWatched(showId, currentWatched)
+                    }
                 } else {
                     if (interactionRepository.toggleEpisodeWatched(showId, episodeId)) {
                         launchAchievementEvaluate()
                         runCatching { userRepository.recordViewingSession(showId, 1) }
+                        checkAutoMarkWatched(showId, _uiState.value.watchedEpisodes)
                     }
                 }
             } catch (e: Exception) {
@@ -342,11 +346,34 @@ class DetailViewModel @Inject constructor(
                 if (!isCompleted) {
                     launchAchievementEvaluate()
                     runCatching { userRepository.recordViewingSession(showId, seasonEpIds.size) }
+                    checkAutoMarkWatched(showId, newList)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 checkInteractions(showId)
             }
+        }
+    }
+
+    private suspend fun checkAutoMarkWatched(showId: Int, watchedEpisodes: List<Int>) {
+        if (_uiState.value.isWatched) return
+        val show = _uiState.value.media ?: return
+        val seasons = show.seasons?.filter { it.seasonNumber > 0 } ?: return
+        val allEpisodeIds = coroutineScope {
+            seasons.map { season ->
+                async {
+                    runCatching { showRepository.getSeasonDetails(showId, season.seasonNumber) }
+                        .getOrNull()
+                        ?.let { if (it is Resource.Success) it.data.episodes.map { ep -> ep.id } else emptyList() }
+                        ?: emptyList()
+                }
+            }.flatMap { it.await() }
+        }
+        if (allEpisodeIds.isNotEmpty() && watchedEpisodes.containsAll(allEpisodeIds)) {
+            interactionRepository.toggleWatched(show, true)
+            _uiState.update { it.copy(isWatched = true) }
+            trackInteraction(show, IInteractionRepository.InteractionType.Watched)
+            launchAchievementEvaluate()
         }
     }
 
@@ -383,9 +410,7 @@ class DetailViewModel @Inject constructor(
     private suspend fun loadUserReview(showId: Int) {
         val review = try {
             interactionRepository.getReview(showId)
-        } catch (
-            e: Exception
-        ) {
+        } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
         }

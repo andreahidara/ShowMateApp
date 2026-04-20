@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.andrea.showmateapp.ui.components.premium.AuthBackground
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
+import com.andrea.showmateapp.ui.components.AuthBackground
+import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils

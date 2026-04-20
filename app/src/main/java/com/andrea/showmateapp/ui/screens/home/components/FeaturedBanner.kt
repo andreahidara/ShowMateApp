@@ -23,8 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.ui.components.premium.MatchBadge
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
+import com.andrea.showmateapp.ui.components.MatchBadge
+import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.util.TmdbUtils

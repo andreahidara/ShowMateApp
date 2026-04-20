@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetViewerPersonalityUseCase
-import com.andrea.showmateapp.domain.usecase.GetWrappedStatsUseCase
 import com.andrea.showmateapp.util.GenreMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
@@ -28,16 +27,13 @@ data class StatsUiState(
     val dailyRecord: Int = 0,
     val totalEpisodesWatched: Int = 0,
     val topGenresByMonth: Map<String, List<Pair<String, Int>>> = emptyMap(),
-    val activityByMonth: Map<String, Int> = emptyMap(),
-    val personalityProfile: GetViewerPersonalityUseCase.PersonalityProfile? = null,
-    val wrappedStats: GetWrappedStatsUseCase.WrappedStats? = null
+    val personalityProfile: GetViewerPersonalityUseCase.PersonalityProfile? = null
 )
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val userRepository: IUserRepository,
-    private val getViewerPersonalityUseCase: GetViewerPersonalityUseCase,
-    private val getWrappedStatsUseCase: GetWrappedStatsUseCase
+    private val getViewerPersonalityUseCase: GetViewerPersonalityUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StatsUiState())
@@ -105,10 +101,6 @@ class StatsViewModel @Inject constructor(
                     prevDay = d
                 }
 
-                val activityByMonth = entries
-                    .groupBy { it.date.format(DateTimeFormatter.ofPattern("yyyy-MM")) }
-                    .mapValues { (_, es) -> es.sumOf { it.count } }
-
                 val watchedByGenre = profile.genreScores.entries
                     .sortedByDescending { it.value }
                     .take(6)
@@ -131,16 +123,8 @@ class StatsViewModel @Inject constructor(
                         dailyRecord = dailyRecord,
                         totalEpisodesWatched = total,
                         topGenresByMonth = topGenresByMonth,
-                        activityByMonth = activityByMonth,
                         personalityProfile = personalityProfile
                     )
-                }
-
-                try {
-                    val wrapped = getWrappedStatsUseCase.execute(profile)
-                    _uiState.update { it.copy(wrappedStats = wrapped) }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
                 }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

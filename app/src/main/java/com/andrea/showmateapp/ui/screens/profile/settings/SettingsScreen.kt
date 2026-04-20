@@ -173,9 +173,6 @@ fun SettingsScreenContent(
                                 showResetDialog = false
                             } else {
                                 showFeedback("Error al reiniciar los datos. Comprueba tu conexión.")
-                                // También cerramos el diálogo en caso de error para que no se quede bloqueado,
-                                // o podríamos dejarlo abierto para reintentar.
-                                // Por simplicidad y consistencia con showFeedback, lo cerramos.
                                 showResetDialog = false
                             }
                         }

@@ -70,9 +70,7 @@ class SettingsViewModel @Inject constructor(
     val currentEmail: StateFlow<String> = _currentEmail.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            _currentEmail.value = userRepository.getCurrentUserEmail() ?: ""
-        }
+        _currentEmail.value = userRepository.getCurrentUserEmail() ?: ""
     }
 
     fun setDarkTheme(enabled: Boolean) {

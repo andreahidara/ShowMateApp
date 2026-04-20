@@ -3,12 +3,13 @@ package com.andrea.showmateapp.data.repository
 import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.IAchievementRepository
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
+import com.andrea.showmateapp.util.safeFirestoreCall
+import com.andrea.showmateapp.util.safeFirestoreRun
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -23,59 +24,41 @@ class AchievementRepository @Inject constructor(
     private fun userDoc() = auth.currentUser?.uid?.let { db.collection("users").document(it) }
 
     override suspend fun getUnlockedIds(): List<String> = withContext(ioDispatcher) {
-        try {
+        safeFirestoreCall(emptyList()) {
             @Suppress("UNCHECKED_CAST")
             userDoc()?.get()?.await()?.get("unlockedAchievementIds") as? List<String> ?: emptyList()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
         }
     }
 
     override suspend fun getXp(): Int = withContext(ioDispatcher) {
-        try {
+        safeFirestoreCall(0) {
             userDoc()?.get()?.await()?.getLong("xp")?.toInt() ?: 0
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            0
         }
     }
 
     override suspend fun unlockAchievements(achievementIds: List<String>, xpToAdd: Int) = withContext(ioDispatcher) {
         if (achievementIds.isEmpty() && xpToAdd == 0) return@withContext
-        try {
-            val doc = userDoc() ?: return@withContext
-            val updates = mutableMapOf<String, Any>(
-                "xp" to FieldValue.increment(xpToAdd.toLong())
-            )
+        safeFirestoreRun {
+            val doc = userDoc() ?: return@safeFirestoreRun
+            val updates = mutableMapOf<String, Any>("xp" to FieldValue.increment(xpToAdd.toLong()))
             if (achievementIds.isNotEmpty()) {
-                updates["unlockedAchievementIds"] =
-                    FieldValue.arrayUnion(*achievementIds.toTypedArray<Any>())
+                updates["unlockedAchievementIds"] = FieldValue.arrayUnion(*achievementIds.toTypedArray<Any>())
             }
             doc.update(updates).await()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
         }
-        Unit
     }
 
     override suspend fun addXp(delta: Int) = withContext(ioDispatcher) {
-        try {
+        safeFirestoreRun {
             userDoc()?.update("xp", FieldValue.increment(delta.toLong()))?.await()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
         }
-        Unit
     }
 
     override suspend fun incrementAndGetGroupMatchCount(): Int = withContext(ioDispatcher) {
         val doc = userDoc() ?: return@withContext 0
-        try {
+        safeFirestoreCall(1) {
             doc.update("completedGroupMatches", FieldValue.increment(1)).await()
             doc.get().await().getLong("completedGroupMatches")?.toInt() ?: 1
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            1
         }
     }
 
@@ -83,7 +66,7 @@ class AchievementRepository @Inject constructor(
         friendEmails: List<String>
     ): List<IAchievementRepository.LeaderboardEntry> = withContext(ioDispatcher) {
         if (friendEmails.isEmpty()) return@withContext emptyList()
-        try {
+        safeFirestoreCall(emptyList()) {
             friendEmails.distinct().chunked(30).flatMap { chunk ->
                 db.collection("users")
                     .whereIn("email", chunk)
@@ -101,9 +84,6 @@ class AchievementRepository @Inject constructor(
                         )
                     }
             }.sortedByDescending { it.xp }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
         }
     }
 }

@@ -3,7 +3,6 @@ package com.andrea.showmateapp.ui.screens.friends
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.andrea.showmateapp.data.model.ActivityEvent
 import com.andrea.showmateapp.data.model.FriendInfo
 import com.andrea.showmateapp.data.model.FriendRequest
 import com.andrea.showmateapp.data.model.UserProfile
@@ -23,9 +22,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class FriendsTab { FRIENDS, REQUESTS, FEED, DISCOVER }
-
-enum class FriendsMode { COMPARE, GROUP }
+enum class FriendsTab { FRIENDS, REQUESTS, SEARCH }
 
 @Immutable
 data class FriendsUiState(
@@ -36,13 +33,9 @@ data class FriendsUiState(
     val outgoingRequests: List<FriendRequest> = emptyList(),
     val isRequestsLoading: Boolean = false,
     val unreadRequestCount: Int = 0,
-    val activityFeed: List<ActivityEvent> = emptyList(),
-    val isFeedLoading: Boolean = false,
     val searchQuery: String = "",
     val searchResults: List<UserProfile> = emptyList(),
     val isSearching: Boolean = false,
-    val suggestions: List<UserProfile> = emptyList(),
-    val isSuggestionsLoading: Boolean = false,
     val sentRequestUids: Set<String> = emptySet(),
     val errorMessage: String? = null,
     val successMessage: String? = null,
@@ -77,9 +70,7 @@ class FriendsViewModel @Inject constructor(
                     _uiState.update { it.copy(isSearching = true) }
                     val results = try {
                         socialRepository.searchByUsername(query)
-                    } catch (
-                        e: Exception
-                    ) {
+                    } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         emptyList()
                     }
@@ -96,8 +87,7 @@ class FriendsViewModel @Inject constructor(
         when (tab) {
             FriendsTab.FRIENDS -> loadFriends()
             FriendsTab.REQUESTS -> loadRequests()
-            FriendsTab.FEED -> loadFeed()
-            FriendsTab.DISCOVER -> if (_uiState.value.suggestions.isEmpty()) loadSuggestions()
+            FriendsTab.SEARCH -> Unit
         }
     }
 
@@ -107,9 +97,7 @@ class FriendsViewModel @Inject constructor(
             _uiState.update { it.copy(isFriendsLoading = true) }
             val friends = try {
                 socialRepository.getFriends()
-            } catch (
-                e: Exception
-            ) {
+            } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 emptyList()
             }
@@ -121,9 +109,7 @@ class FriendsViewModel @Inject constructor(
         viewModelScope.launch {
             val count = try {
                 socialRepository.getPendingRequestCount()
-            } catch (
-                e: Exception
-            ) {
+            } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 0
             }
@@ -206,41 +192,6 @@ class FriendsViewModel @Inject constructor(
         }
     }
 
-    fun loadFeed() {
-        if (_uiState.value.isFeedLoading) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isFeedLoading = true) }
-            try {
-                val friendUids = _uiState.value.friends.map { it.uid }.ifEmpty {
-                    socialRepository.getFriends().also { loaded ->
-                        _uiState.update { it.copy(friends = loaded) }
-                    }.map { it.uid }
-                }
-                val feed = socialRepository.getFriendActivityFeed(friendUids)
-                _uiState.update { it.copy(isFeedLoading = false, activityFeed = feed) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(isFeedLoading = false) }
-            }
-        }
-    }
-
-    fun loadSuggestions() {
-        if (_uiState.value.isSuggestionsLoading) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSuggestionsLoading = true) }
-            val suggestions = try {
-                socialRepository.getSuggestedFriends()
-            } catch (
-                e: Exception
-            ) {
-                if (e is CancellationException) throw e
-                emptyList()
-            }
-            _uiState.update { it.copy(isSuggestionsLoading = false, suggestions = suggestions) }
-        }
-    }
-
     fun onSearchQueryChange(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
         _rawSearchQuery.value = query
@@ -250,9 +201,7 @@ class FriendsViewModel @Inject constructor(
         viewModelScope.launch {
             val success = try {
                 socialRepository.sendFriendRequest(toUid, toUsername)
-            } catch (
-                e: Exception
-            ) {
+            } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 false
             }
@@ -300,6 +249,4 @@ class FriendsViewModel @Inject constructor(
 
     fun dismissError() = _uiState.update { it.copy(errorMessage = null) }
     fun dismissSuccess() = _uiState.update { it.copy(successMessage = null) }
-
-    fun getCurrentUid() = socialRepository.getCurrentUid()
 }

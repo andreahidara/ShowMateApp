@@ -10,6 +10,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.andrea.showmateapp.util.safeFirestoreCall
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
@@ -35,13 +36,7 @@ class UserRepository @Inject constructor(
 
     override suspend fun getUserProfile(): UserProfile? = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext null
-        try {
-            val snapshot = userDoc(uid).get().await()
-            snapshot.toObject(UserProfile::class.java)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
+        safeFirestoreCall(null) { userDoc(uid).get().await().toObject(UserProfile::class.java) }
     }
 
     override fun getUserProfileFlow(): Flow<UserProfile?> = callbackFlow {
@@ -145,61 +140,34 @@ class UserRepository @Inject constructor(
 
     override suspend fun getSimilarUsers(limit: Long): List<UserProfile> = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext emptyList()
-        try {
-            val snapshot = usersCollection
-                .whereNotEqualTo("userId", uid)
-                .limit(limit)
-                .get()
-                .await()
-            snapshot.toObjects(UserProfile::class.java)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
+        safeFirestoreCall(emptyList()) {
+            usersCollection.whereNotEqualTo("userId", uid).limit(limit).get().await()
+                .toObjects(UserProfile::class.java)
         }
     }
 
     override suspend fun userExists(email: String): Boolean = withContext(ioDispatcher) {
-        try {
-            val snapshot = usersCollection
-                .whereEqualTo("email", email)
-                .limit(1)
-                .get()
-                .await()
-            snapshot.documents.isNotEmpty()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            false
+        safeFirestoreCall(false) {
+            usersCollection.whereEqualTo("email", email).limit(1).get().await().documents.isNotEmpty()
         }
     }
 
     override suspend fun getFriendProfile(friendEmail: String): UserProfile? = withContext(ioDispatcher) {
-        try {
-            val snapshot = usersCollection
-                .whereEqualTo("email", friendEmail)
-                .limit(1)
-                .get()
-                .await()
-            snapshot.documents.firstOrNull()?.toObject(UserProfile::class.java)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
+        safeFirestoreCall(null) {
+            usersCollection.whereEqualTo("email", friendEmail).limit(1).get().await()
+                .documents.firstOrNull()?.toObject(UserProfile::class.java)
         }
     }
 
     override suspend fun compareWithFriend(friendEmail: String): List<Int> = withContext(ioDispatcher) {
-        try {
+        safeFirestoreCall(emptyList()) {
             val (myProfile, friendProfile) = coroutineScope {
                 val mine = async { getUserProfile() }
                 val friend = async { getFriendProfile(friendEmail) }
                 mine.await() to friend.await()
             }
-            if (myProfile == null || friendProfile == null) return@withContext emptyList()
-            val myLiked = myProfile.likedMediaIds.toSet()
-            val friendLiked = friendProfile.likedMediaIds.toSet()
-            (myLiked intersect friendLiked).toList()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
+            if (myProfile == null || friendProfile == null) return@safeFirestoreCall emptyList()
+            (myProfile.likedMediaIds.toSet() intersect friendProfile.likedMediaIds.toSet()).toList()
         }
     }
 
@@ -238,7 +206,6 @@ class UserRepository @Inject constructor(
             showDao.clearUserData()
             mediaInteractionDao.deleteAll()
 
-            // Reiniciamos solo lo relacionado con el algoritmo y preferencias
             val resetData = mapOf(
                 "onboardingCompleted" to false,
                 "genreScores" to emptyMap<String, Float>(),
@@ -264,10 +231,8 @@ class UserRepository @Inject constructor(
                 "preferDubbed" to null
             )
 
-            // Usamos update para no tocar campos protegidos como xp o friendIds
             userRef.update(resetData).await()
 
-            // Borrado de subcolecciones con manejo de errores individual
             val collections = listOf("watched", "favorites", "watchlist", "disliked", "ratings", "history", "recommendations")
             collections.forEach { coll ->
                 try {
@@ -329,12 +294,7 @@ class UserRepository @Inject constructor(
 
     override suspend fun deleteAccount() = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
-        try {
-            userDoc(uid).delete().await()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Timber.e(e, "Error deleting Firestore document")
-        }
+        safeFirestoreCall(Unit) { userDoc(uid).delete().await() }
         showDao.clearUserData()
         auth.currentUser?.delete()?.await()
     }

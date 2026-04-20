@@ -30,7 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.ui.components.premium.*
+import com.andrea.showmateapp.ui.components.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.screens.home.components.*
 import com.andrea.showmateapp.ui.theme.PrimaryPurple

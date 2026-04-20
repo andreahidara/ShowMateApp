@@ -32,17 +32,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.andrea.showmateapp.data.model.ActivityEvent
 import com.andrea.showmateapp.data.model.FriendInfo
 import com.andrea.showmateapp.data.model.FriendRequest
 import com.andrea.showmateapp.data.model.UserProfile
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
-import com.andrea.showmateapp.ui.components.premium.shimmerBrush
+import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.ErrorDark
-import com.andrea.showmateapp.ui.theme.GoldAccent
-import com.andrea.showmateapp.ui.theme.PillBinge
-import com.andrea.showmateapp.ui.theme.PillCreator
 import com.andrea.showmateapp.ui.theme.PillGenre
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
@@ -50,8 +45,6 @@ import com.andrea.showmateapp.ui.theme.SuccessDark
 import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
-import com.andrea.showmateapp.util.TmdbUtils
-import java.util.concurrent.TimeUnit
 
 private val socialGradient = listOf(PrimaryPurple, PillGenre)
 
@@ -82,42 +75,6 @@ fun FriendsScreen(globalNavController: NavController, viewModel: FriendsViewMode
             item { SocialHeader(unreadCount = uiState.unreadRequestCount) }
 
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 10.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(PrimaryPurple.copy(alpha = 0.12f))
-                        .border(1.dp, PrimaryPurple.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                        .clickable { globalNavController.navigate(Screen.SharedLists) }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Groups,
-                        contentDescription = null,
-                        tint = PrimaryPurple,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        "Listas compartidas",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForwardIos,
-                        contentDescription = null,
-                        tint = TextGray,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-
-            item {
                 SocialTabRow(
                     selected = uiState.tab,
                     onSelect = viewModel::setTab,
@@ -131,8 +88,7 @@ fun FriendsScreen(globalNavController: NavController, viewModel: FriendsViewMode
             when (uiState.tab) {
                 FriendsTab.FRIENDS -> friendsTabItems(uiState, viewModel, globalNavController)
                 FriendsTab.REQUESTS -> requestsTabItems(uiState, viewModel)
-                FriendsTab.FEED -> feedTabItems(uiState, globalNavController)
-                FriendsTab.DISCOVER -> discoverTabItems(uiState, viewModel)
+                FriendsTab.SEARCH -> searchTabItems(uiState, viewModel)
             }
 
             item { Spacer(Modifier.height(100.dp)) }
@@ -177,7 +133,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.friendsTabItems(
             SocialEmptyState(
                 icon = Icons.Default.Group,
                 title = "Sin amigos todavía",
-                body = "Ve a Descubrir para añadir personas con gustos similares."
+                body = "Ve a Buscar para añadir personas con gustos similares."
             )
         }
 
@@ -200,8 +156,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.friendsTabItems(
             items(uiState.friends, key = { it.uid }) { friend ->
                 FriendCard(
                     friend = friend,
-                    myUid = viewModel.getCurrentUid() ?: "",
-                    onCompare = { navController.navigate(Screen.FriendCompare(friend.email)) },
                     onAddToGroup = { viewModel.addFriendToGroup(friend) },
                     onRemove = { viewModel.removeFriend(friend.uid) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
@@ -222,7 +176,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.requestsTabItems(
             SocialEmptyState(
                 icon = Icons.Default.PersonAdd,
                 title = "Sin solicitudes pendientes",
-                body = "Busca amigos en la pestaña Descubrir."
+                body = "Busca amigos en la pestaña Buscar."
             )
         }
 
@@ -271,34 +225,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.requestsTabItems(
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.feedTabItems(
-    uiState: FriendsUiState,
-    navController: NavController
-) {
-    when {
-        uiState.isFeedLoading -> item { ShimmerList(itemHeight = 60) }
-
-        uiState.activityFeed.isEmpty() -> item {
-            SocialEmptyState(
-                icon = Icons.Default.DynamicFeed,
-                title = "Feed vacío",
-                body = "Cuando tus amigos vean, valoren o pongan en favoritos series, aparecerán aquí."
-            )
-        }
-
-        else -> {
-            items(uiState.activityFeed, key = { "${it.userId}_${it.timestamp}" }) { event ->
-                ActivityEventCard(
-                    event = event,
-                    onClick = { if (event.mediaId > 0) navController.navigate(Screen.Detail(event.mediaId)) },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-        }
-    }
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.discoverTabItems(
+private fun androidx.compose.foundation.lazy.LazyListScope.searchTabItems(
     uiState: FriendsUiState,
     viewModel: FriendsViewModel
 ) {
@@ -313,64 +240,38 @@ private fun androidx.compose.foundation.lazy.LazyListScope.discoverTabItems(
         )
     }
 
-    if (uiState.searchQuery.length >= 2) {
-        when {
-            uiState.isSearching -> item { ShimmerList(count = 3) }
-
-            uiState.searchResults.isEmpty() -> item {
-                SocialEmptyState(
-                    icon = Icons.Default.SearchOff,
-                    title = "Sin resultados",
-                    body = "No hay usuarios con ese nombre. Prueba con otro.",
-                    compact = true
-                )
-            }
-
-            else -> {
-                items(uiState.searchResults, key = { "sr_${it.userId}" }) { user ->
-                    val alreadyFriend = uiState.friends.any { it.uid == user.userId }
-                    val requestSent = user.userId in uiState.sentRequestUids
-                    SearchResultCard(
-                        user = user,
-                        alreadyFriend = alreadyFriend,
-                        requestSent = requestSent,
-                        onSendRequest = { viewModel.sendFriendRequest(user.userId, user.username) },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-    } else {
-        item {
-            SectionLabel(
-                text = "SUGERENCIAS",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    when {
+        uiState.searchQuery.length < 2 -> item {
+            SocialEmptyState(
+                icon = Icons.Default.PersonSearch,
+                title = "Busca por nombre",
+                body = "Escribe al menos 2 caracteres para encontrar usuarios.",
+                compact = true
             )
         }
-        when {
-            uiState.isSuggestionsLoading -> item { ShimmerList(count = 5) }
 
-            uiState.suggestions.isEmpty() -> item {
-                SocialEmptyState(
-                    icon = Icons.Default.People,
-                    title = "Sin sugerencias",
-                    body = "Valora más series para mejorar las recomendaciones.",
-                    compact = true
+        uiState.isSearching -> item { ShimmerList(count = 3) }
+
+        uiState.searchResults.isEmpty() -> item {
+            SocialEmptyState(
+                icon = Icons.Default.SearchOff,
+                title = "Sin resultados",
+                body = "No hay usuarios con ese nombre. Prueba con otro.",
+                compact = true
+            )
+        }
+
+        else -> {
+            items(uiState.searchResults, key = { "sr_${it.userId}" }) { user ->
+                val alreadyFriend = uiState.friends.any { it.uid == user.userId }
+                val requestSent = user.userId in uiState.sentRequestUids
+                SearchResultCard(
+                    user = user,
+                    alreadyFriend = alreadyFriend,
+                    requestSent = requestSent,
+                    onSendRequest = { viewModel.sendFriendRequest(user.userId, user.username) },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
-            }
-
-            else -> {
-                items(uiState.suggestions, key = { "sug_${it.userId}" }) { user ->
-                    val alreadyFriend = uiState.friends.any { it.uid == user.userId }
-                    val requestSent = user.userId in uiState.sentRequestUids
-                    SearchResultCard(
-                        user = user,
-                        alreadyFriend = alreadyFriend,
-                        requestSent = requestSent,
-                        onSendRequest = { viewModel.sendFriendRequest(user.userId, user.username) },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
             }
         }
     }
@@ -479,8 +380,7 @@ private fun TabLabel(tab: FriendsTab, isSelected: Boolean) {
     val label = when (tab) {
         FriendsTab.FRIENDS -> "Amigos"
         FriendsTab.REQUESTS -> "Solicitudes"
-        FriendsTab.FEED -> "Feed"
-        FriendsTab.DISCOVER -> "Descubrir"
+        FriendsTab.SEARCH -> "Buscar"
     }
     Text(
         text = label,
@@ -493,8 +393,6 @@ private fun TabLabel(tab: FriendsTab, isSelected: Boolean) {
 @Composable
 private fun FriendCard(
     friend: FriendInfo,
-    myUid: String,
-    onCompare: () -> Unit,
     onAddToGroup: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
@@ -545,12 +443,6 @@ private fun FriendCard(
                     .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FriendActionButton(
-                    label = "Comparar",
-                    icon = Icons.Default.Compare,
-                    onClick = onCompare,
-                    modifier = Modifier.weight(1f)
-                )
                 FriendActionButton(
                     label = "Grupo",
                     icon = Icons.Default.Group,
@@ -755,123 +647,6 @@ private fun OutgoingRequestCard(request: FriendRequest, onCancel: () -> Unit, mo
         ) {
             Text("Cancelar", color = TextGray, fontSize = 12.sp)
         }
-    }
-}
-
-@Composable
-private fun ActivityEventCard(event: ActivityEvent, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceDark)
-            .border(1.dp, Color.White.copy(alpha = 0.04f), RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(
-                    Brush.linearGradient(socialGradient),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = event.username.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Black
-            )
-        }
-
-        if (event.mediaPoster.isNotBlank()) {
-            TmdbImage(
-                path = event.mediaPoster,
-                contentDescription = event.mediaTitle,
-                size = TmdbUtils.ImageSize.W185,
-                modifier = Modifier
-                    .size(38.dp, 57.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(38.dp, 57.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.06f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Movie, contentDescription = null, tint = TextGray, modifier = Modifier.size(18.dp))
-            }
-        }
-
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = buildActivityText(event),
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 13.sp,
-                lineHeight = 18.sp
-            )
-            Text(
-                text = timeAgo(event.timestamp),
-                color = TextGray,
-                fontSize = 11.sp
-            )
-        }
-
-        val iconData = activityIcon(event.type)
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .background(iconData.second.copy(alpha = 0.12f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(iconData.first, contentDescription = null, tint = iconData.second, modifier = Modifier.size(14.dp))
-        }
-    }
-}
-
-private fun buildActivityText(event: ActivityEvent): String {
-    val name = event.username.ifBlank { "Alguien" }
-    val title = event.mediaTitle.ifBlank { "una serie" }
-    return when (event.type) {
-        ActivityEvent.TYPE_LIKED -> "$name puso en favoritos $title"
-        ActivityEvent.TYPE_ESSENTIAL -> "$name marcó $title como imprescindible"
-        ActivityEvent.TYPE_RATED -> {
-            val scoreStr = if (event.score > 0f) " con %.1f".format(event.score) else ""
-            "$name valoró $title$scoreStr"
-        }
-        ActivityEvent.TYPE_WATCHED -> "$name terminó de ver $title"
-        ActivityEvent.TYPE_WATCHLISTED -> "$name añadió $title a su watchlist"
-        else -> "$name interactuó con $title"
-    }
-}
-
-private fun activityIcon(type: String): Pair<androidx.compose.ui.graphics.vector.ImageVector, Color> = when (type) {
-    ActivityEvent.TYPE_LIKED -> Icons.Default.Favorite to PillBinge
-    ActivityEvent.TYPE_ESSENTIAL -> Icons.Default.Star to GoldAccent
-    ActivityEvent.TYPE_RATED -> Icons.Default.Grade to PillCreator
-    ActivityEvent.TYPE_WATCHED -> Icons.Default.CheckCircle to SuccessGreen
-    ActivityEvent.TYPE_WATCHLISTED -> Icons.Default.Bookmark to PrimaryPurple
-    else -> Icons.Default.Notifications to TextGray
-}
-
-private fun timeAgo(timestampMs: Long): String {
-    val diff = System.currentTimeMillis() - timestampMs
-    val mins = TimeUnit.MILLISECONDS.toMinutes(diff)
-    val hours = TimeUnit.MILLISECONDS.toHours(diff)
-    val days = TimeUnit.MILLISECONDS.toDays(diff)
-    return when {
-        mins < 1 -> "ahora mismo"
-        mins < 60 -> "hace $mins min"
-        hours < 24 -> "hace $hours h"
-        days == 1L -> "ayer"
-        days < 7 -> "hace $days días"
-        else -> "hace ${days / 7} sem."
     }
 }
 

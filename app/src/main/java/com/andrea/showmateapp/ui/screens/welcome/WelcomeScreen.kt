@@ -17,6 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.tooling.preview.Preview
+import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.andrea.showmateapp.ui.components.premium.AuthBackground
+import com.andrea.showmateapp.ui.components.AuthBackground
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
 import com.andrea.showmateapp.ui.theme.TextGray
@@ -228,5 +230,21 @@ private fun WelcomePageContent(page: WelcomePage) {
             textAlign = TextAlign.Center,
             lineHeight = 23.sp
         )
+    }
+}
+
+@Preview(name = "Welcome — Página 1", showBackground = true, backgroundColor = 0xFF151522, showSystemUi = true)
+@Composable
+private fun WelcomeScreenPreview() {
+    ShowMateAppTheme {
+        WelcomeScreen(onGetStarted = {})
+    }
+}
+
+@Preview(name = "Welcome — Contenido página", showBackground = true, backgroundColor = 0xFF151522, widthDp = 360, heightDp = 480)
+@Composable
+private fun WelcomePageContentPreview() {
+    ShowMateAppTheme {
+        WelcomePageContent(page = pages[1])
     }
 }

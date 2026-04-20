@@ -1,7 +1,5 @@
 package com.andrea.showmateapp.ui.screens.profile
 
-import com.andrea.showmateapp.data.model.UserLevel
-import com.andrea.showmateapp.data.model.WatchedShowItem
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.model.toDomain
 import com.andrea.showmateapp.data.model.MediaContent
@@ -93,12 +91,16 @@ class ProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            try { interactionRepository.syncFavoritesAndWatchedToRoom() } catch (e: Exception) { Timber.e(e) }
-            _xp.value = runCatching { achievementRepository.getXp() }.getOrDefault(0)
-            val unlockedIds = runCatching { achievementRepository.getUnlockedIds() }.getOrDefault(emptyList())
-            _achievementProgress.value = unlockedIds.size to AchievementDefs.all.size
+            loadAchievementsData()
             _isLoading.value = false
         }
+    }
+
+    private suspend fun loadAchievementsData() {
+        try { interactionRepository.syncFavoritesAndWatchedToRoom() } catch (e: Exception) { Timber.e(e) }
+        _xp.value = runCatching { achievementRepository.getXp() }.getOrDefault(0)
+        val unlockedIds = runCatching { achievementRepository.getUnlockedIds() }.getOrDefault(emptyList())
+        _achievementProgress.value = unlockedIds.size to AchievementDefs.all.size
     }
 
     private val userProfileFlow = userRepository.getUserProfileFlow()
@@ -162,10 +164,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                interactionRepository.syncFavoritesAndWatchedToRoom()
-                _xp.value = runCatching { achievementRepository.getXp() }.getOrDefault(0)
-                val unlockedIds = runCatching { achievementRepository.getUnlockedIds() }.getOrDefault(emptyList())
-                _achievementProgress.value = unlockedIds.size to AchievementDefs.all.size
+                loadAchievementsData()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Timber.e(e, "Error refreshing profile")

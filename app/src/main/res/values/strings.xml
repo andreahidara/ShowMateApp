@@ -269,4 +269,44 @@
     <string name="feedback_already_watched_desc">La marcaremos como vista</string>
     <string name="feedback_dismissed">Listo, ajustamos tus recomendaciones</string>
     <string name="feedback_marked_watched">Serie marcada como vista</string>
+
+    <!-- ReviewsSection -->
+    <string name="reviews_load_more">Ver más reseñas</string>
+    <string name="reviews_friends_title">¿Qué dicen tus amigos?</string>
+    <string name="reviews_community_title">Comunidad</string>
+    <string name="reviews_season_all">Toda la serie</string>
+    <string name="reviews_season_number">Temporada %1$d</string>
+    <string name="reviews_edit_title">Editar reseña</string>
+    <string name="reviews_write_title">Escribir reseña</string>
+    <string name="reviews_write_about">Sobre</string>
+    <string name="reviews_write_rating">Puntuación</string>
+    <string name="reviews_write_your_review">Tu reseña</string>
+    <string name="reviews_write_placeholder">¿Qué te ha parecido?</string>
+    <string name="reviews_too_long">Demasiado largo</string>
+    <string name="reviews_spoiler_label">Contiene spoilers</string>
+    <string name="reviews_spoiler_hint">Otros verán una advertencia antes de leer</string>
+    <string name="reviews_offensive_warning">Tu reseña contiene palabras inapropiadas. Por favor, modifícala antes de publicar.</string>
+    <string name="reviews_publish">Publicar reseña</string>
+    <string name="reviews_report_title">Reportar reseña</string>
+    <string name="reviews_report_message">¿Quieres reportar esta reseña por contenido inapropiado?</string>
+    <string name="reviews_report_action">Reportar</string>
+    <string name="reviews_friend_badge">amigo</string>
+    <string name="reviews_spoiler_reveal">Contiene spoilers — toca para revelar</string>
+    <string name="reviews_like">Me gusta</string>
+    <string name="reviews_empty_title">Sé el primero en reseñar</string>
+    <string name="reviews_empty_subtitle">No hay reseñas para este filtro todavía.</string>
+    <string name="reviews_delete_cd">Eliminar reseña</string>
+    <string name="reviews_rating_1">Muy malo</string>
+    <string name="reviews_rating_2">Malo</string>
+    <string name="reviews_rating_3">Regular</string>
+    <string name="reviews_rating_4">Bueno</string>
+    <string name="reviews_rating_5">¡Excelente!</string>
+
+    <!-- StreakReminderWorker notifications -->
+    <string name="notif_streak_danger_title">\uD83D\uDD25 ¡Racha de %1$d días en peligro!</string>
+    <string name="notif_streak_active_title">¡No pierdas tu racha! \uD83D\uDD25</string>
+    <string name="notif_streak_inactive_title">Vuelve a ShowMate \uD83C\uDFAC</string>
+    <string name="notif_streak_danger_body">Llevas %1$d días seguidos viendo series. ¡Pon aunque sea un episodio esta noche para no romperla!</string>
+    <string name="notif_streak_active_body">Tienes una racha de %1$d día%2$s. ¡No la pierdas, pon un episodio!</string>
+    <string name="notif_streak_inactive_body">¡Vuelve a ShowMate y empieza una nueva racha hoy!</string>
 </resources>

@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.ui.components.premium.ShowMateSpacing
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
+import com.andrea.showmateapp.ui.components.ShowMateSpacing
+import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.screens.home.MoodOption
 import com.andrea.showmateapp.ui.screens.home.TimeOption
 import com.andrea.showmateapp.ui.theme.AccentBlue

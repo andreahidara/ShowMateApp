@@ -5,6 +5,14 @@ import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.util.ErrorType
 import com.andrea.showmateapp.util.UiText
 
+data class HomeGenreShows(
+    val action: List<MediaContent> = emptyList(),
+    val comedy: List<MediaContent> = emptyList(),
+    val drama: List<MediaContent> = emptyList(),
+    val sciFi: List<MediaContent> = emptyList(),
+    val mystery: List<MediaContent> = emptyList()
+)
+
 @Immutable
 data class HomeUiState(
     val isLoading: Boolean = true,
@@ -26,8 +34,7 @@ data class HomeUiState(
     val whatToWatchToday: MediaContent? = null,
     val showContextSelector: Boolean = false,
     val criticalError: ErrorType? = null,
-    val errorMessage: UiText? = null,
-    val belowFoldLoaded: Boolean = false
+    val errorMessage: UiText? = null
 )
 
 sealed interface HomeAction {

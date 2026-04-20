@@ -26,14 +26,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.Review
-import com.andrea.showmateapp.ui.components.premium.shimmerBrush
+import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -85,7 +87,7 @@ fun SocialReviewsSection(
         ) {
             Column {
                 Spacer(Modifier.height(28.dp))
-                SectionLabel(text = "¿Qué dicen tus amigos?", emoji = "👥")
+                SectionLabel(text = stringResource(R.string.reviews_friends_title), emoji = "👥")
                 Spacer(Modifier.height(12.dp))
                 state.friendReviews.forEach { review ->
                     ReviewCard(
@@ -102,7 +104,7 @@ fun SocialReviewsSection(
         }
 
         Spacer(Modifier.height(28.dp))
-        SectionLabel(text = "Comunidad", emoji = "🌍")
+        SectionLabel(text = stringResource(R.string.reviews_community_title), emoji = "🌍")
         Spacer(Modifier.height(12.dp))
 
         if (state.isLoadingPublic) {
@@ -145,7 +147,7 @@ fun SocialReviewsSection(
                         ) {
                             Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Ver más reseñas", fontSize = 13.sp)
+                            Text(stringResource(R.string.reviews_load_more), fontSize = 13.sp)
                         }
                     }
                 }
@@ -186,7 +188,7 @@ private fun SeasonFilterRow(seasons: List<Int>, selected: Int, onSelect: (Int) -
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = if (season == 0) "Toda la serie" else "Temporada $season",
+                    text = if (season == 0) stringResource(R.string.reviews_season_all) else stringResource(R.string.reviews_season_number, season),
                     color = if (isSelected) Color.White else TextGray,
                     fontSize = 12.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -208,7 +210,7 @@ private fun MyReviewCard(review: Review?, writeRating: Int, onOpenSheet: () -> U
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Tu reseña",
+                stringResource(R.string.reviews_write_your_review),
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
@@ -221,7 +223,7 @@ private fun MyReviewCard(review: Review?, writeRating: Int, onOpenSheet: () -> U
                 ) {
                     Icon(
                         Icons.Default.DeleteOutline,
-                        contentDescription = "Eliminar reseña",
+                        contentDescription = stringResource(R.string.reviews_delete_cd),
                         tint = ErrorRed.copy(alpha = 0.7f),
                         modifier = Modifier.size(18.dp)
                     )
@@ -250,7 +252,7 @@ private fun MyReviewCard(review: Review?, writeRating: Int, onOpenSheet: () -> U
             ) {
                 Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Editar", fontSize = 13.sp)
+                Text(stringResource(R.string.edit), fontSize = 13.sp)
             }
         } else {
             Spacer(Modifier.height(8.dp))
@@ -266,7 +268,7 @@ private fun MyReviewCard(review: Review?, writeRating: Int, onOpenSheet: () -> U
             ) {
                 Icon(Icons.Default.Create, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Escribir reseña", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(stringResource(R.string.reviews_write_title), fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         }
     }
@@ -289,10 +291,10 @@ private fun ReviewCard(
         AlertDialog(
             onDismissRequest = { showReportDialog = false },
             containerColor = SurfaceDark,
-            title = { Text("Reportar reseña", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.reviews_report_title), color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "¿Quieres reportar esta reseña por contenido inapropiado?",
+                    stringResource(R.string.reviews_report_message),
                     color = TextGray,
                     fontSize = 14.sp
                 )
@@ -301,10 +303,10 @@ private fun ReviewCard(
                 TextButton(onClick = {
                     onReport()
                     showReportDialog = false
-                }) { Text("Reportar", color = ErrorRed, fontWeight = FontWeight.Bold) }
+                }) { Text(stringResource(R.string.reviews_report_action), color = ErrorRed, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showReportDialog = false }) { Text("Cancelar", color = TextGray) }
+                TextButton(onClick = { showReportDialog = false }) { Text(stringResource(R.string.cancel), color = TextGray) }
             }
         )
     }
@@ -350,7 +352,7 @@ private fun ReviewCard(
                                 .background(PrimaryPurple.copy(alpha = 0.2f))
                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
-                            Text("amigo", color = PrimaryPurpleLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.reviews_friend_badge), color = PrimaryPurpleLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     if (review.seasonNumber > 0) {
@@ -389,7 +391,7 @@ private fun ReviewCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(Icons.Default.VisibilityOff, null, tint = TextGray, modifier = Modifier.size(14.dp))
-                        Text("Contiene spoilers — toca para revelar", color = TextGray, fontSize = 12.sp)
+                        Text(stringResource(R.string.reviews_spoiler_reveal), color = TextGray, fontSize = 12.sp)
                     }
                 }
             } else {
@@ -430,7 +432,7 @@ private fun ReviewCard(
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
-                    text = if (review.likeCount > 0) "${review.likeCount}" else "Me gusta",
+                    text = if (review.likeCount > 0) "${review.likeCount}" else stringResource(R.string.reviews_like),
                     color = if (isLiked) HeartRed else TextGray,
                     fontSize = 12.sp,
                     fontWeight = if (isLiked) FontWeight.Bold else FontWeight.Normal
@@ -478,7 +480,7 @@ private fun WriteReviewSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                if (state.myReview != null) "Editar reseña" else "Escribir reseña",
+                if (state.myReview != null) stringResource(R.string.reviews_edit_title) else stringResource(R.string.reviews_write_title),
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Black
@@ -486,7 +488,7 @@ private fun WriteReviewSheet(
 
             if (seasons.size > 1) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Sobre", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.reviews_write_about), color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     SeasonFilterRow(
                         seasons = seasons,
                         selected = state.selectedSeason,
@@ -496,7 +498,7 @@ private fun WriteReviewSheet(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Puntuación", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.reviews_write_rating), color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 InteractiveStarRating(
                     current = state.writeRating,
                     onSelect = onRatingChange
@@ -504,11 +506,11 @@ private fun WriteReviewSheet(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Tu reseña", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.reviews_write_your_review), color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
                     value = state.writeText,
                     onValueChange = onTextChange,
-                    placeholder = { Text("¿Qué te ha parecido?", color = TextGray.copy(alpha = 0.6f)) },
+                    placeholder = { Text(stringResource(R.string.reviews_write_placeholder), color = TextGray.copy(alpha = 0.6f)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 100.dp, max = 200.dp),
@@ -531,7 +533,7 @@ private fun WriteReviewSheet(
                         fontSize = 11.sp
                     )
                     if (state.writeText.length > 500) {
-                        Text("Demasiado largo", color = ErrorRed, fontSize = 11.sp)
+                        Text(stringResource(R.string.reviews_too_long), color = ErrorRed, fontSize = 11.sp)
                     }
                 }
             }
@@ -554,13 +556,13 @@ private fun WriteReviewSheet(
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Contiene spoilers",
+                        stringResource(R.string.reviews_spoiler_label),
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Otros verán una advertencia antes de leer",
+                        stringResource(R.string.reviews_spoiler_hint),
                         color = TextGray,
                         fontSize = 12.sp
                     )
@@ -587,7 +589,7 @@ private fun WriteReviewSheet(
                 ) {
                     Icon(Icons.Default.Warning, null, tint = ErrorRed, modifier = Modifier.size(16.dp))
                     Text(
-                        "Tu reseña contiene palabras inapropiadas. Por favor, modifícala antes de publicar.",
+                        stringResource(R.string.reviews_offensive_warning),
                         color = ErrorRed,
                         fontSize = 12.sp,
                         lineHeight = 17.sp
@@ -612,7 +614,7 @@ private fun WriteReviewSheet(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Publicar reseña", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(stringResource(R.string.reviews_publish), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
         }
@@ -648,9 +650,17 @@ private fun InteractiveStarRating(current: Int, onSelect: (Int) -> Unit) {
             )
         }
         if (current > 0) {
+            val ratingLabels = listOf(
+                "",
+                stringResource(R.string.reviews_rating_1),
+                stringResource(R.string.reviews_rating_2),
+                stringResource(R.string.reviews_rating_3),
+                stringResource(R.string.reviews_rating_4),
+                stringResource(R.string.reviews_rating_5)
+            )
             Spacer(Modifier.width(8.dp))
             Text(
-                listOf("", "Muy malo", "Malo", "Regular", "Bueno", "¡Excelente!")[current],
+                ratingLabels[current],
                 color = StarYellow,
                 fontSize = 13.sp,
                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -708,8 +718,8 @@ private fun EmptyReviews() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("✍️", fontSize = 32.sp)
             Spacer(Modifier.height(8.dp))
-            Text("Sé el primero en reseñar", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Text("No hay reseñas para este filtro todavía.", color = TextGray, fontSize = 12.sp)
+            Text(stringResource(R.string.reviews_empty_title), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.reviews_empty_subtitle), color = TextGray, fontSize = 12.sp)
         }
     }
 }

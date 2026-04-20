@@ -55,30 +55,29 @@ class HomeViewModel @Inject constructor(
         observeInteractions()
     }
 
+    private fun HomeUiState.filterShows(predicate: (MediaContent) -> Boolean) = copy(
+        upNextShows = upNextShows.filter(predicate),
+        trendingShows = trendingShows.filter(predicate),
+        top10Shows = top10Shows.filter(predicate),
+        newReleasesShows = newReleasesShows.filter(predicate),
+        thisWeekShows = thisWeekShows.filter(predicate),
+        genres = genres.copy(
+            action = genres.action.filter(predicate),
+            comedy = genres.comedy.filter(predicate),
+            drama = genres.drama.filter(predicate),
+            sciFi = genres.sciFi.filter(predicate),
+            mystery = genres.mystery.filter(predicate)
+        ),
+        platformShows = platformShows.mapValues { (_, shows) -> shows.filter(predicate) },
+        whatToWatchToday = whatToWatchToday?.takeIf(predicate)
+    )
+
     private fun observeInteractions() {
         viewModelScope.launch {
             try {
                 interactionRepository.getInteractedMediaIdsFlow().collect { interactedIds ->
                     if (interactedIds.isEmpty()) return@collect
-
-                    _uiState.update { state ->
-                        state.copy(
-                            upNextShows = state.upNextShows.filter { it.id !in interactedIds },
-                            trendingShows = state.trendingShows.filter { it.id !in interactedIds },
-                            top10Shows = state.top10Shows.filter { it.id !in interactedIds },
-                            newReleasesShows = state.newReleasesShows.filter { it.id !in interactedIds },
-                            thisWeekShows = state.thisWeekShows.filter { it.id !in interactedIds },
-                            genres = state.genres.copy(
-                                action = state.genres.action.filter { it.id !in interactedIds },
-                                comedy = state.genres.comedy.filter { it.id !in interactedIds },
-                                drama = state.genres.drama.filter { it.id !in interactedIds },
-                                sciFi = state.genres.sciFi.filter { it.id !in interactedIds },
-                                mystery = state.genres.mystery.filter { it.id !in interactedIds }
-                            ),
-                            platformShows = state.platformShows.mapValues { (_, shows) -> shows.filter { it.id !in interactedIds } },
-                            whatToWatchToday = state.whatToWatchToday?.takeIf { it.id !in interactedIds }
-                        )
-                    }
+                    _uiState.update { it.filterShows { show -> show.id !in interactedIds } }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -119,26 +118,13 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun removeShowFromState(mediaId: Int) {
-        _uiState.update { state ->
-            state.copy(
-                upNextShows = state.upNextShows.filter { it.id != mediaId },
-                trendingShows = state.trendingShows.filter { it.id != mediaId },
-                top10Shows = state.top10Shows.filter { it.id != mediaId },
-                newReleasesShows = state.newReleasesShows.filter { it.id != mediaId },
-                genres = state.genres.copy(
-                    action = state.genres.action.filter { it.id != mediaId },
-                    comedy = state.genres.comedy.filter { it.id != mediaId },
-                    drama = state.genres.drama.filter { it.id != mediaId },
-                    sciFi = state.genres.sciFi.filter { it.id != mediaId },
-                    mystery = state.genres.mystery.filter { it.id != mediaId }
-                ),
-                thisWeekShows = state.thisWeekShows.filter { it.id != mediaId },
-                whatToWatchToday = state.whatToWatchToday?.takeIf { it.id != mediaId }
-            )
-        }
+        _uiState.update { it.filterShows { show -> show.id != mediaId } }
     }
 
-    private fun handleSwipeLeft(mediaId: Int) {
+    private fun handleSwipeLeft(mediaId: Int) = trackAndRemove(mediaId, IInteractionRepository.InteractionType.Dislike)
+    private fun handleMarkAsWatched(mediaId: Int) = trackAndRemove(mediaId, IInteractionRepository.InteractionType.Watched)
+
+    private fun trackAndRemove(mediaId: Int, interactionType: IInteractionRepository.InteractionType) {
         val show = findShowInState(mediaId)
         removeShowFromState(mediaId)
         viewModelScope.launch {
@@ -152,32 +138,10 @@ class HomeViewModel @Inject constructor(
                         NarrativeStyleMapper.extractStyles(it.keywordNames, it.episodeRunTime?.firstOrNull())
                     } ?: emptyMap(),
                     creators = show?.creatorIds ?: emptyList(),
-                    interactionType = IInteractionRepository.InteractionType.Dislike
+                    interactionType = interactionType
                 )
             } catch (e: Exception) {
-                Timber.e(e, "Error registerSwipe")
-            }
-        }
-    }
-
-    private fun handleMarkAsWatched(mediaId: Int) {
-        val show = findShowInState(mediaId)
-        removeShowFromState(mediaId)
-        viewModelScope.launch {
-            try {
-                interactionRepository.trackMediaInteraction(
-                    mediaId = mediaId,
-                    genres = show?.safeGenreIds?.map { it.toString() } ?: emptyList(),
-                    keywords = show?.keywordNames ?: emptyList(),
-                    actors = show?.credits?.cast?.map { it.id } ?: emptyList(),
-                    narrativeStyles = show?.let {
-                        NarrativeStyleMapper.extractStyles(it.keywordNames, it.episodeRunTime?.firstOrNull())
-                    } ?: emptyMap(),
-                    creators = show?.creatorIds ?: emptyList(),
-                    interactionType = IInteractionRepository.InteractionType.Watched
-                )
-            } catch (e: Exception) {
-                Timber.e(e, "Error markAsWatched")
+                Timber.e(e, "Error trackAndRemove $interactionType")
             }
         }
     }
@@ -385,7 +349,7 @@ class HomeViewModel @Inject constructor(
     private fun updateLoadingState(isInitialLoad: Boolean) {
         _uiState.update {
             if (isInitialLoad) {
-                it.copy(isLoading = true, errorMessage = null, criticalError = null, belowFoldLoaded = false)
+                it.copy(isLoading = true, errorMessage = null, criticalError = null)
             } else {
                 it.copy(isRefreshing = true, errorMessage = null, criticalError = null)
             }
@@ -541,8 +505,7 @@ class HomeViewModel @Inject constructor(
                         drama = dramaList,
                         sciFi = sciFiList,
                         mystery = mysteryList
-                    ),
-                    belowFoldLoaded = true
+                    )
                 )
             }
         }

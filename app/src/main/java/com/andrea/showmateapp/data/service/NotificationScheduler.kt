@@ -27,32 +27,6 @@ object NotificationScheduler {
         )
 
         wm.enqueueUniquePeriodicWork(
-            "friend_activity",
-            ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<FriendActivityWorker>(6, TimeUnit.HOURS)
-                .setConstraints(networkConstraint)
-                .build()
-        )
-
-        wm.enqueueUniquePeriodicWork(
-            "inactivity_recs",
-            ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<InactivityRecsWorker>(1, TimeUnit.DAYS)
-                .setConstraints(networkConstraint)
-                .setInitialDelay(18, TimeUnit.HOURS)
-                .build()
-        )
-
-        wm.enqueueUniquePeriodicWork(
-            "hidden_gem",
-            ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<HiddenGemWorker>(1, TimeUnit.DAYS)
-                .setConstraints(networkConstraint)
-                .setInitialDelay(12, TimeUnit.HOURS)
-                .build()
-        )
-
-        wm.enqueueUniquePeriodicWork(
             "streak_reminder",
             ExistingPeriodicWorkPolicy.KEEP,
             PeriodicWorkRequestBuilder<StreakReminderWorker>(1, TimeUnit.DAYS)

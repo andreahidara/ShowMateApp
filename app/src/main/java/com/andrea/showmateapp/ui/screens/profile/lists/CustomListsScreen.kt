@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
-import com.andrea.showmateapp.ui.components.premium.outlinedTextFieldColors
+import com.andrea.showmateapp.ui.components.TmdbImage
+import com.andrea.showmateapp.ui.components.outlinedTextFieldColors
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.HeartRed
 import com.andrea.showmateapp.ui.theme.PrimaryPurple

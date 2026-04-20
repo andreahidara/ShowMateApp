@@ -50,7 +50,7 @@ import androidx.navigation.NavController
 import com.andrea.showmateapp.data.model.GroupFilters
 import com.andrea.showmateapp.data.model.MemberVoteDoc
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
+import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.GenreMapper
@@ -689,16 +689,6 @@ private fun MatchFoundContent(
             Spacer(Modifier.height(16.dp))
         }
 
-        OutlinedButton(
-            onClick = { navController.navigate(Screen.GroupNights) },
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.4f))
-        ) {
-            Icon(Icons.Default.History, null, tint = PrimaryPurpleLight, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Ver historial", color = PrimaryPurpleLight, fontSize = 14.sp)
-        }
     }
 }
 

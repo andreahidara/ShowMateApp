@@ -61,8 +61,8 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.ui.components.premium.*
-import com.andrea.showmateapp.ui.components.premium.shimmerBrush
+import com.andrea.showmateapp.ui.components.*
+import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.AccentBlue
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
@@ -512,7 +512,7 @@ fun SearchScreen(
                                 items(personSearchResults, key = { it.id }) { person ->
                                     TrendingPersonCard(
                                         person = person,
-                                        onClick = { globalNavController.navigate(Screen.Actor(person.id, person.name)) }
+                                        onClick = { }
                                     )
                                 }
                             }
@@ -554,7 +554,7 @@ fun SearchScreen(
                                 items(trendingPeople, key = { it.id }) { person ->
                                     TrendingPersonCard(
                                         person = person,
-                                        onClick = { globalNavController.navigate(Screen.Actor(person.id, person.name)) }
+                                        onClick = { }
                                     )
                                 }
                             }
@@ -1124,7 +1124,7 @@ fun TrendingPersonCard(person: com.andrea.showmateapp.data.model.PersonSearchRes
                 .border(2.dp, accentColor.copy(alpha = 0.5f), CircleShape)
         ) {
             if (person.profilePath != null) {
-                com.andrea.showmateapp.ui.components.premium.TmdbImage(
+                com.andrea.showmateapp.ui.components.TmdbImage(
                     path = person.profilePath,
                     contentDescription = person.name,
                     size = com.andrea.showmateapp.util.TmdbUtils.ImageSize.W185,

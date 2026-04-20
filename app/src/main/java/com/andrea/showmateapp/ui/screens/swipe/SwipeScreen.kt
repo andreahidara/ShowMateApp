@@ -41,9 +41,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.ui.components.premium.MatchBadge
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
-import com.andrea.showmateapp.ui.components.premium.shimmerBrush
+import com.andrea.showmateapp.ui.components.MatchBadge
+import com.andrea.showmateapp.ui.components.TmdbImage
+import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.GenreMapper

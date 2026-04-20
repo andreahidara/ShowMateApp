@@ -37,7 +37,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.andrea.showmateapp.ui.components.BottomNavBar
-import com.andrea.showmateapp.ui.components.premium.AchievementToastOverlay
+import com.andrea.showmateapp.ui.components.AchievementToastOverlay
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.screens.discover.DiscoverScreen
 import com.andrea.showmateapp.ui.screens.friends.FriendsScreen

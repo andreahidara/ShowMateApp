@@ -40,7 +40,7 @@ import coil.request.ImageRequest
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.ui.components.premium.*
+import com.andrea.showmateapp.ui.components.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
@@ -102,9 +102,7 @@ fun DetailScreen(
         onHideAddToListDialog = { viewModel.hideAddToListDialog() },
         onAddToList = { viewModel.addToList(it) },
         onWhyDialogClick = { viewModel.showWhyDialog() },
-        onActorClick = { personId, personName ->
-            navController.navigate(Screen.Actor(personId = personId, personName = personName))
-        },
+        onActorClick = { _, _ -> },
         whyFactors = whyFactors,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,

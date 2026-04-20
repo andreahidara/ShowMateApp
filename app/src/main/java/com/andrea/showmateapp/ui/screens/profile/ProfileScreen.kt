@@ -56,8 +56,8 @@ import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.*
 import com.andrea.showmateapp.domain.usecase.GetProfileStatsUseCase
-import com.andrea.showmateapp.ui.components.premium.TmdbImage
-import com.andrea.showmateapp.ui.components.premium.shimmerBrush
+import com.andrea.showmateapp.ui.components.TmdbImage
+import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark

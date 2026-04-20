@@ -54,19 +54,14 @@ class StreakReminderWorker @AssistedInject constructor(
         }
 
         val title = when {
-            isDanger -> "\uD83D\uDD25 ¡Racha de $streakDays días en peligro!"
-            streakDays > 0 -> "¡No pierdas tu racha! \uD83D\uDD25"
-            else -> "Vuelve a ShowMate \uD83C\uDFAC"
+            isDanger -> context.getString(R.string.notif_streak_danger_title, streakDays)
+            streakDays > 0 -> context.getString(R.string.notif_streak_active_title)
+            else -> context.getString(R.string.notif_streak_inactive_title)
         }
         val body = when {
-            isDanger ->
-                "Llevas $streakDays días seguidos viendo series. ¡Pon aunque sea un episodio " +
-                    "esta noche para no romperla!"
-            streakDays > 0 ->
-                "Tienes una racha de $streakDays día${if (streakDays == 1) "" else "s"}. " +
-                    "¡No la pierdas, pon un episodio!"
-            else ->
-                "¡Vuelve a ShowMate y empieza una nueva racha hoy!"
+            isDanger -> context.getString(R.string.notif_streak_danger_body, streakDays)
+            streakDays > 0 -> context.getString(R.string.notif_streak_active_body, streakDays, if (streakDays == 1) "" else "s")
+            else -> context.getString(R.string.notif_streak_inactive_body)
         }
 
         val notification = NotificationCompat.Builder(context, channelId)

@@ -30,6 +30,13 @@ suspend fun <T> safeApiCall(retries: Int = 0, initialDelayMs: Long = 500L, apiCa
     }
 }
 
+suspend inline fun <T> safeFirestoreCall(default: T, crossinline block: suspend () -> T): T =
+    try { block() } catch (e: Exception) { if (e is CancellationException) throw e; default }
+
+suspend inline fun safeFirestoreRun(crossinline block: suspend () -> Unit) {
+    try { block() } catch (e: Exception) { if (e is CancellationException) throw e }
+}
+
 private fun Throwable.toErrorResource(): Resource.Error = when (this) {
     is IOException -> Resource.Error(type = ErrorType.Network)
     is HttpException -> when (val code = code()) {

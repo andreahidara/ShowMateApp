@@ -3,12 +3,13 @@ package com.andrea.showmateapp.data.repository
 import com.andrea.showmateapp.data.local.MediaInteractionDao
 import com.andrea.showmateapp.data.local.MediaInteractionEntity
 import com.andrea.showmateapp.data.local.ShowDao
-import com.andrea.showmateapp.data.model.ActivityEvent
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.model.toEntity
+import com.andrea.showmateapp.data.model.toDomain
 import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
+import com.andrea.showmateapp.util.safeFirestoreCall
 import com.andrea.showmateapp.domain.repository.IInteractionRepository.InteractionType
 import com.andrea.showmateapp.domain.repository.ISocialRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -46,12 +47,7 @@ class UserInteractionRepository @Inject constructor(
     private fun userDoc() = uid?.let { db.collection("users").document(it) }
 
     private suspend fun <T> getCollection(path: String, clazz: Class<T>): List<T> = withContext(ioDispatcher) {
-        try {
-            userDoc()?.collection(path)?.get()?.await()?.toObjects(clazz) ?: emptyList()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            emptyList()
-        }
+        safeFirestoreCall(emptyList()) { userDoc()?.collection(path)?.get()?.await()?.toObjects(clazz) ?: emptyList() }
     }
 
     override fun getLikedShowsFlow() = showDao.getLikedShowsFlow()
@@ -119,7 +115,6 @@ class UserInteractionRepository @Inject constructor(
     ) {
         if (setLiked) {
             showDao.insertShows(listOf(media.toEntity("liked")))
-            runCatching { socialRepo.get().postActivityEvent(ActivityEvent.TYPE_LIKED, media.id, media.name, media.posterPath ?: "") }
             runCatching { achievement.get().addXp(AchievementDefs.XP_LIKE_SHOW) }
         } else {
             showDao.deleteLikedShow(media.id)
@@ -128,7 +123,6 @@ class UserInteractionRepository @Inject constructor(
 
     override suspend fun toggleEssential(media: MediaContent, setEssential: Boolean) = toggleBase(media, "essentials", setEssential, { it.copy(isEssential = setEssential) }) {
         if (setEssential) {
-            runCatching { socialRepo.get().postActivityEvent(ActivityEvent.TYPE_ESSENTIAL, media.id, media.name, media.posterPath ?: "") }
             runCatching { achievement.get().addXp(AchievementDefs.XP_LIKE_SHOW) }
         }
     }
@@ -208,7 +202,6 @@ class UserInteractionRepository @Inject constructor(
                 val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
                 tx.set(doc, p.copy(ratings = p.ratings.toMutableMap().apply { put(mediaId.toString(), rating.toFloat()) }))
             }.await()
-            runCatching { socialRepo.get().postActivityEvent(ActivityEvent.TYPE_RATED, mediaId, show?.name ?: mediaId.toString(), show?.posterPath ?: "", rating.toFloat()) }
             runCatching { achievement.get().addXp(AchievementDefs.XP_RATE_SHOW) }
             userRepo.get().getUserProfile()
         } catch (e: Exception) { Timber.e(e, "updateRating failed"); throw e }
@@ -233,7 +226,9 @@ class UserInteractionRepository @Inject constructor(
         s?.documents?.mapNotNull { d -> d.id.toIntOrNull()?.to(d.getLong("rating")?.toInt() ?: return@mapNotNull null) }?.toMap() ?: emptyMap()
     }
 
-    override suspend fun getUserRating(mediaId: Int) = try { userDoc()?.collection("ratings")?.document(mediaId.toString())?.get()?.await()?.getLong("rating")?.toInt() } catch (e: Exception) { null }
+    override suspend fun getUserRating(mediaId: Int) = safeFirestoreCall(null) {
+        userDoc()?.collection("ratings")?.document(mediaId.toString())?.get()?.await()?.getLong("rating")?.toInt()
+    }
 
     override suspend fun saveReview(mediaId: Int, text: String) = withContext(ioDispatcher) {
         val doc = userDoc() ?: return@withContext
@@ -278,7 +273,8 @@ class UserInteractionRepository @Inject constructor(
         val doc = userDoc() ?: return@withContext
         db.runTransaction { tx ->
             val p = tx.get(doc).toObject(UserProfile::class.java) ?: UserProfile(userId = uid ?: "")
-            if (p.customLists.toMutableMap().remove(list) != null) tx.set(doc, p.copy(customLists = p.customLists.toMutableMap().apply { remove(list) }))
+            val updated = p.customLists.toMutableMap()
+            if (updated.remove(list) != null) tx.set(doc, p.copy(customLists = updated))
         }.await()
         userRepo.get().getUserProfile()
     }
@@ -335,11 +331,38 @@ class UserInteractionRepository @Inject constructor(
 
             showDao.syncCategory("liked", validFav.map { it.toEntity("liked") })
             showDao.syncCategory("watched", validWat.map { it.toEntity("watched") })
-            showDao.syncCategory("watchlist", validWls.map { it.toEntity("watchlist") })
+
+            // If Firestore watchlist is empty, check for locally pending items that failed to sync
+            val pendingWatchlistIds = interactionDao.getPendingSyncInteractions()
+                .filter { it.isInWatchlist }.map { it.mediaId }.toSet()
+
+            val extraLocalEntities = if (pendingWatchlistIds.isNotEmpty()) {
+                val firestoreIds = validWls.map { it.id }.toSet()
+                showDao.getShowsByCategory("watchlist")
+                    .filter { it.id in pendingWatchlistIds && it.id !in firestoreIds }
+                    .also { localShows ->
+                        localShows.forEach { entity ->
+                            try {
+                                doc.collection("watchlist")
+                                    .document(entity.id.toString())
+                                    .set(entity.toDomain()).await()
+                                interactionDao.getById(entity.id)?.let { interaction ->
+                                    interactionDao.upsert(interaction.copy(syncPending = false))
+                                }
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                Timber.w(e, "Retry watchlist write failed for ${entity.id}")
+                            }
+                        }
+                    }
+            } else emptyList()
+
+            val effectiveWatchlist = validWls.map { it.toEntity("watchlist") } + extraLocalEntities
+            showDao.syncCategory("watchlist", effectiveWatchlist)
 
             val fIds = validFav.map { it.id }.toSet()
             val wIds = validWat.map { it.id }.toSet()
-            val wlIds = validWls.map { it.id }.toSet()
+            val wlIds = effectiveWatchlist.map { it.id }.toSet()
             val all = (fIds + wIds + wlIds).toList()
 
             if (all.isNotEmpty()) {

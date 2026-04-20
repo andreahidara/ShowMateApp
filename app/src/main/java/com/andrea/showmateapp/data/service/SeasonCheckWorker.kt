@@ -4,7 +4,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -72,12 +71,7 @@ class SeasonCheckWorker @AssistedInject constructor(
     private fun sendNotification(showId: Int, showName: String, newSeasonCount: Int) {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("showmate://detail/$showId"),
-            ctx,
-            MainActivity::class.java
-        ).apply {
+        val intent = Intent(ctx, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(

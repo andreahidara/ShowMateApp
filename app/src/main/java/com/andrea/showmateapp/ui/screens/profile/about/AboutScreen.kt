@@ -29,8 +29,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.andrea.showmateapp.R
+import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
@@ -471,5 +474,26 @@ private fun TechRow(icon: ImageVector, iconTint: Color, category: String, value:
         Spacer(Modifier.width(10.dp))
         Text(category, color = TextGray, fontSize = 13.sp, modifier = Modifier.weight(1f))
         Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
+    }
+}
+
+@Preview(name = "About Screen", showBackground = true, showSystemUi = true)
+@Composable
+private fun AboutScreenPreview() {
+    ShowMateAppTheme {
+        AboutScreen(navController = rememberNavController())
+    }
+}
+
+@Preview(name = "About — Sección card", showBackground = true, widthDp = 360)
+@Composable
+private fun AboutSectionCardPreview() {
+    ShowMateAppTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            AboutSectionCard(title = "Stack Tecnológico", icon = Icons.Default.Code, iconTint = Color(0xFF4CAF50)) {
+                TechRow(Icons.Default.Brush, Color(0xFFE91E63), "UI", "Jetpack Compose + Material 3")
+                TechRow(Icons.Default.Architecture, Color(0xFF7C4DFF), "Arquitectura", "MVVM + Clean Architecture")
+            }
+        }
     }
 }

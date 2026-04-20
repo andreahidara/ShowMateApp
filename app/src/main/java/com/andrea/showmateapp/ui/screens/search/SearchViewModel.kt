@@ -128,10 +128,8 @@ class SearchViewModel @Inject constructor(
     private val _searchMode = MutableStateFlow(SearchMode.TITLE)
     val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
 
-    private val _trendingPeople =
-        MutableStateFlow<List<com.andrea.showmateapp.data.model.PersonSearchResult>>(emptyList())
-    val trendingPeople: StateFlow<List<com.andrea.showmateapp.data.model.PersonSearchResult>> =
-        _trendingPeople.asStateFlow()
+    private val _trendingPeople = MutableStateFlow<List<PersonSearchResult>>(emptyList())
+    val trendingPeople: StateFlow<List<PersonSearchResult>> = _trendingPeople.asStateFlow()
 
     private var searchJob: Job? = null
 
@@ -188,20 +186,20 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    private fun filterPeopleByMode(people: List<PersonSearchResult>, mode: SearchMode) = when (mode) {
+        SearchMode.ACTOR -> people.filter { it.knownForDepartment?.lowercase() == "acting" }
+        SearchMode.CREATOR -> people.filter {
+            val dept = it.knownForDepartment?.lowercase() ?: ""
+            dept == "directing" || dept == "writing" || dept == "production" || dept == "creator"
+        }
+        else -> people
+    }
+
     private fun loadTrendingPeople(mode: SearchMode) {
         viewModelScope.launch {
             try {
                 val response = tmdbApiService.getTrendingPeople()
-                _trendingPeople.value = when (mode) {
-                    SearchMode.ACTOR -> response.results.filter {
-                        it.knownForDepartment?.lowercase() == "acting"
-                    }
-                    SearchMode.CREATOR -> response.results.filter {
-                        val dept = it.knownForDepartment?.lowercase() ?: ""
-                        dept == "directing" || dept == "writing" || dept == "production" || dept == "creator"
-                    }
-                    else -> response.results
-                }.take(20)
+                _trendingPeople.value = filterPeopleByMode(response.results, mode).take(20)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -262,32 +260,12 @@ class SearchViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 if (query.isNotBlank()) {
-                    if (_searchMode.value == SearchMode.TITLE) {
-                        val result = showRepository.searchShows(query)
-                        if (result is Resource.Success) {
-                            _searchResults.value = getRecommendationsUseCase.scoreShows(result.data)
-                            saveRecentQuery(query)
-                        } else if (result is Resource.Error) {
-                            _errorMessage.value = result.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.error_unknown)
-                        }
-                    } else {
-                        val result = showRepository.searchPerson(query)
-                        if (result is Resource.Success) {
-                            val filtered = when (_searchMode.value) {
-                                SearchMode.ACTOR -> result.data.filter {
-                                    it.knownForDepartment?.lowercase() == "acting"
-                                }
-                                SearchMode.CREATOR -> result.data.filter {
-                                    val dept = it.knownForDepartment?.lowercase() ?: ""
-                                    dept == "directing" || dept == "writing" || dept == "production" || dept == "creator"
-                                }
-                                else -> result.data
-                            }
-                            _personSearchResults.value = filtered
-                            saveRecentQuery(query)
-                        } else if (result is Resource.Error) {
-                            _errorMessage.value = result.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.error_unknown)
-                        }
+                    val result = showRepository.searchPerson(query)
+                    if (result is Resource.Success) {
+                        _personSearchResults.value = filterPeopleByMode(result.data, _searchMode.value)
+                        saveRecentQuery(query)
+                    } else if (result is Resource.Error) {
+                        _errorMessage.value = result.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.error_unknown)
                     }
                 } else if (_isFilterActive.value) {
                     applyFilters()

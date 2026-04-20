@@ -39,8 +39,6 @@ sealed interface Screen {
 
     @Serializable object CustomLists : Screen
 
-    @Serializable data class FriendCompare(val friendEmail: String = "") : Screen
-
     @Serializable data class ListDetail(val listName: String) : Screen
 
     @Serializable data class AllShows(val type: String) : Screen
@@ -49,13 +47,5 @@ sealed interface Screen {
 
     @Serializable data class GroupMatch(val memberEmails: String) : Screen
 
-    @Serializable object GroupNights : Screen
-
     @Serializable object Achievements : Screen
-
-    @Serializable data class Actor(val personId: Int, val personName: String = "") : Screen
-
-    @Serializable data class CollabList(val listId: String) : Screen
-
-    @Serializable object SharedLists : Screen
 }

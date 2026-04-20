@@ -142,64 +142,57 @@ class DiscoverViewModel @Inject constructor(
         loadDiscoverContent(isRefresh = true)
     }
 
-    fun loadMoreTopGenre() {
-        if (_uiState.value.isLoadingMoreTopGenre) return
-        if (topGenrePage >= topGenreTotalPages) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingMoreTopGenre = true) }
-            try {
-                val result = repository.discoverShowsPaged(
-                    genreId = currentTopGenreId,
-                    sortBy = "popularity.desc",
-                    page = topGenrePage + 1
-                )
-                if (result is Resource.Success) {
-                    topGenrePage++
-                    topGenreTotalPages = result.data.second
-                    val scored = getRecommendationsUseCase.scoreShows(result.data.first)
-                    _uiState.update { state ->
-                        state.copy(
-                            topGenreShows = (state.topGenreShows + scored).distinctBy { it.id },
-                            isLoadingMoreTopGenre = false
-                        )
-                    }
-                } else {
-                    _uiState.update { it.copy(isLoadingMoreTopGenre = false) }
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoadingMoreTopGenre = false) }
-            }
-        }
-    }
+    fun loadMoreTopGenre() = loadMoreGenre(
+        isAlreadyLoading = { _uiState.value.isLoadingMoreTopGenre },
+        currentPage = { topGenrePage },
+        totalPages = { topGenreTotalPages },
+        genreId = { currentTopGenreId },
+        setLoading = { _uiState.update { it.copy(isLoadingMoreTopGenre = true) } },
+        onSuccess = { newPage, newTotal, scored ->
+            topGenrePage = newPage
+            topGenreTotalPages = newTotal
+            _uiState.update { state -> state.copy(topGenreShows = (state.topGenreShows + scored).distinctBy { it.id }, isLoadingMoreTopGenre = false) }
+        },
+        onError = { _uiState.update { it.copy(isLoadingMoreTopGenre = false) } }
+    )
 
-    fun loadMoreSecondGenre() {
-        if (_uiState.value.isLoadingMoreSecondGenre) return
-        if (secondGenrePage >= secondGenreTotalPages) return
+    fun loadMoreSecondGenre() = loadMoreGenre(
+        isAlreadyLoading = { _uiState.value.isLoadingMoreSecondGenre },
+        currentPage = { secondGenrePage },
+        totalPages = { secondGenreTotalPages },
+        genreId = { currentSecondGenreId },
+        setLoading = { _uiState.update { it.copy(isLoadingMoreSecondGenre = true) } },
+        onSuccess = { newPage, newTotal, scored ->
+            secondGenrePage = newPage
+            secondGenreTotalPages = newTotal
+            _uiState.update { state -> state.copy(secondGenreShows = (state.secondGenreShows + scored).distinctBy { it.id }, isLoadingMoreSecondGenre = false) }
+        },
+        onError = { _uiState.update { it.copy(isLoadingMoreSecondGenre = false) } }
+    )
+
+    private fun loadMoreGenre(
+        isAlreadyLoading: () -> Boolean,
+        currentPage: () -> Int,
+        totalPages: () -> Int,
+        genreId: () -> String,
+        setLoading: () -> Unit,
+        onSuccess: (newPage: Int, newTotal: Int, scored: List<MediaContent>) -> Unit,
+        onError: () -> Unit
+    ) {
+        if (isAlreadyLoading()) return
+        if (currentPage() >= totalPages()) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingMoreSecondGenre = true) }
+            setLoading()
             try {
-                val result = repository.discoverShowsPaged(
-                    genreId = currentSecondGenreId,
-                    sortBy = "popularity.desc",
-                    page = secondGenrePage + 1
-                )
+                val result = repository.discoverShowsPaged(genreId = genreId(), sortBy = "popularity.desc", page = currentPage() + 1)
                 if (result is Resource.Success) {
-                    secondGenrePage++
-                    secondGenreTotalPages = result.data.second
-                    val scored = getRecommendationsUseCase.scoreShows(result.data.first)
-                    _uiState.update { state ->
-                        state.copy(
-                            secondGenreShows = (state.secondGenreShows + scored).distinctBy { it.id },
-                            isLoadingMoreSecondGenre = false
-                        )
-                    }
+                    onSuccess(currentPage() + 1, result.data.second, getRecommendationsUseCase.scoreShows(result.data.first))
                 } else {
-                    _uiState.update { it.copy(isLoadingMoreSecondGenre = false) }
+                    onError()
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoadingMoreSecondGenre = false) }
+                onError()
             }
         }
     }
