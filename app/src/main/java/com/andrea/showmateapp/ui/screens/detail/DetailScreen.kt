@@ -217,7 +217,7 @@ fun DetailScreenContent(
                                 it
                             } else {
                                 it.sharedElement(
-                                    sharedContentState = rememberSharedContentState(key = sharedElementKey),
+                                    state = rememberSharedContentState(key = sharedElementKey),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }
@@ -384,71 +384,36 @@ fun DetailScreenContent(
                     }?.key
                     if (trailerKey != null) {
                         Spacer(modifier = Modifier.height(24.dp))
-                        val uriHandler = LocalUriHandler.current
-                        Box(
+                        DetailSectionHeader(title = stringResource(R.string.detail_official_trailer))
+                        Spacer(modifier = Modifier.height(14.dp))
+                        androidx.compose.ui.viewinterop.AndroidView(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(180.dp)
+                                .height(210.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .clickable {
-                                    uriHandler.openUri("https://www.youtube.com/watch?v=$trailerKey")
+                                .background(Color.Black),
+                            factory = { ctx ->
+                                android.webkit.WebView(ctx).apply {
+                                    settings.javaScriptEnabled = true
+                                    settings.loadWithOverviewMode = true
+                                    settings.useWideViewPort = true
+                                    webChromeClient = android.webkit.WebChromeClient()
                                 }
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data("https://img.youtube.com/vi/$trailerKey/mqdefault.jpg")
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Tráiler de ${show.name}",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                placeholder = painterResource(R.drawable.ic_logo_placeholder)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
-                                        )
-                                    )
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .align(Alignment.Center)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(PrimaryPurple, PrimaryPurpleDark)
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(28.dp)
-                                )
+                            },
+                            update = { webView ->
+                                val htmlData = """
+                                    <html>
+                                        <body style="margin:0;padding:0;background-color:#000;">
+                                            <iframe width="100%" height="100%" 
+                                                src="https://www.youtube.com/embed/$trailerKey?rel=0" 
+                                                frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
+                                            </iframe>
+                                        </body>
+                                    </html>
+                                """.trimIndent()
+                                webView.loadData(htmlData, "text/html", "utf-8")
                             }
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(12.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.Black.copy(alpha = 0.55f))
-                            ) {
-                                Text(
-                                    stringResource(R.string.detail_official_trailer),
-                                    color = Color.White,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 9.sp,
-                                    letterSpacing = 1.sp,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(28.dp))

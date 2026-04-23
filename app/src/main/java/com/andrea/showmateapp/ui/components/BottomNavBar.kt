@@ -163,13 +163,21 @@ fun BottomNavBar(navController: NavController, onScrollToTop: (Any) -> Unit = {}
                                         }
                                     }
                                 ) {
+                                    val isDiscover = item.route == Screen.Discover
                                     Box(
                                         contentAlignment = Alignment.Center,
                                         modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(RoundedCornerShape(14.dp))
+                                            .size(if (isDiscover) 48.dp else 42.dp)
+                                            .clip(RoundedCornerShape(if (isDiscover) 24.dp else 14.dp))
                                             .background(
-                                                if (isSelected) {
+                                                if (isDiscover) {
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            PrimaryPurple,
+                                                            PrimaryPurpleLight
+                                                        )
+                                                    )
+                                                } else if (isSelected) {
                                                     Brush.linearGradient(
                                                         listOf(
                                                             PrimaryPurple.copy(alpha = 0.30f),
@@ -187,9 +195,9 @@ fun BottomNavBar(navController: NavController, onScrollToTop: (Any) -> Unit = {}
                                             imageVector = item.icon,
                                             contentDescription = item.title,
                                             modifier = Modifier
-                                                .size(22.dp)
-                                                .scale(iconScale),
-                                            tint = if (isSelected) PrimaryPurple else TextGray
+                                                .size(if (isDiscover) 28.dp else 22.dp)
+                                                .scale(if (isDiscover) 1f else iconScale),
+                                            tint = if (isDiscover) Color.White else if (isSelected) PrimaryPurple else TextGray
                                         )
                                     }
                                 }

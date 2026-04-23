@@ -23,7 +23,8 @@
       "Bash(awk \"{s+=\\\\$1} END {print \\\\\"TOTAL tests: \\\\\"s}\")",
       "Bash(grep -rn \"^\\\\s*//\" --include=\"*.kt\")",
       "Bash(xargs cat *)",
-      "Bash(./gradlew :app:compileDebugKotlin --quiet)"
+      "Bash(./gradlew :app:compileDebugKotlin --quiet)",
+      "Bash(git commit *)"
     ]
   }
 }

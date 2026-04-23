@@ -19,17 +19,14 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -40,8 +37,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -53,15 +48,12 @@ import coil.compose.SubcomposeAsyncImageContent
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.model.ReasonType
-import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils
-import kotlinx.coroutines.delay
 import timber.log.Timber
 
 object ShowMateSpacing {
@@ -69,8 +61,6 @@ object ShowMateSpacing {
     val xs = 8.dp
     val s = 12.dp
     val m = 16.dp
-    val l = 20.dp
-    val xl = 24.dp
     val xxl = 32.dp
     val xxxl = 48.dp
 }
@@ -84,14 +74,6 @@ object ShowMateMotion {
         dampingRatio = Spring.DampingRatioLowBouncy,
         stiffness = Spring.StiffnessLow
     )
-    val colorTween: TweenSpec<Color> = tween(durationMillis = 180)
-}
-
-object ShowMateElevation {
-    val card = 2.dp
-    val raised = 4.dp
-    val sheet = 8.dp
-    val dialog = 12.dp
 }
 
 private val showCardOverlayGradient = Brush.verticalGradient(
@@ -116,7 +98,7 @@ fun TmdbImage(
         return
     }
 
-    SubcomposeAsyncImage(
+    coil.compose.AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(url)
             .crossfade(if (crossfade) 250 else 0)
@@ -131,31 +113,7 @@ fun TmdbImage(
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = contentScale,
-        loading = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(shimmerBrush())
-            )
-        },
-        error = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(SurfaceDark),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(error),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .aspectRatio(1f),
-                    alpha = 0.4f
-                )
-            }
-        },
-        success = { SubcomposeAsyncImageContent() }
+        error = painterResource(error)
     )
 }
 
@@ -243,7 +201,7 @@ fun ShowCard(
                         } else {
                             with(sharedTransitionScope) {
                                 Modifier.sharedElement(
-                                    sharedContentState = rememberSharedContentState(key = sharedElementKey),
+                                    state = rememberSharedContentState(key = sharedElementKey),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }
@@ -328,46 +286,6 @@ fun MatchBadge(score: Float, isAffinity: Boolean, modifier: Modifier = Modifier)
     }
 }
 
-@Composable
-fun ReasonPill(reason: RecommendationReason, modifier: Modifier = Modifier) {
-    val pillColor = when (reason.type) {
-        ReasonType.GENRE -> PillGenre
-        ReasonType.ACTOR -> PillActor
-        ReasonType.NARRATIVE -> PillNarrative
-        ReasonType.CREATOR -> PillCreator
-        ReasonType.HIDDEN_GEM -> PillHiddenGem
-        ReasonType.COLLABORATIVE -> PillCollab
-        ReasonType.BINGE -> PillBinge
-        ReasonType.COMPLETENESS -> PillCompleteness
-        ReasonType.TRENDING -> PillTrending
-    }
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.Black.copy(alpha = 0.75f))
-            .border(
-                width = 1.dp,
-                color = pillColor.copy(alpha = 0.50f),
-                shape = RoundedCornerShape(20.dp)
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-
-        Text(
-            text = reason.description.asString(),
-            color = Color.White.copy(alpha = 0.92f),
-            fontSize = 9.5.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 2,
-            softWrap = true,
-            lineHeight = 11.sp,
-            letterSpacing = 0.sp,
-            modifier = Modifier.weight(1f, fill = false)
-        )
-    }
-}
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -490,43 +408,6 @@ fun ShowSection(
     }
 }
 
-@Composable
-fun PulseLoader(modifier: Modifier = Modifier) {
-    val circles = listOf(
-        remember { Animatable(0.3f) },
-        remember { Animatable(0.3f) },
-        remember { Animatable(0.3f) }
-    )
-
-    circles.forEachIndexed { index, animatable ->
-        LaunchedEffect(Unit) {
-            delay(index * 150L)
-            animatable.animateTo(
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(600, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                )
-            )
-        }
-    }
-
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            circles.forEach { animatable ->
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .scale(animatable.value)
-                        .background(PrimaryPurple, shape = CircleShape)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun ErrorView(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
@@ -665,19 +546,6 @@ fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-fun CardSurface(
-    modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(16.dp),
-    content: @Composable () -> Unit
-) = Surface(
-    color = MaterialTheme.colorScheme.surface,
-    shape = shape,
-    tonalElevation = 2.dp,
-    modifier = modifier,
-    content = content
-)
-
-@Composable
 fun <T> PremiumTabRow(
     tabs: List<T>,
     selectedTab: T,
@@ -764,63 +632,4 @@ fun <T> PremiumTabRow(
     }
 }
 
-@Composable
-fun GlassHeader(
-    title: String,
-    modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    iconTint: Color = PrimaryPurple,
-    onBackClick: (() -> Unit)? = null,
-    trailingContent: @Composable () -> Unit = {}
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = ShowMateSpacing.m, vertical = ShowMateSpacing.s)
-                .statusBarsPadding(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (onBackClick != null) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = Color.White
-                    )
-                }
-            } else if (icon != null) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(iconTint.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.5).sp
-                )
-            }
-
-            trailingContent()
-        }
-    }
-}
 

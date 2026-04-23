@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 fun SplashScreen(
     onNavigateToMain: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onNavigateToWelcomeNew: () -> Unit,
     onNavigateToOnboarding: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
@@ -123,6 +124,7 @@ fun SplashScreen(
             SplashDestination.HOME -> onNavigateToMain()
             SplashDestination.ONBOARDING -> onNavigateToOnboarding()
             SplashDestination.LOGIN -> onNavigateToLogin()
+            SplashDestination.WELCOME_NEW -> onNavigateToWelcomeNew()
         }
     }
 

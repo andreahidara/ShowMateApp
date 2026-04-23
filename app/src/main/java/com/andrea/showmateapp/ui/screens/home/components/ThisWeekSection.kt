@@ -229,7 +229,7 @@ fun ThisWeekCard(
                     } else {
                         with(sharedTransitionScope) {
                             Modifier.sharedElement(
-                                sharedContentState = rememberSharedContentState(key = "image-${media.id}-thisweek"),
+                                rememberSharedContentState(key = "image-${media.id}-thisweek"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
                         }

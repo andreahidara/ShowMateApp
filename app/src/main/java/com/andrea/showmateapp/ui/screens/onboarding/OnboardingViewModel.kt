@@ -1,8 +1,13 @@
 package com.andrea.showmateapp.ui.screens.onboarding
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.repository.ShowRepository
+import com.andrea.showmateapp.di.AppPrefsDataStore
 import com.andrea.showmateapp.domain.repository.ISocialRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.Resource
@@ -22,7 +27,8 @@ import kotlinx.coroutines.tasks.await
 class OnboardingViewModel @Inject constructor(
     private val userRepository: IUserRepository,
     private val showRepository: ShowRepository,
-    private val socialRepository: ISocialRepository
+    private val socialRepository: ISocialRepository,
+    @AppPrefsDataStore private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -199,6 +205,11 @@ class OnboardingViewModel @Inject constructor(
             if (saved.isFailure) {
                 _uiState.update { it.copy(isLoading = false, isComplete = true) }
                 return@launch
+            }
+
+            runCatching {
+                val key = booleanPreferencesKey("onboarding_completed")
+                dataStore.edit { prefs -> prefs[key] = true }
             }
 
             runCatching {

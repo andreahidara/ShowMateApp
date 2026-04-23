@@ -196,6 +196,7 @@ fun SettingsScreenContent(
         )
     }
 
+
     if (showEditProfileDialog) {
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },

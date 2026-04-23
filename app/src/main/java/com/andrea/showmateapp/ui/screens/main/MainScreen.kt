@@ -94,7 +94,7 @@ fun MainScreen(
         ) { paddingValues ->
             NavHost(
                 navController = bottomNavController,
-                startDestination = Screen.Home,
+                startDestination = Screen.Discover,
                 modifier = Modifier.padding(paddingValues)
             ) {
                 composable<Screen.Home> {

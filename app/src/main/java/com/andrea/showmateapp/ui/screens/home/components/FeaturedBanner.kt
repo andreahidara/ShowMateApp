@@ -3,7 +3,6 @@ package com.andrea.showmateapp.ui.screens.home.components
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -76,7 +75,7 @@ fun FeaturedBanner(
                         } else {
                             with(sharedTransitionScope) {
                                 Modifier.sharedElement(
-                                    sharedContentState = rememberSharedContentState(key = "image-${media.id}-$tag"),
+                                    rememberSharedContentState(key = "image-${media.id}-$tag"),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }

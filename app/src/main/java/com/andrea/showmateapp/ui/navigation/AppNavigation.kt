@@ -42,6 +42,11 @@ fun AppNavigation() {
                         }
                     },
                     onNavigateToLogin = {
+                        navController.navigate(Screen.Login) {
+                            popUpTo(Screen.Splash) { inclusive = true }
+                        }
+                    },
+                    onNavigateToWelcomeNew = {
                         navController.navigate(Screen.Welcome) {
                             popUpTo(Screen.Splash) { inclusive = true }
                         }

@@ -389,7 +389,11 @@ fun ProfileHeaderPremium(
                 ) {
                     if (photoUrl != null) {
                         coil.compose.AsyncImage(
-                            model = photoUrl,
+                            model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(photoUrl)
+                                .crossfade(true)
+                                .memoryCachePolicy(coil.request.CachePolicy.DISABLED)
+                                .build(),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop

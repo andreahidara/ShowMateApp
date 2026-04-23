@@ -13,7 +13,8 @@ interface TmdbApiService {
         @Path("tv_id") tvId: Int,
         @Query("language") language: String = "es-ES",
         @Query(
-            "append_to_response"
+            value = "append_to_response",
+            encoded = true
         ) appendToResponse: String? = "credits,keywords,watch/providers,content_ratings,videos"
     ): MediaContent
 
@@ -28,6 +29,13 @@ interface TmdbApiService {
 
     @GET("tv/{tv_id}/recommendations")
     suspend fun getRecommendationsByShow(
+        @Path("tv_id") tvId: Int,
+        @Query("language") language: String = "es-ES",
+        @Query("page") page: Int = 1
+    ): MediaResponse
+
+    @GET("tv/{tv_id}/similar")
+    suspend fun getSimilarMediaByShow(
         @Path("tv_id") tvId: Int,
         @Query("language") language: String = "es-ES",
         @Query("page") page: Int = 1

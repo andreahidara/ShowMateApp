@@ -3,6 +3,7 @@ package com.andrea.showmateapp.ui.screens.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
+import timber.log.Timber
 import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.UiText
@@ -17,7 +18,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: IUserRepository
+    private val userRepository: IUserRepository,
+    private val interactionRepository: com.andrea.showmateapp.domain.repository.IInteractionRepository
 ) : ViewModel() {
 
     private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
@@ -70,6 +72,11 @@ class LoginViewModel @Inject constructor(
                             ?: "Usuario"
                         runCatching { userRepository.initUserProfile(displayName) }
                     }
+                    try {
+                        interactionRepository.syncFavoritesAndWatchedToRoom()
+                    } catch (e: Exception) {
+                        Timber.e(e, "Error syncing initial data upon google login")
+                    }
                     _uiState.update { it.copy(isGoogleLoading = false, isSuccess = true, isNewGoogleUser = isNewUser) }
                 }
                 .onFailure { e ->
@@ -99,6 +106,11 @@ class LoginViewModel @Inject constructor(
             authRepository.login(state.email, state.password)
                 .onSuccess {
                     val profile = userRepository.getUserProfile()
+                    try {
+                        interactionRepository.syncFavoritesAndWatchedToRoom()
+                    } catch (e: Exception) {
+                        Timber.e(e, "Error syncing initial data upon login")
+                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,

@@ -84,7 +84,7 @@ fun Top10Section(
                                         it
                                     } else {
                                         it.sharedElement(
-                                            sharedContentState = rememberSharedContentState(key = "image-${show.id}-top10"),
+                                            state = rememberSharedContentState(key = "image-${show.id}-top10"),
                                             animatedVisibilityScope = animatedVisibilityScope
                                         )
                                     }

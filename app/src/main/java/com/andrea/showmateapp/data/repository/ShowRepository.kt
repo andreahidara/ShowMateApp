@@ -158,6 +158,6 @@ class ShowRepository @Inject constructor(
         api.discoverMedia(genreId = genreId, sortBy = sortBy, page = page, airDateGte = airDateGte, airDateLte = airDateLte).let { it.results to it.totalPages }
     }
 
-    override suspend fun getSimilarShows(showId: Int): List<MediaContent> = (safeApiCall { api.getRecommendationsByShow(showId).results } as? Resource.Success)?.data ?: emptyList()
+    override suspend fun getSimilarShows(showId: Int): List<MediaContent> = (safeApiCall { api.getSimilarMediaByShow(showId).results } as? Resource.Success)?.data ?: emptyList()
 }
 

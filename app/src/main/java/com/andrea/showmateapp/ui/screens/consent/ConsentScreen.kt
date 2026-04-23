@@ -41,11 +41,6 @@ import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
 
 @Composable
 fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltViewModel()) {
-    val isConsentGiven by viewModel.isConsentGiven.collectAsStateWithLifecycle()
-
-    LaunchedEffect(isConsentGiven) {
-        if (isConsentGiven) onAccepted()
-    }
 
     AuthBackground {
         Column(
@@ -112,7 +107,10 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
             Spacer(modifier = Modifier.height(28.dp))
 
             Button(
-                onClick = { viewModel.giveConsent() },
+                onClick = {
+                    viewModel.giveConsent()
+                    onAccepted()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),

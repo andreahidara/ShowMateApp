@@ -77,7 +77,9 @@ class GetRecommendationsUseCase @Inject constructor(
     private data class ScoringWeights(
         val maxNarrative: Float,
         val saturatedGenreId: Int?,
-        val isSaturated: Boolean
+        val isSaturated: Boolean,
+        val preferShortEpisodes: Boolean?,
+        val preferFinishedShows: Boolean?
     )
 
     private fun buildRecommendationContext(profile: UserProfile, now: Long): RecommendationContext {
@@ -98,7 +100,9 @@ class GetRecommendationsUseCase @Inject constructor(
         val weights = ScoringWeights(
             maxNarrative = decayed.narrativeStyleScores.values.maxOrNull()?.coerceAtLeast(1f) ?: 1f,
             saturatedGenreId = saturatedGenreId,
-            isSaturated = isSaturated
+            isSaturated = isSaturated,
+            preferShortEpisodes = profile.preferShortEpisodes,
+            preferFinishedShows = profile.preferFinishedShows
         )
 
         val embeddingSpace = ContentEmbeddingEngine.buildEmbeddingSpace(decayed)
@@ -195,13 +199,20 @@ class GetRecommendationsUseCase @Inject constructor(
                 return shows.filter { it.id !in excludedIds }
             }
             val context = buildRecommendationContext(userProfile, System.currentTimeMillis())
+            val collaborativeBoost = try {
+                getCollaborativeBoostUseCase.execute(userProfile)
+            } catch (e: Exception) {
+                emptyMap<Int, Float>()
+            }
 
             shows.filter { it.id !in excludedIds }
                 .map { show ->
                     scoreShow(
                         show = show,
                         context = context,
-                        noveltyBoost = calculateNoveltyBoost(show, context.today)
+                        abandonmentPenalty = calculateAbandonmentPenalty(show, context.watchedEpisodesMap),
+                        noveltyBoost = calculateNoveltyBoost(show, context.today),
+                        collabBoost = collaborativeBoost[show.id] ?: 0f
                     )
                 }.sortedByDescending { it.affinityScore }
         } catch (e: Exception) {
@@ -271,11 +282,24 @@ class GetRecommendationsUseCase @Inject constructor(
             0f
         }
 
+        var prefBoost = 0f
+        if (context.weights.preferShortEpisodes == true && (show.episodeRunTime?.firstOrNull() ?: 45) <= 35) {
+            prefBoost += 1.5f
+        } else if (context.weights.preferShortEpisodes == false && (show.episodeRunTime?.firstOrNull() ?: 45) > 35) {
+            prefBoost += 1.5f
+        }
+
+        if (context.weights.preferFinishedShows == true && (show.status == "Ended" || show.status == "Canceled")) {
+            prefBoost += 1.5f
+        } else if (context.weights.preferFinishedShows == false && (show.status == "Returning Series" || show.status == "In Production")) {
+            prefBoost += 1.5f
+        }
+
         val score = (
             (personalAffinity * moodMultiplier * temporalMultiplier * W_PERSONAL) +
                 (global * W_GLOBAL) +
                 completeness + noveltyBoost + collabBoost +
-                hiddenGemBoost + bingeBoost + explorationBonus -
+                hiddenGemBoost + bingeBoost + explorationBonus + prefBoost -
                 abandonmentPenalty - saturationPenalty
             ).coerceIn(0f, 11f)
 
@@ -469,6 +493,13 @@ class GetRecommendationsUseCase @Inject constructor(
                 ReasonType.COLLABORATIVE, weight,
                 UiText.StringResource(R.string.reason_collaborative), "👥"
             )
+        }
+
+        if (context.weights.preferShortEpisodes == true && (show.episodeRunTime?.firstOrNull() ?: 45) <= 35) {
+            personal += RecommendationReason(ReasonType.NARRATIVE, 0.75f, UiText.StringResource(R.string.reason_binge_short), "⏱️")
+        }
+        if (context.weights.preferFinishedShows == true && (show.status == "Ended" || show.status == "Canceled")) {
+            personal += RecommendationReason(ReasonType.COMPLETENESS, 0.75f, UiText.StringResource(R.string.reason_completeness), "✅")
         }
 
         if (personal.size < 2) {
