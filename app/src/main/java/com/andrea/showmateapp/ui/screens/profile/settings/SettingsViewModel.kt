@@ -3,7 +3,6 @@ package com.andrea.showmateapp.ui.screens.profile.settings
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +11,7 @@ import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.di.AppPrefsDataStore
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.DataExportManager
+import com.andrea.showmateapp.util.NotificationPrefsKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -33,30 +33,23 @@ class SettingsViewModel @Inject constructor(
     private val exportManager: DataExportManager
 ) : ViewModel() {
 
-    companion object {
-        val KEY_NOTIF_ENABLED = booleanPreferencesKey("notif_enabled")
-        val KEY_NOTIF_NEW_EPISODES = booleanPreferencesKey("notif_new_episodes")
-        val KEY_NOTIF_FRIENDS = booleanPreferencesKey("notif_friends")
-        val KEY_NOTIF_RECOMMENDATIONS = booleanPreferencesKey("notif_recommendations")
-    }
-
     val isDarkTheme = themePreference.isDarkTheme
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    val notifEnabled = dataStore.data.map { it[KEY_NOTIF_ENABLED] != false }
+    val notifEnabled = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_ENABLED] != false }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    val notifNewEpisodes = dataStore.data.map { it[KEY_NOTIF_NEW_EPISODES] != false }
+    val notifNewEpisodes = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_NEW_EPISODES] != false }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    val notifFriends = dataStore.data.map { it[KEY_NOTIF_FRIENDS] != false }
+    val notifFriends = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_FRIENDS] != false }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    val notifRecommendations = dataStore.data.map { it[KEY_NOTIF_RECOMMENDATIONS] == true }
+    val notifRecommendations = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_RECOMMENDATIONS] == true }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
@@ -78,19 +71,19 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setNotifEnabled(enabled: Boolean) {
-        viewModelScope.launch { dataStore.edit { it[KEY_NOTIF_ENABLED] = enabled } }
+        viewModelScope.launch { dataStore.edit { it[NotificationPrefsKeys.NOTIF_ENABLED] = enabled } }
     }
 
     fun setNotifNewEpisodes(enabled: Boolean) {
-        viewModelScope.launch { dataStore.edit { it[KEY_NOTIF_NEW_EPISODES] = enabled } }
+        viewModelScope.launch { dataStore.edit { it[NotificationPrefsKeys.NOTIF_NEW_EPISODES] = enabled } }
     }
 
     fun setNotifFriends(enabled: Boolean) {
-        viewModelScope.launch { dataStore.edit { it[KEY_NOTIF_FRIENDS] = enabled } }
+        viewModelScope.launch { dataStore.edit { it[NotificationPrefsKeys.NOTIF_FRIENDS] = enabled } }
     }
 
     fun setNotifRecommendations(enabled: Boolean) {
-        viewModelScope.launch { dataStore.edit { it[KEY_NOTIF_RECOMMENDATIONS] = enabled } }
+        viewModelScope.launch { dataStore.edit { it[NotificationPrefsKeys.NOTIF_RECOMMENDATIONS] = enabled } }
     }
 
     fun logout() {

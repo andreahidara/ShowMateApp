@@ -24,7 +24,11 @@
       "Bash(grep -rn \"^\\\\s*//\" --include=\"*.kt\")",
       "Bash(xargs cat *)",
       "Bash(./gradlew :app:compileDebugKotlin --quiet)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(grep -v \"// TODO for extensions\\\\|//TODO\\\\|error_\\\\|ERROR\")",
+      "Bash(./gradlew assembleRelease --no-daemon)",
+      "Bash(grep \"\\\\.kt$\")",
+      "Bash(./gradlew compileReleaseKotlin --no-daemon)"
     ]
   }
 }

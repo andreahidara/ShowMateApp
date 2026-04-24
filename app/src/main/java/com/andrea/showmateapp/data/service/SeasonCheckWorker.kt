@@ -15,7 +15,7 @@ import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.di.AppPrefsDataStore
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.ui.MainActivity
-import com.andrea.showmateapp.ui.screens.profile.settings.SettingsViewModel
+import com.andrea.showmateapp.util.NotificationPrefsKeys
 import com.andrea.showmateapp.util.Resource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -39,8 +39,8 @@ class SeasonCheckWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val prefs = dataStore.data.first()
-        val notifEnabled = prefs[SettingsViewModel.KEY_NOTIF_ENABLED] != false
-        val notifNewEpisodes = prefs[SettingsViewModel.KEY_NOTIF_NEW_EPISODES] != false
+        val notifEnabled = prefs[NotificationPrefsKeys.NOTIF_ENABLED] != false
+        val notifNewEpisodes = prefs[NotificationPrefsKeys.NOTIF_NEW_EPISODES] != false
         if (!notifEnabled || !notifNewEpisodes) return Result.success()
 
         return try {
