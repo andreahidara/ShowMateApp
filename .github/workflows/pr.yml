@@ -30,8 +30,11 @@ jobs:
       - name: Create secret.properties
         run: echo 'TMDB_API_TOKEN="NO_TOKEN"' > secret.properties
 
+      - name: Create google-services.json
+        run: echo '{"project_info":{"project_number":"123456789012","firebase_url":"https://showmate-app.firebaseio.com","project_id":"showmate-app","storage_bucket":"showmate-app.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:abcdef1234567890","android_client_info":{"package_name":"com.andrea.showmateapp"}},"api_key":[{"current_key":"placeholder"}],"services":{}}],"configuration_version":"1"}' > app/google-services.json
+
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest -x processDebugGoogleServices
+        run: ./gradlew testDebugUnitTest
 
       - name: Upload test results
         if: always()

@@ -6,7 +6,7 @@ on:
 
 jobs:
   test-and-build:
-    name: Test & Build Debug APK
+    name: Test & Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -33,33 +33,16 @@ jobs:
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
             echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
           else
-            printf '%s\n' \
-              '{' \
-              '  "project_info": {' \
-              '    "project_number": "123456789012",' \
-              '    "firebase_url": "https://showmate-app-default-rtdb.firebaseio.com",' \
-              '    "project_id": "showmate-app",' \
-              '    "storage_bucket": "showmate-app.appspot.com"' \
-              '  },' \
-              '  "client": [{' \
-              '    "client_info": {' \
-              '      "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",' \
-              '      "android_client_info": { "package_name": "com.andrea.showmateapp" }' \
-              '    },' \
-              '    "api_key": [{ "current_key": "placeholder" }],' \
-              '    "services": {}' \
-              '  }],' \
-              '  "configuration_version": "1"' \
-              '}' > app/google-services.json
+            echo '{"project_info":{"project_number":"123456789012","firebase_url":"https://showmate-app.firebaseio.com","project_id":"showmate-app","storage_bucket":"showmate-app.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:abcdef1234567890","android_client_info":{"package_name":"com.andrea.showmateapp"}},"api_key":[{"current_key":"placeholder"}],"services":{}}],"configuration_version":"1"}' > app/google-services.json
           fi
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest -x processDebugGoogleServices
+        run: ./gradlew testDebugUnitTest
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-main
+          name: test-results
           path: app/build/reports/tests/testDebugUnitTest/
           retention-days: 14
