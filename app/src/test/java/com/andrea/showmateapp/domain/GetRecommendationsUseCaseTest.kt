@@ -199,8 +199,8 @@ class GetRecommendationsUseCaseTest {
 
     @Test
     fun `given two drama shows with same voteAverage, when scored, then higher voteCount wins`() = runTest {
-        val popular = show(1, genreIds = listOf(18), voteAverage = 8f, voteCount = 2000)
-        val obscure = show(2, genreIds = listOf(18), voteAverage = 8f, voteCount = 10)
+        val popular = show(1, genreIds = listOf(18), voteAverage = 8f, voteCount = 2000, popularity = 500f)
+        val obscure = show(2, genreIds = listOf(18), voteAverage = 8f, voteCount = 10, popularity = 1f)
         coEvery { userRepository.getUserProfile() } returns dramaProfile
 
         val result = useCase.scoreShows(listOf(popular, obscure))
@@ -541,7 +541,7 @@ class GetRecommendationsUseCaseTest {
             voteAverage = 7f,
             voteCount = 500,
             status = "Ended",
-            seasons = 2
+            seasons = 5
         )
         coEvery { userRepository.getUserProfile() } returns bingeProfile
 

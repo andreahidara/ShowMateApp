@@ -45,15 +45,33 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(authInterceptor: Interceptor, cache: Cache): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply { 
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.HEADERS else HttpLoggingInterceptor.Level.NONE 
+        val logging = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.HEADERS else HttpLoggingInterceptor.Level.NONE
+        }
+        val retryInterceptor = Interceptor { chain ->
+            var attempt = 0
+            var lastException: Exception? = null
+            while (attempt < 3) {
+                try {
+                    val response = chain.proceed(chain.request())
+                    if (response.isSuccessful || attempt == 2) return@Interceptor response
+                    response.close()
+                } catch (e: Exception) {
+                    lastException = e
+                }
+                attempt++
+                if (attempt < 3) Thread.sleep(500L * attempt)
+            }
+            throw lastException ?: Exception("Max retries exceeded")
         }
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .addInterceptor(retryInterceptor)
             .addInterceptor(logging)
             .cache(cache)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
     }

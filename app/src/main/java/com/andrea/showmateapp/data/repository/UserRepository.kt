@@ -97,7 +97,12 @@ class UserRepository @Inject constructor(
             val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
 
             val newGenreScores = profile.genreScores.toMutableMap()
-            genres.forEach { id -> newGenreScores[id] = (newGenreScores[id] ?: 0f) + 15f }
+            val newGenreDates = profile.genreScoreDates.toMutableMap()
+            val now = System.currentTimeMillis()
+            genres.forEach { id ->
+                newGenreScores[id] = (newGenreScores[id] ?: 0f) + 15f
+                newGenreDates[id] = now
+            }
 
             val newLiked = (profile.likedMediaIds + watchedShowIds).distinct()
             val newEssential = (profile.essentialMediaIds + lovedShowIds).distinct()
@@ -110,6 +115,7 @@ class UserRepository @Inject constructor(
                 userRef,
                 profile.copy(
                     genreScores = newGenreScores,
+                    genreScoreDates = newGenreDates,
                     likedMediaIds = newLiked,
                     essentialMediaIds = newEssential,
                     ratings = newRatings,
@@ -247,9 +253,10 @@ class UserRepository @Inject constructor(
                 }
             }
 
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.e(e, "Error crítico al reiniciar datos del algoritmo")
-            if (e is CancellationException) throw e
             throw e
         }
     }
@@ -294,9 +301,10 @@ class UserRepository @Inject constructor(
 
     override suspend fun deleteAccount() = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
+        // Auth must succeed first — if it fails (e.g. requires re-auth) we don't lose local data
+        auth.currentUser?.delete()?.await()
         safeFirestoreCall(Unit) { userDoc(uid).delete().await() }
         showDao.clearUserData()
-        auth.currentUser?.delete()?.await()
     }
 }
 

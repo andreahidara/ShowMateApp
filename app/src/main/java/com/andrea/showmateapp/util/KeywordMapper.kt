@@ -23,7 +23,7 @@ object KeywordMapper {
         "robbery" to Pair("9882", "Porque te gustan los atracos"),
         "artificial intelligence" to Pair("9951", "Porque te gusta la inteligencia artificial"),
         "murder mystery" to Pair("207317", "Porque te gustan los misterios"),
-        "mystery" to Pair("9648", "Porque te gustan los misterios"),
+        "mystery" to Pair("9826", "Porque te gustan los misterios"),
         "post-apocalyptic" to Pair("4565", "Porque te gustan las historias post-apocalípticas"),
         "post apocalyptic" to Pair("4565", "Porque te gustan las historias post-apocalípticas"),
         "conspiracy" to Pair("241527", "Porque te gustan las conspiraciones"),
@@ -40,25 +40,35 @@ object KeywordMapper {
         "detective" to Pair("9799", "Porque te gustan los detectives"),
         "witch" to Pair("2343", "Porque te gusta la magia"),
         "robot" to Pair("9951", "Porque te gusta la inteligencia artificial"),
-        "war" to Pair("10769", "Porque te gustan las historias bélicas"),
+        "war" to Pair("6027", "Porque te gustan las historias bélicas"),
         "historical" to Pair("256258", "Porque te gustan las series históricas"),
         "biography" to Pair("9672", "Porque te gustan las historias reales"),
-        "politics" to Pair("10768", "Porque te gustan las series políticas"),
-        "political" to Pair("10768", "Porque te gustan las series políticas")
+        "politics" to Pair("10183", "Porque te gustan las series políticas"),
+        "political" to Pair("10183", "Porque te gustan las series políticas")
     )
 
     fun getKeywordInfo(keywordName: String): Pair<String, String>? = keywordMap[keywordName.lowercase().trim()]
+
+    fun getTopMappedKeywords(
+        preferredKeywords: Map<String, Float>,
+        limit: Int = 3,
+        excludeKeywordIds: Set<String> = setOf("4363") // exclude time travel by default as it has its own section
+    ): List<Triple<String, String, String>> {
+        return preferredKeywords.entries
+            .sortedByDescending { it.value }
+            .mapNotNull { (name, _) ->
+                val info = keywordMap[name.lowercase().trim()] ?: return@mapNotNull null
+                if (info.first in excludeKeywordIds) return@mapNotNull null
+                Triple(name, info.first, info.second)
+            }
+            .distinctBy { it.second }
+            .take(limit)
+    }
 
     fun getTopMappedKeyword(
         preferredKeywords: Map<String, Float>,
         excludeKeywordId: String = "4363"
     ): Triple<String, String, String>? {
-        return preferredKeywords.entries
-            .sortedByDescending { it.value }
-            .firstNotNullOfOrNull { (name, _) ->
-                val info = keywordMap[name.lowercase().trim()] ?: return@firstNotNullOfOrNull null
-                if (info.first == excludeKeywordId) return@firstNotNullOfOrNull null
-                Triple(name, info.first, info.second)
-            }
+        return getTopMappedKeywords(preferredKeywords, 1, setOf(excludeKeywordId)).firstOrNull()
     }
 }

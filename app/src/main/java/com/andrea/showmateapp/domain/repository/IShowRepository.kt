@@ -14,7 +14,7 @@ interface IShowRepository {
     suspend fun getTrendingShows(excludedIds: List<Int> = emptyList()): Resource<List<MediaContent>>
     suspend fun getShowsByGenres(genreIds: String, excludedIds: List<Int> = emptyList()): Resource<List<MediaContent>>
     suspend fun getDetailedRecommendations(genres: String?, excludedIds: List<Int> = emptyList()): List<MediaContent>
-    suspend fun getShowsOnTheAir(providers: String = "8|119|337|1899|2"): Resource<List<MediaContent>>
+    suspend fun getShowsOnTheAir(providers: String = "8|119|337|1899|350"): Resource<List<MediaContent>>
     suspend fun searchShows(query: String): Resource<List<MediaContent>>
     suspend fun searchByPerson(query: String, isCreator: Boolean): Resource<List<MediaContent>>
     suspend fun searchPerson(query: String): Resource<List<PersonSearchResult>>

@@ -240,7 +240,7 @@ fun SwipeScreenContent(
                             modifier = Modifier.size(32.dp)
                         )
                     }
-                    Text("No hay más series por ahora", color = TextGray, fontSize = 15.sp)
+                    Text(stringResource(R.string.swipe_no_more_shows), color = TextGray, fontSize = 15.sp)
                 }
             } else {
                 val stackLimit = 3
@@ -303,7 +303,7 @@ fun SwipeScreenContent(
                 val undoActive = lastAction != null
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
                         .background(
                             if (undoActive) {

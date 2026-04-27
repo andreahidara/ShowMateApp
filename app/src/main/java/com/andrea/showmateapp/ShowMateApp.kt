@@ -18,6 +18,7 @@ import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.initialize
+import com.google.firebase.perf.FirebasePerformance
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.*
@@ -46,11 +47,14 @@ class ShowMateApp : Application(), Configuration.Provider, ImageLoaderFactory {
 
         Firebase.initialize(this)
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!isDebug)
+        FirebasePerformance.getInstance().isPerformanceCollectionEnabled = !isDebug
 
         setupAppCheck()
 
-        if (!isDebug && SecurityChecker.isDeviceCompromised()) {
-            FirebaseCrashlytics.getInstance().log("Security check failed: rooted=${SecurityChecker.isRooted()} emulator=${SecurityChecker.isEmulator()}")
+        appScope.launch {
+            if (!isDebug && SecurityChecker.isDeviceCompromised()) {
+                FirebaseCrashlytics.getInstance().log("Security check failed: rooted=${SecurityChecker.isRooted()} emulator=${SecurityChecker.isEmulator()}")
+            }
         }
 
         NotificationScheduler.scheduleAll(this)

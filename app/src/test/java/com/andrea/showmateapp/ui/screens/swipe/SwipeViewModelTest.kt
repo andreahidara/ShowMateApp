@@ -112,7 +112,7 @@ class SwipeViewModelTest {
 
     @Test
     fun `likeTopShow removes first show from list`() = runTest {
-        coEvery { getRecommendationsUseCase.execute() } returns sampleShows
+        coEvery { getRecommendationsUseCase.execute() } returnsMany listOf(sampleShows, emptyList())
 
         val vm = viewModel()
         vm.loadShows(forceReload = true)
@@ -164,7 +164,7 @@ class SwipeViewModelTest {
 
     @Test
     fun `skipTopShow removes first show from list`() = runTest {
-        coEvery { getRecommendationsUseCase.execute() } returns sampleShows
+        coEvery { getRecommendationsUseCase.execute() } returnsMany listOf(sampleShows, emptyList())
 
         val vm = viewModel()
         vm.loadShows(forceReload = true)

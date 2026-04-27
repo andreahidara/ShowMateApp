@@ -3,6 +3,7 @@ package com.andrea.showmateapp.ui.screens.splash
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.repository.AuthRepository
@@ -59,6 +60,9 @@ class SplashViewModel @Inject constructor(
                         // Si no está localmente, comprobamos en remoto (por si viene de otro dispositivo o borró datos)
                         val profile = userRepository.getUserProfile()
                         if (profile?.onboardingCompleted == true) {
+                            runCatching {
+                                dataStore.edit { prefs -> prefs[KEY_ONBOARDING] = true }
+                            }
                             _authDecision.value = SplashDestination.HOME
                         } else {
                             _authDecision.value = SplashDestination.ONBOARDING

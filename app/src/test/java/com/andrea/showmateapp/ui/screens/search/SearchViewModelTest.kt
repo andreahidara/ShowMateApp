@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.network.TmdbApiService
 import com.andrea.showmateapp.domain.repository.IShowRepository
+import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.andrea.showmateapp.util.MainDispatcherRule
 import com.andrea.showmateapp.util.Resource
@@ -29,6 +30,7 @@ class SearchViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val showRepository: IShowRepository = mockk(relaxed = true)
+    private val userRepository: IUserRepository = mockk(relaxed = true)
     private val tmdbApiService: TmdbApiService = mockk(relaxed = true)
     private val getRecommendationsUseCase: GetRecommendationsUseCase = mockk(relaxed = true)
     private val dataStore: DataStore<Preferences> = mockk(relaxed = true)
@@ -36,7 +38,8 @@ class SearchViewModelTest {
     private fun viewModel(): SearchViewModel {
         val fakePreferences = mockk<Preferences>(relaxed = true)
         every { dataStore.data } returns flowOf(fakePreferences)
-        return SearchViewModel(showRepository, tmdbApiService, getRecommendationsUseCase, dataStore)
+        every { userRepository.getUserProfileFlow() } returns flowOf(null)
+        return SearchViewModel(showRepository, userRepository, tmdbApiService, getRecommendationsUseCase, dataStore)
     }
 
     // --- Filter state ---

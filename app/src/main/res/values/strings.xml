@@ -46,6 +46,7 @@
     <string name="swipe_all_ready">¡Todo listo!</string>
     <string name="swipe_all_ready_desc">Hemos calibrado tus gustos. Ahora ShowMate es mucho más inteligente para ti.</string>
     <string name="swipe_start_exploring">Empezar a explorar</string>
+    <string name="swipe_no_more_shows">No hay más series por ahora</string>
 
 
     <string name="stats_monthly_activity">Actividad mensual</string>
@@ -168,6 +169,7 @@
     <string name="search_no_results">Sin resultados para\n\"%1$s\"</string>
     <string name="search_no_results_person">No se encontraron series para el %1$s \"%2$s\"</string>
     <string name="search_no_matches">No hay coincidencias</string>
+    <string name="error_search_too_short">Introduce al menos 2 caracteres</string>
     <string name="search_trending_label">TENDENCIAS</string>
     <string name="search_rating_all">Todas</string>
     <string name="search_rating_format">%1$.0f/10</string>
@@ -260,6 +262,31 @@
 
     <!-- Discover -->
     <string name="discover_narrative_style_prefix">Porque te gusta: %1$s</string>
+    <string name="discover_genre_action">Tu género favorito según tu perfil</string>
+    <string name="discover_genre_animation">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_comedy">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_crime">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_documentary">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_drama">Tu género favorito según tu perfil</string>
+    <string name="discover_genre_family">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_kids">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_mystery">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_news">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_reality">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_scifi">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_soap">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_talk">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_war">Uno de tus géneros favoritos</string>
+    <string name="discover_genre_western">Uno de tus géneros favoritos</string>
+    <string name="discover_mood_suspense">Para una noche de suspense</string>
+    <string name="discover_mood_emotional">Para llorar un buen rato</string>
+    <string name="discover_mood_light">Para reírte esta noche</string>
+    <string name="discover_mood_action">Noche de acción</string>
+    <string name="discover_mood_mystery">Thrillers psicológicos</string>
+    <string name="discover_mood_crime">Crimen y misterio</string>
+    <string name="discover_mood_antihero">Antihéroes y dilemas morales</string>
+    <string name="discover_mood_genius">Genios en pantalla</string>
+    <string name="discover_mood_slow">Para saborear con calma</string>
 
     <!-- Feedback de recomendaciones -->
     <string name="feedback_sheet_title">¿Qué quieres hacer con esta serie?</string>

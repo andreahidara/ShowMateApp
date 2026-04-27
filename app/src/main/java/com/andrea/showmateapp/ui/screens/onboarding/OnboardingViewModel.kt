@@ -179,7 +179,7 @@ class OnboardingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             val state = _uiState.value
 
-            val saved = runCatching {
+            runCatching {
                 userRepository.saveOnboardingInterests(
                     genres = state.selectedGenres.toList(),
                     watchedShows = state.popularShows.filter { it.id in state.watchedShowIds },
@@ -202,14 +202,9 @@ class OnboardingViewModel @Inject constructor(
                 )
             }
 
-            if (saved.isFailure) {
-                _uiState.update { it.copy(isLoading = false, isComplete = true) }
-                return@launch
-            }
-
+            // Siempre guardar localmente, aunque Firebase haya fallado
             runCatching {
-                val key = booleanPreferencesKey("onboarding_completed")
-                dataStore.edit { prefs -> prefs[key] = true }
+                dataStore.edit { prefs -> prefs[booleanPreferencesKey("onboarding_completed")] = true }
             }
 
             runCatching {

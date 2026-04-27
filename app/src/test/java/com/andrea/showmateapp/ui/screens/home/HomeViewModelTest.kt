@@ -26,6 +26,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import kotlinx.coroutines.flow.emptyFlow
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
@@ -53,6 +54,8 @@ class HomeViewModelTest {
         mockkStatic(FirebaseCrashlytics::class)
         val mockCrashlytics = mockk<FirebaseCrashlytics>(relaxed = true)
         every { FirebaseCrashlytics.getInstance() } returns mockCrashlytics
+
+        whenever(userRepository.getUserProfileFlow()).thenReturn(emptyFlow())
     }
 
     @After
@@ -74,7 +77,7 @@ class HomeViewModelTest {
         ).thenReturn(Resource.Success(emptyList()))
         whenever(repository.getShowsOnTheAir(any())).thenReturn(Resource.Success(emptyList()))
 
-        whenever(getRecommendationsUseCase.scoreShows(any())).thenAnswer { it.arguments[0] }
+        whenever(getRecommendationsUseCase.scoreShows(any(), anyOrNull())).thenAnswer { it.arguments[0] }
         whenever(userRepository.getUserProfile()).thenReturn(null)
         whenever(userRepository.getCurrentUserEmail()).thenReturn("andrea@showmate.com")
 
@@ -110,7 +113,7 @@ class HomeViewModelTest {
         whenever(userRepository.getCurrentUserEmail()).thenReturn("andrea@showmate.com")
 
         whenever(repository.getShowsOnTheAir(eq("8"))).thenReturn(Resource.Success(mockMedia))
-        whenever(getRecommendationsUseCase.scoreShows(any())).thenAnswer { it.arguments[0] }
+        whenever(getRecommendationsUseCase.scoreShows(any(), anyOrNull())).thenAnswer { it.arguments[0] }
 
         val viewModel = HomeViewModel(
             repository,

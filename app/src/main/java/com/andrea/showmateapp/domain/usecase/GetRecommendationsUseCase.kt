@@ -124,13 +124,18 @@ class GetRecommendationsUseCase @Inject constructor(
     }
 
     suspend fun execute(): List<MediaContent> {
+        val excludedIds = try {
+            interactionRepository.getExcludedMediaIds().toList()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            emptyList()
+        }
         return try {
             val userProfile = userRepository.getUserProfile()
-            val excludedIds = interactionRepository.getExcludedMediaIds().toList()
 
             if (userProfile == null || userProfile.genreScores.all { it.value <= 0 }) {
                 val popular = showRepository.getPopularShows(excludedIds)
-                return if (popular is Resource.Success) popular.data else emptyList()
+                return if (popular is Resource.Success) scoreShows(popular.data) else emptyList()
             }
 
             val genres = userProfile.genreScores
@@ -186,15 +191,15 @@ class GetRecommendationsUseCase @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Timber.e(e, "Error executing recommendations")
-            val popular = showRepository.getPopularShows()
-            if (popular is Resource.Success) popular.data else emptyList()
+            val popular = showRepository.getPopularShows(excludedIds)
+            if (popular is Resource.Success) scoreShows(popular.data) else emptyList()
         }
     }
 
-    suspend fun scoreShows(shows: List<MediaContent>): List<MediaContent> {
+    suspend fun scoreShows(shows: List<MediaContent>, cachedProfile: UserProfile? = null): List<MediaContent> {
         return try {
-            val userProfile = userRepository.getUserProfile()
-            val excludedIds = interactionRepository.getExcludedMediaIds().toSet()
+            val userProfile = cachedProfile ?: userRepository.getUserProfile()
+            val excludedIds = interactionRepository.getExcludedMediaIds()
             if (userProfile == null || userProfile.genreScores.isEmpty()) {
                 return shows.filter { it.id !in excludedIds }
             }
@@ -219,6 +224,27 @@ class GetRecommendationsUseCase @Inject constructor(
             if (e is CancellationException) throw e
             Timber.e(e, "Error scoring shows")
             shows
+        }
+    }
+
+    suspend fun scoreForDetail(show: MediaContent): MediaContent {
+        return try {
+            val userProfile = userRepository.getUserProfile()
+            if (userProfile == null || userProfile.genreScores.isEmpty()) return show
+            val context = buildRecommendationContext(userProfile, System.currentTimeMillis())
+            val collabBoost = try {
+                getCollaborativeBoostUseCase.execute(userProfile)[show.id] ?: 0f
+            } catch (e: Exception) { 0f }
+            scoreShow(
+                show = show,
+                context = context,
+                abandonmentPenalty = calculateAbandonmentPenalty(show, context.watchedEpisodesMap),
+                noveltyBoost = calculateNoveltyBoost(show, context.today),
+                collabBoost = collabBoost
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            show
         }
     }
 
@@ -301,7 +327,10 @@ class GetRecommendationsUseCase @Inject constructor(
                 completeness + noveltyBoost + collabBoost +
                 hiddenGemBoost + bingeBoost + explorationBonus + prefBoost -
                 abandonmentPenalty - saturationPenalty
-            ).coerceIn(0f, 11f)
+            ).coerceIn(0f, 10f)
+
+        // Unify rounding to 1 decimal place to ensure consistency across screens (e.g. 8.5)
+        val finalScore = (score * 10).let { kotlin.math.round(it) } / 10f
 
         val reasons = buildReasons(
             show = show,
@@ -313,7 +342,7 @@ class GetRecommendationsUseCase @Inject constructor(
             bingeBoost = bingeBoost
         )
 
-        return show.copy(affinityScore = score, reasons = reasons)
+        return show.copy(affinityScore = finalScore, reasons = reasons)
     }
 
     private fun calculateNarrativeContrib(
@@ -392,8 +421,8 @@ class GetRecommendationsUseCase @Inject constructor(
         val isOngoing = show.status in listOf("Returning Series", "In Production")
         val isEnded = show.status == "Ended" || show.status == "Canceled"
         return when {
-            avgEpsPerSession >= BINGE_THRESHOLD_EPS && seasons >= 3 && (isOngoing || show.status == null) -> BINGE_PROFILE_BOOST
-            avgEpsPerSession < BINGE_THRESHOLD_EPS && seasons <= 2 && (isEnded || show.status == null) -> BINGE_PROFILE_BOOST
+            avgEpsPerSession >= BINGE_THRESHOLD_EPS && seasons >= 3 && isOngoing -> BINGE_PROFILE_BOOST
+            avgEpsPerSession < BINGE_THRESHOLD_EPS && seasons <= 2 && isEnded -> BINGE_PROFILE_BOOST
             else -> 0f
         }
     }
@@ -403,6 +432,7 @@ class GetRecommendationsUseCase @Inject constructor(
         val maxPerGenre = (scored.size * effectiveFraction).toInt().coerceAtLeast(3)
         val genreCount = mutableMapOf<Int, Int>()
         val result = mutableListOf<MediaContent>()
+        val overflow = mutableListOf<MediaContent>()
 
         for (show in scored) {
             val dominantGenre = show.safeGenreIds.firstOrNull() ?: -1
@@ -410,10 +440,11 @@ class GetRecommendationsUseCase @Inject constructor(
             if (count < maxPerGenre) {
                 result.add(show)
                 genreCount[dominantGenre] = count + 1
+            } else {
+                overflow.add(show)
             }
         }
-        val included = result.map { it.id }.toHashSet()
-        result.addAll(scored.filter { it.id !in included })
+        result.addAll(overflow)
         return result
     }
 
@@ -430,10 +461,10 @@ class GetRecommendationsUseCase @Inject constructor(
         val personal = mutableListOf<RecommendationReason>()
         val systemic = mutableListOf<RecommendationReason>()
 
-        val topGenreEntry = show.safeGenreIds
+        val qualifiedGenres = show.safeGenreIds
             .mapNotNull { id -> profile.genreScores[id.toString()]?.let { id to it } }
             .filter { it.second > 3f }
-            .maxByOrNull { it.second }
+        val topGenreEntry = qualifiedGenres.maxByOrNull { it.second }
         topGenreEntry?.let { (genreId, genreScore) ->
             val weight = kotlin.math.tanh(genreScore / 20.0).toFloat().coerceIn(0.15f, 1f)
             personal += RecommendationReason(
@@ -502,45 +533,41 @@ class GetRecommendationsUseCase @Inject constructor(
             personal += RecommendationReason(ReasonType.COMPLETENESS, 0.75f, UiText.StringResource(R.string.reason_completeness), "✅")
         }
 
-        if (personal.size < 2) {
-            if (hiddenGemBoost > 0f) {
-                systemic += RecommendationReason(
-                    ReasonType.HIDDEN_GEM, 0.70f,
-                    UiText.StringResource(R.string.reason_hidden_gem, (cosineSim * 100).toInt()), "💎"
-                )
-            }
-            if (bingeBoost > 0f) {
-                val seasons = show.numberOfSeasons ?: 1
-                systemic += RecommendationReason(
-                    ReasonType.BINGE, 0.50f,
-                    if (seasons >= 3) {
-                        UiText.StringResource(R.string.reason_binge_long, seasons)
-                    } else {
-                        UiText.StringResource(R.string.reason_binge_short)
-                    },
-                    "🍿"
-                )
-            }
-            if (personal.isEmpty()) {
-                if (show.status == "Ended" || show.status == "Canceled") {
-                    systemic += RecommendationReason(
-                        ReasonType.COMPLETENESS, 0.40f,
-                        UiText.StringResource(R.string.reason_completeness), "✅"
-                    )
-                }
-                if (show.popularity > 100f && show.voteCount > 1000) {
-                    systemic += RecommendationReason(
-                        ReasonType.TRENDING,
-                        (show.popularity / 1000f).coerceIn(0.10f, 0.80f),
-                        UiText.StringResource(R.string.reason_trending), "🔥"
-                    )
-                }
-            }
+        if (hiddenGemBoost > 0f) {
+            systemic += RecommendationReason(
+                ReasonType.HIDDEN_GEM, 0.70f,
+                UiText.StringResource(R.string.reason_hidden_gem, (cosineSim * 100).toInt()), "💎"
+            )
+        }
+        if (bingeBoost > 0f) {
+            val seasons = show.numberOfSeasons ?: 1
+            systemic += RecommendationReason(
+                ReasonType.BINGE, 0.50f,
+                if (seasons >= 3) {
+                    UiText.StringResource(R.string.reason_binge_long, seasons)
+                } else {
+                    UiText.StringResource(R.string.reason_binge_short)
+                },
+                "🍿"
+            )
+        }
+        if (show.status == "Ended" || show.status == "Canceled") {
+            systemic += RecommendationReason(
+                ReasonType.COMPLETENESS, 0.40f,
+                UiText.StringResource(R.string.reason_completeness), "✅"
+            )
+        }
+        if (show.popularity > 100f && show.voteCount > 1000) {
+            systemic += RecommendationReason(
+                ReasonType.TRENDING,
+                (show.popularity / 1000f).coerceIn(0.10f, 0.80f),
+                UiText.StringResource(R.string.reason_trending), "🔥"
+            )
         }
 
         val sortedPersonal = personal.sortedByDescending { r: RecommendationReason -> r.weight }
         val sortedSystemic = systemic.sortedByDescending { r: RecommendationReason -> r.weight }
-        return (sortedPersonal + sortedSystemic).take(3)
+        return (sortedPersonal + sortedSystemic).distinctBy { it.type }.take(5)
     }
 
     private fun genreEmoji(genreId: Int): String = when (genreId) {
@@ -554,7 +581,7 @@ class GetRecommendationsUseCase @Inject constructor(
         10762 -> "🧸"
         9648 -> "🔍"
         10765 -> "🚀"
-        10768 -> "⚡"
+        10768 -> "🗳️"
         37 -> "🤠"
         else -> "🎬"
     }
@@ -616,7 +643,7 @@ class GetRecommendationsUseCase @Inject constructor(
             pool.sortedByDescending { calculateBayesianRating(it) }
         }
 
-        serendipityCandidates.forEachIndexed { i, show ->
+        serendipityCandidates.take(serendipityCount).forEachIndexed { i, show ->
             val pos = ((i + 1) * 7).coerceAtMost(main.size)
             main.add(pos, show)
         }

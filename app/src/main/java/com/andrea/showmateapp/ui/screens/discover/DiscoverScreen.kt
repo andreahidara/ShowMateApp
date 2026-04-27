@@ -214,6 +214,7 @@ fun DiscoverScreenContent(
                         animatedVisibilityScope = animatedVisibilityScope,
                         onItemClick = onMediaClick,
                         tag = "discover_genre1",
+                        subtitle = state.topGenreSubtitle.takeIf { it.isNotEmpty() },
                         listState = sectionStates[2],
                         onLoadMore = onLoadMoreTopGenre,
                         isLoadingMore = state.isLoadingMoreTopGenre
@@ -243,6 +244,7 @@ fun DiscoverScreenContent(
                         animatedVisibilityScope = animatedVisibilityScope,
                         onItemClick = onMediaClick,
                         tag = "discover_genre2",
+                        subtitle = state.secondGenreSubtitle.takeIf { it.isNotEmpty() },
                         listState = sectionStates[4],
                         onLoadMore = onLoadMoreSecondGenre,
                         isLoadingMore = state.isLoadingMoreSecondGenre
@@ -258,6 +260,7 @@ fun DiscoverScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_genre3",
+                            subtitle = state.thirdGenreSubtitle.takeIf { it.isNotEmpty() },
                             listState = sectionStates[6]
                         )
                     }
@@ -353,15 +356,15 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (state.secondActorShows.isNotEmpty() && state.secondActorName.isNotEmpty()) {
+                if (state.secondKeywordShows.isNotEmpty() && state.secondKeywordLabel.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gusta ${state.secondActorName}",
-                            items = state.secondActorShows,
+                            title = state.secondKeywordLabel,
+                            items = state.secondKeywordShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            tag = "discover_actor2",
+                            tag = "discover_keyword2",
                             listState = sectionStates[15]
                         )
                     }
@@ -567,17 +570,6 @@ fun DiscoverHeroSection(
             ).take(3)
     }
 
-    val glowTransition = rememberInfiniteTransition(label = "heroGlow")
-    val badgeGlow by glowTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            tween(1800, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse
-        ),
-        label = "badge"
-    )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -598,7 +590,7 @@ fun DiscoverHeroSection(
                             it
                         } else {
                             it.sharedElement(
-                                state = rememberSharedContentState(key = "image-${media.id}-$tag"),
+                                sharedContentState = rememberSharedContentState(key = "image-${media.id}-$tag"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
                         }

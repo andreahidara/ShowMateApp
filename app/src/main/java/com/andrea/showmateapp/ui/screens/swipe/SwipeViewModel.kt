@@ -81,7 +81,6 @@ class SwipeViewModel @Inject constructor(
                 lastAction = SwipeUiState.SwipeAction(show, isLike = true)
             )
         }
-        if (_uiState.value.shows.size < 5) loadShows(false)
 
         viewModelScope.launch {
             try {
@@ -99,6 +98,9 @@ class SwipeViewModel @Inject constructor(
                     interactionType = IInteractionRepository.InteractionType.Like
                 )
                 achievementChecker.addXp(AchievementDefs.XP_LIKE_SHOW)
+
+                if (_uiState.value.shows.size < 5) refillShows()
+
                 runCatching { userRepository.getUserProfile() }.getOrNull()?.let { profile ->
                     achievementChecker.evaluate(
                         AchievementChecker.EvalContext(
@@ -132,7 +134,6 @@ class SwipeViewModel @Inject constructor(
                 lastAction = SwipeUiState.SwipeAction(show, isLike = false)
             )
         }
-        if (_uiState.value.shows.size < 5) loadShows(false)
 
         viewModelScope.launch {
             try {
@@ -149,6 +150,7 @@ class SwipeViewModel @Inject constructor(
                     creators = show.creatorIds,
                     interactionType = IInteractionRepository.InteractionType.Dislike
                 )
+                if (_uiState.value.shows.size < 5) refillShows()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update { state ->
@@ -171,7 +173,6 @@ class SwipeViewModel @Inject constructor(
                 lastAction = SwipeUiState.SwipeAction(show, isLike = true)
             )
         }
-        if (_uiState.value.shows.size < 5) loadShows(false)
 
         viewModelScope.launch {
             try {
@@ -189,6 +190,7 @@ class SwipeViewModel @Inject constructor(
                     interactionType = IInteractionRepository.InteractionType.Essential
                 )
                 achievementChecker.addXp(AchievementDefs.XP_LIKE_SHOW)
+                if (_uiState.value.shows.size < 5) refillShows()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update { state ->
@@ -200,6 +202,19 @@ class SwipeViewModel @Inject constructor(
                 }
                 _effects.trySend(SwipeEffect.ShowError("No se pudo guardar. Revisa tu conexión."))
             }
+        }
+    }
+
+    private suspend fun refillShows() {
+        try {
+            val newShows = getRecommendationsUseCase.execute()
+            if (newShows.isEmpty()) return
+            _uiState.update { state ->
+                val currentIds = state.shows.map { it.id }.toHashSet()
+                state.copy(shows = state.shows + newShows.filter { it.id !in currentIds })
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
         }
     }
 

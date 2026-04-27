@@ -268,7 +268,7 @@ class RecommendationRegressionTest {
     fun `FIXTURE4 casual watcher gets boost for ended 2-season show, binge watcher does not`() = runTest {
         val bingeHistory = listOf("2026-04-01:1:5", "2026-04-02:2:5", "2026-04-03:3:5")
         val casualHistory = listOf("2026-04-01:1:1", "2026-04-02:2:1", "2026-04-03:3:1")
-        val endedShort = show(1, listOf(18), 7.5f, 1000, "Ended", 2)
+        val endedShort = show(1, emptyList(), 7.5f, 1000, "Ended", 2)
 
         coEvery { userRepository.getUserProfile() } returns UserProfile(
             genreScores = mapOf("18" to 20f),

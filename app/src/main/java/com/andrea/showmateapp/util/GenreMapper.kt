@@ -37,4 +37,24 @@ object GenreMapper {
     }
 
     fun getGenreName(id: Int): String = getGenreName(id.toString())
+
+    fun getGenreDescriptionKey(id: String): String = when (id) {
+        "10759" -> "discover_genre_action"
+        "16" -> "discover_genre_animation"
+        "35" -> "discover_genre_comedy"
+        "80" -> "discover_genre_crime"
+        "99" -> "discover_genre_documentary"
+        "18" -> "discover_genre_drama"
+        "10751" -> "discover_genre_family"
+        "10762" -> "discover_genre_kids"
+        "9648" -> "discover_genre_mystery"
+        "10763" -> "discover_genre_news"
+        "10764" -> "discover_genre_reality"
+        "10765" -> "discover_genre_scifi"
+        "10766" -> "discover_genre_soap"
+        "10767" -> "discover_genre_talk"
+        "10768" -> "discover_genre_war"
+        "37" -> "discover_genre_western"
+        else -> "discover_genre_comedy"
+    }
 }

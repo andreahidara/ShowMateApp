@@ -24,7 +24,9 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +64,31 @@ class DetailViewModel @Inject constructor(
 
     private val toggleMutex = Mutex()
 
+    fun refresh(showId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+            try {
+                when (val result = showRepository.getShowDetails(showId)) {
+                    is Resource.Success -> {
+                        val scoredDetails = getRecommendationsUseCase.scoreForDetail(result.data)
+                        _uiState.update { it.copy(media = scoredDetails) }
+                        loadUserRating(scoredDetails.id)
+                        loadUserReview(scoredDetails.id)
+                    }
+                    is Resource.Error -> {
+                        _uiState.update { it.copy(errorMessage = UiText.DynamicString(result.effectiveMessage)) }
+                    }
+                    else -> {}
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.error_unexpected_data)) }
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
+    }
+
     fun loadShowDetails(showId: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -77,8 +104,7 @@ class DetailViewModel @Inject constructor(
                             null
                         }
 
-                        val scoredDetails =
-                            getRecommendationsUseCase.scoreShows(listOf(details)).firstOrNull() ?: details
+                        val scoredDetails = getRecommendationsUseCase.scoreForDetail(details)
                         _uiState.update { it.copy(media = scoredDetails) }
 
                         checkInteractions(scoredDetails.id, profile)
@@ -90,7 +116,7 @@ class DetailViewModel @Inject constructor(
                         }
 
                         loadCustomLists()
-                        scoredDetails.seasons?.firstOrNull()?.let {
+                        scoredDetails.seasons?.firstOrNull { it.seasonNumber > 0 }?.let {
                             loadSeasonDetails(showId, it.seasonNumber)
                         }
                     }
@@ -254,7 +280,7 @@ class DetailViewModel @Inject constructor(
                         ?.let { if (it is Resource.Success) it.data.episodes.map { ep -> ep.id } else emptyList() }
                         ?: emptyList()
                 }
-            }.flatMap { it.await() }
+            }.awaitAll().flatten()
         }
         if (allEpisodeIds.isNotEmpty()) {
             interactionRepository.setAllEpisodesWatched(show.id, allEpisodeIds)
@@ -367,7 +393,7 @@ class DetailViewModel @Inject constructor(
                         ?.let { if (it is Resource.Success) it.data.episodes.map { ep -> ep.id } else emptyList() }
                         ?: emptyList()
                 }
-            }.flatMap { it.await() }
+            }.awaitAll().flatten()
         }
         if (allEpisodeIds.isNotEmpty() && watchedEpisodes.containsAll(allEpisodeIds)) {
             interactionRepository.toggleWatched(show, true)
@@ -534,10 +560,29 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSimilarLoading = true) }
             try {
-                val similar = showRepository.getSimilarShows(showId)
+                var similar = showRepository.getSimilarShows(showId)
+
+                if (similar.isEmpty()) {
+                    // Retry once after a short delay
+                    delay(500)
+                    similar = showRepository.getSimilarShows(showId)
+                }
+
+                if (similar.isEmpty()) {
+                    Timber.i("Similar shows empty after retry, attempting genre-based fallback for $showId")
+                    val genres = _uiState.value.media?.safeGenreIds?.joinToString(",")
+                    if (!genres.isNullOrEmpty()) {
+                        val fallback = showRepository.getShowsByGenres(genres)
+                        if (fallback is Resource.Success) {
+                            similar = fallback.data.filter { it.id != showId }
+                        }
+                    }
+                }
+
                 val scoredSimilar = getRecommendationsUseCase.scoreShows(similar)
                 _uiState.update { it.copy(similarShows = scoredSimilar) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Timber.e(e, "Error loading similar shows")
             } finally {
                 _uiState.update { it.copy(isSimilarLoading = false) }

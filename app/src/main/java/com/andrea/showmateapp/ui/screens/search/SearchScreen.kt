@@ -284,7 +284,7 @@ fun SearchScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     modifier = Modifier.padding(bottom = 10.dp)
                 ) {
-                    items(SearchMode.entries) { mode ->
+                    items(SearchMode.entries, key = { it.name }) { mode ->
                         val isSelected = mode == searchMode
                         Box(
                             modifier = Modifier

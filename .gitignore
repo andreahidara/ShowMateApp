@@ -42,6 +42,7 @@ $RECYCLE.BIN/
 
 # --- SECRETS & KEYS ---
 secret.properties
+keystore.properties
 *.jks
 *.keystore
 **/google-services.json

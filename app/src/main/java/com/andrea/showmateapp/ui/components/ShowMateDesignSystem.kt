@@ -98,8 +98,9 @@ fun TmdbImage(
         return
     }
 
-    coil.compose.AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
+    val context = LocalContext.current
+    val request = remember(url, crossfade) {
+        ImageRequest.Builder(context)
             .data(url)
             .crossfade(if (crossfade) 250 else 0)
             .diskCachePolicy(CachePolicy.ENABLED)
@@ -109,7 +110,10 @@ fun TmdbImage(
                     Timber.e("TmdbImage error url=$url: ${result.throwable}")
                 }
             )
-            .build(),
+            .build()
+    }
+    coil.compose.AsyncImage(
+        model = request,
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = contentScale,
@@ -132,23 +136,19 @@ fun ShowCard(
 ) {
     val sharedElementKey = "image-${media.id}-$tag"
 
-    val isHighScore = media.affinityScore >= 0.8f || media.voteAverage >= 8.0f
+    val isHighScore = media.affinityScore >= 8.0f || media.voteAverage >= 8.0f
 
-    val glowAlpha = if (isHighScore) {
-        val glowTransition = rememberInfiniteTransition(label = "glow")
-        val glowPulse by glowTransition.animateFloat(
-            initialValue = 0.25f,
-            targetValue = 0.65f,
-            animationSpec = infiniteRepeatable(
-                tween(1800, easing = FastOutSlowInEasing),
-                RepeatMode.Reverse
-            ),
-            label = "glowPulse"
-        )
-        glowPulse
-    } else {
-        0f
-    }
+    val glowTransition = rememberInfiniteTransition(label = "glow")
+    val glowPulse by glowTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.65f,
+        animationSpec = infiniteRepeatable(
+            tween(1800, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "glowPulse"
+    )
+    val glowAlpha = if (isHighScore) glowPulse else 0f
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -180,7 +180,7 @@ fun ShowCard(
                 .shadow(
                     elevation = if (isHighScore) 8.dp else 0.dp,
                     shape = RoundedCornerShape(16.dp),
-                    spotColor = if (media.affinityScore >= 0.8f) {
+                    spotColor = if (media.affinityScore >= 8.0f) {
                         MatchGreen.copy(alpha = glowAlpha)
                     } else {
                         GoldAccent.copy(alpha = glowAlpha)
@@ -201,7 +201,7 @@ fun ShowCard(
                         } else {
                             with(sharedTransitionScope) {
                                 Modifier.sharedElement(
-                                    state = rememberSharedContentState(key = sharedElementKey),
+                                    sharedContentState = rememberSharedContentState(key = sharedElementKey),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }
@@ -253,7 +253,7 @@ fun ShowCard(
 
 @Composable
 fun MatchBadge(score: Float, isAffinity: Boolean, modifier: Modifier = Modifier) {
-    val percentage = (score * 10).toInt().coerceIn(0, 100)
+    val percentage = remember(score) { (score * 10f).let { kotlin.math.round(it) }.toInt().coerceIn(0, 100) }
     val displayValue = remember(score, isAffinity) {
         if (isAffinity) "$percentage%" else "${"%.1f".format(score)}★"
     }
@@ -613,9 +613,12 @@ fun <T> PremiumTabRow(
                         ) { onTabSelected(tab) }
                         .padding(vertical = 10.dp)
                         .onGloballyPositioned { coords ->
-                            val newWidths = tabWidths.toMutableList()
-                            newWidths[index] = with(density) { coords.size.width.toDp() }
-                            tabWidths = newWidths
+                            val newWidth = with(density) { coords.size.width.toDp() }
+                            if (tabWidths[index] != newWidth) {
+                                val newWidths = tabWidths.toMutableList()
+                                newWidths[index] = newWidth
+                                tabWidths = newWidths
+                            }
                         },
                     contentAlignment = Alignment.Center
                 ) {

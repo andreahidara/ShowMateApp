@@ -46,9 +46,9 @@ class HomeViewModel @Inject constructor(
 
     private var fetchJob: Job? = null
     private var trendingPage = 1
-    private var trendingTotalPages = 1
+    private var trendingTotalPages = Int.MAX_VALUE
     private var thisWeekPage = 1
-    private var thisWeekTotalPages = 1
+    private var thisWeekTotalPages = Int.MAX_VALUE
 
     init {
         fetchHomeData(isInitialLoad = true)
@@ -82,6 +82,53 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Timber.e(e, "observeInteractions flow failed")
+            }
+        }
+
+        viewModelScope.launch {
+            userRepository.getUserProfileFlow().collect { profile ->
+                if (profile != null && !_uiState.value.isLoading && !_uiState.value.isRefreshing) {
+                    rescoreExistingContent()
+                }
+            }
+        }
+    }
+
+    private fun rescoreExistingContent() {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val upNextScored = getRecommendationsUseCase.scoreShows(state.upNextShows)
+            val trendingScored = getRecommendationsUseCase.scoreShows(state.trendingShows)
+            val top10Scored = getRecommendationsUseCase.scoreShows(state.top10Shows)
+            val newReleasesScored = getRecommendationsUseCase.scoreShows(state.newReleasesShows)
+            val thisWeekScored = getRecommendationsUseCase.scoreShows(state.thisWeekShows)
+            
+            val actionScored = getRecommendationsUseCase.scoreShows(state.genres.action)
+            val comedyScored = getRecommendationsUseCase.scoreShows(state.genres.comedy)
+            val dramaScored = getRecommendationsUseCase.scoreShows(state.genres.drama)
+            val sciFiScored = getRecommendationsUseCase.scoreShows(state.genres.sciFi)
+            val mysteryScored = getRecommendationsUseCase.scoreShows(state.genres.mystery)
+            
+            val platformScored = state.platformShows.mapValues { getRecommendationsUseCase.scoreShows(it.value) }
+            val whatToWatchScored = state.whatToWatchToday?.let { getRecommendationsUseCase.scoreForDetail(it) }
+
+            _uiState.update { s ->
+                s.copy(
+                    upNextShows = upNextScored,
+                    trendingShows = trendingScored,
+                    top10Shows = top10Scored,
+                    newReleasesShows = newReleasesScored,
+                    thisWeekShows = thisWeekScored,
+                    genres = s.genres.copy(
+                        action = actionScored,
+                        comedy = comedyScored,
+                        drama = dramaScored,
+                        sciFi = sciFiScored,
+                        mystery = mysteryScored
+                    ),
+                    platformShows = platformScored,
+                    whatToWatchToday = whatToWatchScored
+                )
             }
         }
     }
@@ -221,7 +268,9 @@ class HomeViewModel @Inject constructor(
                     currentState.genres.comedy + currentState.genres.drama +
                     currentState.genres.sciFi + currentState.genres.mystery).distinctBy { it.id }
 
-            val recommendations = cachedPool.ifEmpty {
+            val recommendations = if (cachedPool.isNotEmpty()) {
+                getRecommendationsUseCase.scoreShows(cachedPool)
+            } else {
                 try { getRecommendationsUseCase.execute() } catch (e: Exception) { emptyList() }
             }
 
@@ -237,7 +286,7 @@ class HomeViewModel @Inject constructor(
                 if (filtered.isNotEmpty()) candidates = filtered
             }
 
-            val pick = candidates.maxByOrNull { it.affinityScore }
+            val pick = candidates.sortedByDescending { it.affinityScore }.firstOrNull()
                 ?: currentState.trendingShows.firstOrNull { it.posterPath != null }
 
             _uiState.update { it.copy(whatToWatchToday = pick) }
@@ -341,9 +390,9 @@ class HomeViewModel @Inject constructor(
 
     private fun resetPagination() {
         trendingPage = 1
-        trendingTotalPages = 1
+        trendingTotalPages = Int.MAX_VALUE
         thisWeekPage = 1
-        thisWeekTotalPages = 1
+        thisWeekTotalPages = Int.MAX_VALUE
     }
 
     private fun updateLoadingState(isInitialLoad: Boolean) {
@@ -351,7 +400,8 @@ class HomeViewModel @Inject constructor(
             if (isInitialLoad) {
                 it.copy(isLoading = true, errorMessage = null, criticalError = null)
             } else {
-                it.copy(isRefreshing = true, errorMessage = null, criticalError = null)
+                it.copy(isRefreshing = true, errorMessage = null, criticalError = null,
+                    platformShows = emptyMap(), selectedPlatform = null)
             }
         }
     }
@@ -447,7 +497,9 @@ class HomeViewModel @Inject constructor(
             val caughtUp = watchedCount >= totalEpisodes && totalEpisodes > 0
 
             if (isFinishedStatus) !caughtUp else (watchedCount > 0 && !caughtUp)
-        }.reversed()
+        }.let {
+            getRecommendationsUseCase.scoreShows(it)
+        }
     }
 
     private fun calculateUpNextProgress(shows: List<MediaContent>, watchedEpisodes: Map<String, List<Int>>): Map<Int, Float> {
@@ -465,36 +517,67 @@ class HomeViewModel @Inject constructor(
     private suspend fun fetchPhase2() = withContext(ioDispatcher) {
         PerfTracer.trace("home_phase2_fetch") { trace ->
             val excludedIds = interactionRepository.getExcludedMediaIds()
+            val profile = userRepository.getUserProfile()
             val threeMonthsAgo = LocalDate.now().minusMonths(3).toString()
-            val defs = mapOf(
-                "new" to async { repository.discoverShows(firstAirDateGte = threeMonthsAgo, sortBy = "popularity.desc") },
-                "10759" to async { repository.discoverShows(genreId = "10759") },
-                "35" to async { repository.discoverShows(genreId = "35") },
-                "18" to async { repository.discoverShows(genreId = "18") },
-                "10765" to async { repository.discoverShows(genreId = "10765") },
-                "9648" to async { repository.discoverShows(genreId = "9648") }
-            )
 
-            val results = defs.mapValues { it.value.await() }
+            val userGenres = profile?.genreScores?.filter { it.value > 0 }?.keys ?: emptySet()
+
+            val defs = mutableMapOf<String, kotlinx.coroutines.Deferred<Resource<List<MediaContent>>>>()
+            val defs2 = mutableMapOf<String, kotlinx.coroutines.Deferred<Resource<Pair<List<MediaContent>, Int>>>>()
+
+            defs["new"] = async { repository.discoverShows(firstAirDateGte = threeMonthsAgo, sortBy = "popularity.desc") }
+
+            val genresToFetch = mutableListOf<String>()
+            if (userGenres.contains("10759")) genresToFetch.add("10759")
+            if (userGenres.contains("35")) genresToFetch.add("35")
+            if (userGenres.contains("18")) genresToFetch.add("18")
+            if (userGenres.contains("10765")) genresToFetch.add("10765")
+            if (userGenres.contains("9648")) genresToFetch.add("9648")
+
+            if (genresToFetch.size < 3) {
+                if (!genresToFetch.contains("18")) genresToFetch.add("18")
+                if (!genresToFetch.contains("35")) genresToFetch.add("35")
+            }
+
+            genresToFetch.forEach { gid ->
+                defs2[gid] = async { repository.discoverShowsPaged(genreId = gid, page = 1) }
+                defs2[gid + "_p2"] = async { repository.discoverShowsPaged(genreId = gid, page = 2) }
+                defs2[gid + "_p3"] = async { repository.discoverShowsPaged(genreId = gid, page = 3) }
+            }
+
+            val resultsNew = defs["new"]?.await()
+            val resultsGenres = defs2.mapValues { it.value.await() }
+
+            val totalShowsFound = resultsGenres.values.filterIsInstance<Resource.Success<Pair<List<MediaContent>, Int>>>().sumOf { it.data.first.size }
+            trace?.putMetric("below_fold_genres_total", totalShowsFound.toLong())
+
             val existingIds = (_uiState.value.trendingShows + _uiState.value.top10Shows).map { it.id }.toSet()
 
             suspend fun process(res: Resource<List<MediaContent>>?, current: List<MediaContent>, filter: Boolean = false): List<MediaContent> {
                 return if (res is Resource.Success) {
                     val baseList = res.data.filter { it.id !in excludedIds }
-                    val list = if (filter) baseList.filter { it.id !in existingIds }.take(15) else baseList
+                    val list = if (filter) baseList.filter { it.id !in existingIds }.take(30) else baseList.take(30)
                     getRecommendationsUseCase.scoreShows(list)
-                } else current
+                } else if (res == null) emptyList() else current
             }
 
-            val belowFoldTotal = results.values.filterIsInstance<Resource.Success<List<MediaContent>>>().sumOf { it.data.size }.toLong()
-            trace?.putMetric("below_fold_total", belowFoldTotal)
+            suspend fun processPaged(gid: String, current: List<MediaContent>): List<MediaContent> {
+                val r1 = resultsGenres[gid]
+                val r2 = resultsGenres[gid + "_p2"]
+                val r3 = resultsGenres[gid + "_p3"]
+                val list1 = (r1 as? Resource.Success)?.data?.first ?: emptyList()
+                val list2 = (r2 as? Resource.Success)?.data?.first ?: emptyList()
+                val list3 = (r3 as? Resource.Success)?.data?.first ?: emptyList()
+                val combined = (list1 + list2 + list3).distinctBy { it.id }.filter { it.id !in excludedIds }
+                return if (combined.isEmpty()) current else getRecommendationsUseCase.scoreShows(combined.take(40))
+            }
 
-            val newReleasesShows = process(results["new"], _uiState.value.newReleasesShows, true)
-            val actionList = process(results["10759"], _uiState.value.genres.action)
-            val comedyList = process(results["35"], _uiState.value.genres.comedy)
-            val dramaList = process(results["18"], _uiState.value.genres.drama)
-            val sciFiList = process(results["10765"], _uiState.value.genres.sciFi)
-            val mysteryList = process(results["9648"], _uiState.value.genres.mystery)
+            val newReleasesShows = process(resultsNew, _uiState.value.newReleasesShows, true)
+            val actionList = processPaged("10759", _uiState.value.genres.action)
+            val comedyList = processPaged("35", _uiState.value.genres.comedy)
+            val dramaList = processPaged("18", _uiState.value.genres.drama)
+            val sciFiList = processPaged("10765", _uiState.value.genres.sciFi)
+            val mysteryList = processPaged("9648", _uiState.value.genres.mystery)
 
             _uiState.update { state ->
                 state.copy(

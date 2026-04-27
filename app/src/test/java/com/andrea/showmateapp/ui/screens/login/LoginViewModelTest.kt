@@ -23,8 +23,9 @@ class LoginViewModelTest {
 
     private val authRepository: AuthRepository = mockk(relaxed = true)
     private val userRepository: IUserRepository = mockk(relaxed = true)
+    private val interactionRepository: com.andrea.showmateapp.domain.repository.IInteractionRepository = mockk(relaxed = true)
 
-    private fun viewModel() = LoginViewModel(authRepository, userRepository)
+    private fun viewModel() = LoginViewModel(authRepository, userRepository, interactionRepository)
 
     @Test
     fun `onEmailChanged updates email in state`() {

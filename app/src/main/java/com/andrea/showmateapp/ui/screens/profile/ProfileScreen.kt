@@ -122,10 +122,11 @@ fun ProfileScreen(
 
     val achievementProgress by viewModel.achievementProgress.collectAsStateWithLifecycle()
     val friendCount by viewModel.friendCount.collectAsStateWithLifecycle()
-    val posterPaths = remember(watchedShows, likedShows) {
+    val posterPaths = remember(watchedShows, likedShows, watchlistShows) {
         buildMap {
             watchedShows.forEach { put(it.show.id, it.show.posterPath) }
             likedShows.forEach { put(it.id, it.posterPath) }
+            watchlistShows.forEach { put(it.id, it.posterPath) }
         }
     }
 
@@ -392,7 +393,7 @@ fun ProfileHeaderPremium(
                             model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                                 .data(photoUrl)
                                 .crossfade(true)
-                                .memoryCachePolicy(coil.request.CachePolicy.DISABLED)
+                                .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
                                 .build(),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),

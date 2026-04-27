@@ -15,6 +15,7 @@ import com.andrea.showmateapp.data.model.*
 import com.andrea.showmateapp.data.network.TmdbApiService
 import com.andrea.showmateapp.data.network.TmdbSearchPagingSource
 import com.andrea.showmateapp.domain.repository.IShowRepository
+import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.UiText
@@ -43,6 +44,7 @@ enum class SearchMode(val label: String) {
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val showRepository: IShowRepository,
+    private val userRepository: IUserRepository,
     private val tmdbApiService: TmdbApiService,
     private val getRecommendationsUseCase: GetRecommendationsUseCase,
     private val dataStore: DataStore<Preferences>
@@ -64,7 +66,7 @@ class SearchViewModel @Inject constructor(
             "119" to "Prime",
             "337" to "Disney+",
             "1899" to "Max",
-            "2" to "Apple TV+",
+            "350" to "Apple TV+",
             "531" to "Paramount+"
         )
     }
@@ -142,6 +144,26 @@ class SearchViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
+        }
+
+        viewModelScope.launch {
+            userRepository.getUserProfileFlow().collect { profile ->
+                if (profile != null && !_isLoading.value) {
+                    rescoreExistingContent()
+                }
+            }
+        }
+    }
+
+    private fun rescoreExistingContent() {
+        viewModelScope.launch {
+            val trendingScored = getRecommendationsUseCase.scoreShows(_trendingShows.value)
+            val suggestionsScored = getRecommendationsUseCase.scoreShows(_suggestions.value)
+            val resultsScored = getRecommendationsUseCase.scoreShows(_searchResults.value)
+            
+            _trendingShows.value = trendingScored
+            _suggestions.value = suggestionsScored
+            _searchResults.value = resultsScored
         }
     }
 
@@ -236,11 +258,20 @@ class SearchViewModel @Inject constructor(
 
     fun searchMedia(query: String) {
         searchJob?.cancel()
+        val trimmedQuery = query.trim()
 
-        if (query.isBlank() && !_isFilterActive.value) {
+        if (trimmedQuery.isEmpty() && !_isFilterActive.value) {
             _searchResults.value = emptyList()
             _suggestions.value = emptyList()
             _errorMessage.value = null
+            return
+        }
+
+        if (trimmedQuery.isNotEmpty() && trimmedQuery.length < 2) {
+            _errorMessage.value = UiText.StringResource(R.string.error_search_too_short)
+            _searchResults.value = emptyList()
+            _personSearchResults.value = emptyList()
+            _suggestions.value = emptyList()
             return
         }
 

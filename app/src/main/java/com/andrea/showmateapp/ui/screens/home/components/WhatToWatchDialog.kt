@@ -41,10 +41,12 @@ import com.andrea.showmateapp.util.TmdbUtils
 
 @Composable
 fun WhatToWatchDialog(media: MediaContent, onDismiss: () -> Unit, onViewDetails: () -> Unit) {
-    val matchPct = if (media.affinityScore > 0f) {
-        (media.affinityScore * 100).toInt().coerceIn(0, 100)
-    } else {
-        -1
+    val matchPct = remember(media.affinityScore) {
+        if (media.affinityScore > 0f) {
+            (media.affinityScore * 10.05f).toInt().coerceIn(0, 100)
+        } else {
+            -1
+        }
     }
     val matchColor = when {
         matchPct >= 80 -> Color(0xFF4CAF50)

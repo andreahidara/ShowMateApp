@@ -36,6 +36,7 @@ class ShowRepository @Inject constructor(
         const val CAT_DETAILS = "details"
         const val CAT_POPULAR = "popular"
         const val CAT_TRENDING = "trending"
+        const val CAT_TRENDING_WEEK = "trending_week"
         const val CAT_RECOMMENDED = "recommended"
     }
 
@@ -98,8 +99,9 @@ class ShowRepository @Inject constructor(
         val result = safeApiCall(retries = 1) { withTimeoutOrNull(TIMEOUT) { apiCall() } ?: throw IOException("Timeout") }
         when (result) {
             is Resource.Success -> {
-                dao.replaceCategory(cat, result.data.map { it.toEntity(cat) })
-                if (excluded.isNotEmpty()) Resource.Success(result.data.filter { it.id !in excluded }) else result
+                val enriched = enrichWithLocalData(result.data)
+                dao.replaceCategory(cat, enriched.map { it.toEntity(cat) })
+                if (excluded.isNotEmpty()) Resource.Success(enriched.filter { it.id !in excluded }) else Resource.Success(enriched)
             }
             is Resource.Error -> {
                 dao.deleteStaleByCategory(cat, System.currentTimeMillis() - CACHE_TTL)
@@ -110,22 +112,46 @@ class ShowRepository @Inject constructor(
         }
     }
 
+    private suspend fun enrichWithLocalData(shows: List<MediaContent>): List<MediaContent> {
+        return shows.map { show ->
+            val local = dao.getLikedShowById(show.id) ?: dao.getWatchedShowById(show.id)
+            if (local != null) {
+                show.copy(
+                    status = local.status ?: show.status,
+                    numberOfSeasons = local.numberOfSeasons ?: show.numberOfSeasons,
+                    firstAirDate = local.firstAirDate ?: show.firstAirDate
+                )
+            } else {
+                show
+            }
+        }
+    }
+
     override suspend fun getShowDetailsInParallel(ids: List<Int>, maxCount: Int): List<MediaContent> = coroutineScope {
         ids.take(maxCount).map { async { getShowDetails(it) } }.awaitAll().mapNotNull { (it as? Resource.Success)?.data }
     }
 
     override suspend fun getPopularShows(excludedIds: List<Int>) = fetchCached(CAT_POPULAR, excludedIds) { api.getPopularMedia().results }
-    override suspend fun getTrendingThisWeek(excludedIds: List<Int>) = fetchCached(CAT_TRENDING, excludedIds) { api.getTrendingThisWeek().results }
-    override suspend fun getTrendingShows(excludedIds: List<Int>) = fetchCached(CAT_POPULAR, excludedIds) { api.discoverMedia(sortBy = "popularity.desc").results }
+    override suspend fun getTrendingThisWeek(excludedIds: List<Int>) = fetchCached(CAT_TRENDING_WEEK, excludedIds) { api.getTrendingThisWeek().results }
+    override suspend fun getTrendingShows(excludedIds: List<Int>) = fetchCached(CAT_TRENDING, excludedIds) { api.getTrendingMedia().results }
     override suspend fun getShowsByGenres(genreIds: String, excludedIds: List<Int>) = fetchCached(CAT_RECOMMENDED, excludedIds) { api.discoverMedia(genreId = genreIds).results }
 
     override suspend fun getDetailedRecommendations(genres: String?, excludedIds: List<Int>): List<MediaContent> {
         if (genres.isNullOrEmpty()) return (getTrendingShows(excludedIds) as? Resource.Success)?.data ?: emptyList()
+        val excludedSet = excludedIds.toHashSet()
         val result = safeApiCall {
-            val res = api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 6f, minVoteCount = 100).results
-            if (excludedIds.isEmpty()) res else res.filter { it.id !in excludedIds }
+            coroutineScope {
+                val p1 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 1).results }
+                val p2 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 2).results }
+                val p3 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5f, minVoteCount = 10, page = 3).results }
+                val all = (p1.await() + p2.await() + p3.await()).distinctBy { it.id }
+                val enriched = enrichWithLocalData(all)
+                if (excludedSet.isEmpty()) enriched else enriched.filter { it.id !in excludedSet }
+            }
         }
-        return (result as? Resource.Success)?.data.takeIf { !it.isNullOrEmpty() } ?: (getTrendingShows(excludedIds) as? Resource.Success)?.data ?: emptyList()
+        return (result as? Resource.Success)?.data.takeIf { !it.isNullOrEmpty() }
+            ?: (getTrendingShows(excludedIds) as? Resource.Success)?.data
+            ?: emptyList()
     }
 
     override suspend fun getShowsOnTheAir(providers: String): Resource<List<MediaContent>> {
@@ -148,10 +174,19 @@ class ShowRepository @Inject constructor(
         val people = api.searchPerson(query).results
         if (people.isEmpty()) return@safeApiCall emptyList()
         val jobs = setOf("Creator", "Executive Producer", "Showrunner", "Series Director")
-        people.take(3).flatMap { p ->
-            val c = api.getPersonTvCredits(p.id)
-            if (isCreator) c.crew.filter { it.job in jobs }.map { it.toMediaContent() } else c.cast
-        }.distinctBy { it.id }.filter { it.posterPath != null }.sortedByDescending { it.popularity }
+        coroutineScope {
+            people.take(3)
+                .map { p -> async { api.getPersonTvCredits(p.id) } }
+                .awaitAll()
+                .zip(people.take(3)) { credits, p ->
+                    if (isCreator) credits.crew.filter { it.job in jobs }.map { it.toMediaContent() }
+                    else credits.cast
+                }
+                .flatten()
+                .distinctBy { it.id }
+                .filter { it.posterPath != null }
+                .sortedByDescending { it.popularity }
+        }
     }
 
     override suspend fun discoverShowsPaged(genreId: String?, sortBy: String, page: Int, airDateGte: String?, airDateLte: String?): Resource<Pair<List<MediaContent>, Int>> = safeApiCall {

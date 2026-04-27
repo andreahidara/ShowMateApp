@@ -61,7 +61,7 @@ class DiscoverViewModelTest {
             repository.discoverShows(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         } returns Resource.Success(emptyList())
         coEvery { getRecommendationsUseCase.execute() } returns emptyList()
-        coEvery { getRecommendationsUseCase.scoreShows(any()) } answers { firstArg() }
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } answers { firstArg() }
         every { context.getString(any()) } returns ""
     }
 
@@ -81,9 +81,8 @@ class DiscoverViewModelTest {
 
     @Test
     fun `loadDiscoverContent success sets isLoading false and no errorMessage`() = runTest {
-        coEvery { repository.getShowsByGenres("18", emptyList()) } returns Resource.Success(mockMedia)
-        coEvery { repository.getShowsByGenres("35", emptyList()) } returns Resource.Success(mockMedia)
-        coEvery { getRecommendationsUseCase.scoreShows(any()) } answers { firstArg() }
+        coEvery { getRecommendationsUseCase.execute() } returns mockMedia
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } answers { firstArg() }
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -94,8 +93,8 @@ class DiscoverViewModelTest {
 
     @Test
     fun `loadDiscoverContent populates topGenreShows`() = runTest {
-        coEvery { repository.getShowsByGenres("18", emptyList()) } returns Resource.Success(mockMedia)
-        coEvery { getRecommendationsUseCase.scoreShows(mockMedia) } returns mockMedia
+        coEvery { repository.discoverShowsPaged(any(), any(), any(), any(), any()) } returns Resource.Success(mockMedia to 1)
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } answers { firstArg() }
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -108,7 +107,7 @@ class DiscoverViewModelTest {
         // Todas las llamadas devuelven listas vacías → hero=null, topGenreShows vacío → errorMessage != null
         coEvery { repository.getShowsByGenres(any(), any()) } returns Resource.Success(emptyList())
         coEvery { getRecommendationsUseCase.execute() } returns emptyList()
-        coEvery { getRecommendationsUseCase.scoreShows(any()) } returns emptyList()
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } returns emptyList()
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -121,7 +120,7 @@ class DiscoverViewModelTest {
     fun `isFromCache is true when offline and content loads`() = runTest {
         every { networkMonitor.isOnline } returns flowOf(false)
         coEvery { repository.getShowsByGenres("18", emptyList()) } returns Resource.Success(mockMedia)
-        coEvery { getRecommendationsUseCase.scoreShows(any()) } answers { firstArg() }
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } answers { firstArg() }
         coEvery { getRecommendationsUseCase.execute() } returns mockMedia
 
         val vm = createViewModel()
@@ -133,8 +132,8 @@ class DiscoverViewModelTest {
     @Test
     fun `isFromCache is false when online`() = runTest {
         every { networkMonitor.isOnline } returns flowOf(true)
-        coEvery { repository.getShowsByGenres("18", emptyList()) } returns Resource.Success(mockMedia)
-        coEvery { getRecommendationsUseCase.scoreShows(any()) } answers { firstArg() }
+        coEvery { getRecommendationsUseCase.execute() } returns mockMedia
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } answers { firstArg() }
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -146,15 +145,14 @@ class DiscoverViewModelTest {
     fun `retry after no-content error clears errorMessage when content loads`() = runTest {
         // Primera carga: sin contenido → errorMessage
         coEvery { getRecommendationsUseCase.execute() } returns emptyList()
-        coEvery { getRecommendationsUseCase.scoreShows(any()) } returns emptyList()
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } returns emptyList()
         val vm = createViewModel()
         advanceUntilIdle()
         assertNotNull(vm.uiState.value.errorMessage)
 
         // Retry con contenido real
-        coEvery { repository.getShowsByGenres("18", emptyList()) } returns Resource.Success(mockMedia)
         coEvery { getRecommendationsUseCase.execute() } returns mockMedia
-        coEvery { getRecommendationsUseCase.scoreShows(mockMedia) } returns mockMedia
+        coEvery { getRecommendationsUseCase.scoreShows(any(), any()) } answers { firstArg() }
         vm.retry()
         advanceUntilIdle()
 

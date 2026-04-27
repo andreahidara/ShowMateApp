@@ -9,6 +9,7 @@ import com.andrea.showmateapp.util.UiText
 @Immutable
 data class DetailUiState(
     override val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val media: MediaContent? = null,
     override val errorMessage: UiText? = null,
     val isLiked: Boolean = false,

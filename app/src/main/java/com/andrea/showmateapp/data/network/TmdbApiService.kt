@@ -21,6 +21,9 @@ interface TmdbApiService {
     @GET("trending/tv/week")
     suspend fun getTrendingThisWeek(@Query("language") language: String = "es-ES"): MediaResponse
 
+    @GET("trending/tv/day")
+    suspend fun getTrendingMedia(@Query("language") language: String = "es-ES"): MediaResponse
+
     @GET("tv/popular")
     suspend fun getPopularMedia(
         @Query("language") language: String = "es-ES",
@@ -46,7 +49,7 @@ interface TmdbApiService {
         @Query("with_genres") genreId: String? = null,
         @Query("first_air_date_year") year: Int? = null,
         @Query("vote_average.gte") minRating: Float? = null,
-        @Query("vote_count.gte") minVoteCount: Int = 50,
+        @Query("vote_count.gte") minVoteCount: Int = 10,
         @Query("language") language: String = "es-ES",
         @Query("sort_by") sortBy: String = "popularity.desc",
         @Query("page") page: Int = 1,

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +47,7 @@ import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
     navController: NavController,
@@ -74,6 +75,10 @@ fun DetailScreen(
         WhyRecommendedDialog(factors = whyFactors, onDismiss = { viewModel.dismissWhyDialog() })
     }
 
+    PullToRefreshBox(
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.refresh(showId) }
+    ) {
     DetailScreenContent(
         uiState = uiState,
         localWatched = uiState.isWatched,
@@ -109,6 +114,7 @@ fun DetailScreen(
         sharedElementTag = sharedElementTag,
         viewModel = viewModel
     )
+    }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -217,7 +223,7 @@ fun DetailScreenContent(
                                 it
                             } else {
                                 it.sharedElement(
-                                    state = rememberSharedContentState(key = sharedElementKey),
+                                    sharedContentState = rememberSharedContentState(key = sharedElementKey),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }
@@ -227,13 +233,20 @@ fun DetailScreenContent(
 
             Box(modifier = Modifier.fillMaxSize().background(heroGradient))
 
-            if (show.voteAverage > 0.0) {
-                Box(
+            if (show.affinityScore > 0f || show.voteAverage > 0.0) {
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(end = 20.dp, bottom = 72.dp)
+                        .padding(end = 20.dp, bottom = 72.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    MatchBadge(score = show.voteAverage, isAffinity = false)
+                    if (show.voteAverage > 0.0) {
+                        MatchBadge(score = show.voteAverage, isAffinity = false)
+                    }
+                    if (show.affinityScore > 0f) {
+                        MatchBadge(score = show.affinityScore, isAffinity = true)
+                    }
                 }
             }
         }
@@ -269,50 +282,41 @@ fun DetailScreenContent(
                             lineHeight = 34.sp,
                             modifier = Modifier.weight(1f)
                         )
-                        if (show.affinityScore > 0f && whyFactors.isNotEmpty()) {
+                        if (whyFactors.isNotEmpty()) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.padding(start = 12.dp, top = 4.dp)
-                            ) {
-                                MatchBadge(
-                                    score = show.affinityScore,
-                                    isAffinity = true
-                                )
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(
-                                                    PrimaryPurple.copy(alpha = 0.45f),
-                                                    PrimaryMagenta.copy(alpha = 0.30f)
-                                                )
+                                modifier = Modifier
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(
+                                                PrimaryPurple.copy(alpha = 0.45f),
+                                                PrimaryMagenta.copy(alpha = 0.30f)
                                             )
                                         )
-                                        .border(
-                                            1.dp,
-                                            PrimaryPurpleLight.copy(alpha = 0.55f),
-                                            RoundedCornerShape(14.dp)
-                                        )
-                                        .clickable { onWhyDialogClick() }
-                                        .padding(horizontal = 12.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(13.dp)
                                     )
-                                    Text(
-                                        text = "¿Por qué?",
-                                        color = Color.White,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
+                                    .border(
+                                        1.dp,
+                                        PrimaryPurpleLight.copy(alpha = 0.55f),
+                                        RoundedCornerShape(14.dp)
                                     )
-                                }
+                                    .clickable { onWhyDialogClick() }
+                                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.detail_why_recommended),
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
@@ -379,9 +383,11 @@ fun DetailScreenContent(
                         }
                     }
 
-                    val trailerKey = show.videos?.results?.firstOrNull {
-                        it.site == "YouTube" && it.type == "Trailer"
-                    }?.key
+                    val trailerKey = remember(show.id) {
+                        show.videos?.results?.firstOrNull {
+                            it.site == "YouTube" && it.type == "Trailer"
+                        }?.key
+                    }
                     if (trailerKey != null) {
                         Spacer(modifier = Modifier.height(24.dp))
                         DetailSectionHeader(title = stringResource(R.string.detail_official_trailer))
@@ -401,17 +407,19 @@ fun DetailScreenContent(
                                 }
                             },
                             update = { webView ->
+                                // Sanitize key: YouTube IDs are alphanumeric + hyphens/underscores only
+                                val safeKey = trailerKey?.replace(Regex("[^A-Za-z0-9_\\-]"), "") ?: ""
                                 val htmlData = """
                                     <html>
                                         <body style="margin:0;padding:0;background-color:#000;">
-                                            <iframe width="100%" height="100%" 
-                                                src="https://www.youtube.com/embed/$trailerKey?rel=0" 
+                                            <iframe width="100%" height="100%"
+                                                src="https://www.youtube.com/embed/$safeKey?rel=0"
                                                 frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
                                             </iframe>
                                         </body>
                                     </html>
                                 """.trimIndent()
-                                webView.loadData(htmlData, "text/html", "utf-8")
+                                webView.loadDataWithBaseURL(null, htmlData, "text/html", "UTF-8", null)
                             }
                         )
                     }
