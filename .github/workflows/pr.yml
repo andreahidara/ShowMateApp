@@ -10,17 +10,17 @@ concurrency:
 
 jobs:
   lint-and-test:
-    name: Lint & Unit Tests
+    name: Unit Tests
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
@@ -30,30 +30,8 @@ jobs:
       - name: Create secret.properties
         run: echo 'TMDB_API_TOKEN="NO_TOKEN"' > secret.properties
 
-      - name: Create google-services.json placeholder
-        run: |
-          cat > app/google-services.json << 'EOF'
-          {
-            "project_info": {
-              "project_number": "000000000000",
-              "firebase_url": "https://showmate-placeholder-default-rtdb.firebaseio.com",
-              "project_id": "showmate-placeholder",
-              "storage_bucket": "showmate-placeholder.appspot.com"
-            },
-            "client": [{
-              "client_info": {
-                "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
-                "android_client_info": { "package_name": "com.andrea.showmateapp" }
-              },
-              "api_key": [{ "current_key": "placeholder" }],
-              "services": {}
-            }],
-            "configuration_version": "1"
-          }
-          EOF
-
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest -x processDebugGoogleServices
 
       - name: Upload test results
         if: always()
