@@ -51,7 +51,9 @@ fun DetailSectionHeader(title: String, modifier: Modifier = Modifier) {
                 .width(4.dp)
                 .height(20.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(PrimaryPurple)
+                .background(
+                    Brush.verticalGradient(listOf(PrimaryMagenta, PrimaryPurple))
+                )
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
@@ -191,14 +193,15 @@ fun MetaChip(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(Color.White.copy(alpha = 0.09f))
+            .border(0.5.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(8.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(
             text = text,
             color = TextGray,
             fontSize = 11.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.SemiBold
         )
     }
 }

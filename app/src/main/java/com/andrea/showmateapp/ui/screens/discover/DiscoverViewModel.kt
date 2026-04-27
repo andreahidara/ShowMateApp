@@ -326,13 +326,21 @@ class DiscoverViewModel @Inject constructor(
                     topSubtitle = getGenreSubtitle(topGenreId)
                     if (sortedGenres.size > 1) {
                         secondGenreId = sortedGenres[1].key
-                        secondName = GenreMapper.getGenreName(secondGenreId)
-                        secondSubtitle = getGenreSubtitle(secondGenreId)
+                    } else {
+                        // Only 1 genre selected: pick a complementary default to avoid duplicate sections
+                        secondGenreId = when (topGenreId) {
+                            "18" -> "35"; "35" -> "18"; "10765" -> "10759"
+                            "9648" -> "80"; "80" -> "9648"; "10759" -> "53"
+                            "53" -> "9648"; "16" -> "35"; "99" -> "18"
+                            else -> "18"
+                        }
                     }
+                    secondName = GenreMapper.getGenreName(secondGenreId)
+                    secondSubtitle = getGenreSubtitle(secondGenreId)
                     if (sortedGenres.size > 2) {
                         thirdGenreId = sortedGenres[2].key
-                        thirdName = GenreMapper.getGenreName(thirdGenreId)
-                        thirdSubtitle = getGenreSubtitle(thirdGenreId)
+                        thirdName = GenreMapper.getGenreName(thirdGenreId!!)
+                        thirdSubtitle = getGenreSubtitle(thirdGenreId!!)
                     }
                 }
 

@@ -266,14 +266,14 @@ fun MatchBadge(score: Float, isAffinity: Boolean, modifier: Modifier = Modifier)
 
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(Color.Black.copy(alpha = 0.85f))
-            .border(
-                width = 1.dp,
-                color = matchColor.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(6.dp)
+            .clip(RoundedCornerShape(7.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(matchColor.copy(alpha = 0.28f), Color.Black.copy(alpha = 0.82f))
+                )
             )
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .border(1.dp, matchColor.copy(alpha = 0.55f), RoundedCornerShape(7.dp))
+            .padding(horizontal = 7.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -319,7 +319,11 @@ fun ShowSection(
                         .width(3.dp)
                         .height(20.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(accentColor)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(accentColor, accentColor.copy(alpha = 0.4f))
+                            )
+                        )
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(

@@ -283,10 +283,11 @@ fun DetailScreenContent(
                             modifier = Modifier.weight(1f)
                         )
                         if (whyFactors.isNotEmpty()) {
-                            Row(
+                            Box(
                                 modifier = Modifier
                                     .padding(start = 12.dp, top = 4.dp)
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(
                                         Brush.linearGradient(
                                             listOf(
@@ -298,24 +299,16 @@ fun DetailScreenContent(
                                     .border(
                                         1.dp,
                                         PrimaryPurpleLight.copy(alpha = 0.55f),
-                                        RoundedCornerShape(14.dp)
+                                        RoundedCornerShape(10.dp)
                                     )
-                                    .clickable { onWhyDialogClick() }
-                                    .padding(horizontal = 12.dp, vertical = 7.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    .clickable { onWhyDialogClick() },
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Default.AutoAwesome,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.detail_why_recommended),
                                     tint = Color.White,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.detail_why_recommended),
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
@@ -401,25 +394,18 @@ fun DetailScreenContent(
                             factory = { ctx ->
                                 android.webkit.WebView(ctx).apply {
                                     settings.javaScriptEnabled = true
+                                    settings.domStorageEnabled = true
                                     settings.loadWithOverviewMode = true
                                     settings.useWideViewPort = true
                                     webChromeClient = android.webkit.WebChromeClient()
                                 }
                             },
                             update = { webView ->
-                                // Sanitize key: YouTube IDs are alphanumeric + hyphens/underscores only
                                 val safeKey = trailerKey?.replace(Regex("[^A-Za-z0-9_\\-]"), "") ?: ""
-                                val htmlData = """
-                                    <html>
-                                        <body style="margin:0;padding:0;background-color:#000;">
-                                            <iframe width="100%" height="100%"
-                                                src="https://www.youtube.com/embed/$safeKey?rel=0"
-                                                frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
-                                            </iframe>
-                                        </body>
-                                    </html>
-                                """.trimIndent()
-                                webView.loadDataWithBaseURL(null, htmlData, "text/html", "UTF-8", null)
+                                if (webView.tag != safeKey && safeKey.isNotEmpty()) {
+                                    webView.tag = safeKey
+                                    webView.loadUrl("https://www.youtube.com/embed/$safeKey?rel=0")
+                                }
                             }
                         )
                     }

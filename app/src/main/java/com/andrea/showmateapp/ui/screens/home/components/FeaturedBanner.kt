@@ -4,6 +4,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -203,17 +207,28 @@ fun FeaturedBanner(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                Button(
-                    onClick = { onClick(media) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                    shape = RoundedCornerShape(50.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                val btnInteraction = remember { MutableInteractionSource() }
+                val isBtnPressed by btnInteraction.collectIsPressedAsState()
+                val btnScale by animateFloatAsState(
+                    targetValue = if (isBtnPressed) 0.94f else 1f,
+                    animationSpec = spring(dampingRatio = 0.45f, stiffness = 600f),
+                    label = "btnScale"
+                )
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryMagenta)),
-                            RoundedCornerShape(50.dp)
-                        )
+                        .scale(btnScale)
+                        .shadow(16.dp, RoundedCornerShape(50.dp), spotColor = PrimaryPurple)
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(Brush.horizontalGradient(listOf(PrimaryPurple, PrimaryMagenta)))
+                        .clickable(
+                            interactionSource = btnInteraction,
+                            indication = null
+                        ) { onClick(media) }
+                        .padding(horizontal = 24.dp, vertical = 15.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,

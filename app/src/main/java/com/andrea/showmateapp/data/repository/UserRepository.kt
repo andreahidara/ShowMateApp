@@ -104,6 +104,44 @@ class UserRepository @Inject constructor(
                 newGenreDates[id] = now
             }
 
+            // Seed narrative styles from selected genres so new users get populated sections in Discover
+            val narrativeSeeds = mapOf(
+                "35" to mapOf("tono_ligero" to 8f, "ritmo_episodico" to 6f),
+                "18" to mapOf("tono_emocional" to 8f, "ritmo_lento" to 5f),
+                "10765" to mapOf("narrativa_compleja" to 7f),
+                "9648" to mapOf("narrativa_compleja" to 8f, "protagonista_detective" to 6f),
+                "80" to mapOf("protagonista_antihero" to 7f),
+                "10759" to mapOf("ritmo_intenso" to 8f),
+                "53" to mapOf("tono_oscuro" to 8f),
+                "16" to mapOf("tono_ligero" to 7f)
+            )
+            val newNarrativeScores = profile.narrativeStyleScores.toMutableMap()
+            val newNarrativeDates = profile.narrativeStyleDates.toMutableMap()
+            genres.forEach { genreId ->
+                narrativeSeeds[genreId]?.forEach { (style, score) ->
+                    newNarrativeScores[style] = maxOf(newNarrativeScores[style] ?: 0f, score)
+                    newNarrativeDates[style] = now
+                }
+            }
+
+            // Seed keywords from genres so the keyword embedding dimensions are populated from day 1
+            val keywordSeeds = mapOf(
+                "9648" to mapOf("mystery" to 8f, "detective" to 6f, "murder mystery" to 6f),
+                "80" to mapOf("crime" to 8f, "heist" to 6f, "drugs" to 5f),
+                "10765" to mapOf("space" to 8f, "artificial intelligence" to 6f, "dystopia" to 6f),
+                "10759" to mapOf("spy" to 6f, "survival" to 6f),
+                "53" to mapOf("serial killer" to 5f, "conspiracy" to 5f),
+                "99" to mapOf("based on true story" to 7f)
+            )
+            val newKeywordScores = profile.preferredKeywords.toMutableMap()
+            val newKeywordDates = profile.keywordScoreDates.toMutableMap()
+            genres.forEach { genreId ->
+                keywordSeeds[genreId]?.forEach { (kw, score) ->
+                    newKeywordScores[kw] = maxOf(newKeywordScores[kw] ?: 0f, score)
+                    newKeywordDates[kw] = now
+                }
+            }
+
             val newLiked = (profile.likedMediaIds + watchedShowIds).distinct()
             val newEssential = (profile.essentialMediaIds + lovedShowIds).distinct()
 
@@ -116,6 +154,10 @@ class UserRepository @Inject constructor(
                 profile.copy(
                     genreScores = newGenreScores,
                     genreScoreDates = newGenreDates,
+                    narrativeStyleScores = newNarrativeScores,
+                    narrativeStyleDates = newNarrativeDates,
+                    preferredKeywords = newKeywordScores,
+                    keywordScoreDates = newKeywordDates,
                     likedMediaIds = newLiked,
                     essentialMediaIds = newEssential,
                     ratings = newRatings,

@@ -126,7 +126,7 @@ data/        → Repositorios, Room, Retrofit, Firebase, Workers
 ### Requisitos previos
 
 - Android Studio Ladybug o superior
-- JDK 21
+- JDK 17
 - Cuenta en [Firebase](https://firebase.google.com)
 - Token de API de [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api)
 
@@ -155,7 +155,7 @@ TMDB_API_TOKEN=<tu_token_aqui>
 ## 🧪 Tests
 
 ```bash
-./gradlew test                        # Tests unitarios (~178 tests)
+./gradlew test                        # Tests unitarios (~284 tests)
 ./gradlew connectedAndroidTest        # Tests instrumentados en emulador
 ```
 

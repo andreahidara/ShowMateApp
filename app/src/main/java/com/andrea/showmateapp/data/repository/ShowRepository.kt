@@ -144,7 +144,9 @@ class ShowRepository @Inject constructor(
                 val p1 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 1).results }
                 val p2 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 2).results }
                 val p3 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5f, minVoteCount = 10, page = 3).results }
-                val all = (p1.await() + p2.await() + p3.await()).distinctBy { it.id }
+                val p4 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5f, minVoteCount = 10, page = 4).results }
+                val p5 = async { api.discoverMedia(genreId = genres, sortBy = "vote_average.desc", minRating = 7.5f, minVoteCount = 100, page = 1).results }
+                val all = (p1.await() + p2.await() + p3.await() + p4.await() + p5.await()).distinctBy { it.id }
                 val enriched = enrichWithLocalData(all)
                 if (excludedSet.isEmpty()) enriched else enriched.filter { it.id !in excludedSet }
             }

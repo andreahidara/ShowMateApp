@@ -44,21 +44,22 @@ object ContentEmbeddingEngine {
         val maxAbsCreator = profile.preferredCreators.values
             .maxOfOrNull { kotlin.math.abs(it) }?.coerceAtLeast(1f) ?: 1f
 
+        // Clamp negatives to 0: dislikes inflate norm and lower ALL cosine similarities; handled elsewhere via genre filtering.
         GENRE_IDS.forEachIndexed { i, genreId ->
-            vec[i] = normalize(profile.genreScores[genreId.toString()] ?: 0f, maxAbsGenre)
+            vec[i] = normalize(profile.genreScores[genreId.toString()] ?: 0f, maxAbsGenre).coerceAtLeast(0f)
         }
         val kwOffset = GENRE_IDS.size
         val actorOffset = kwOffset + space.topKeywords.size
         val creatorOffset = actorOffset + space.topActors.size
 
         space.topKeywords.forEachIndexed { i, kw ->
-            vec[kwOffset + i] = normalize(profile.preferredKeywords[kw] ?: 0f, maxAbsKw)
+            vec[kwOffset + i] = normalize(profile.preferredKeywords[kw] ?: 0f, maxAbsKw).coerceAtLeast(0f)
         }
         space.topActors.forEachIndexed { i, actorId ->
-            vec[actorOffset + i] = normalize(profile.preferredActors[actorId] ?: 0f, maxAbsActor)
+            vec[actorOffset + i] = normalize(profile.preferredActors[actorId] ?: 0f, maxAbsActor).coerceAtLeast(0f)
         }
         space.topCreators.forEachIndexed { i, creatorId ->
-            vec[creatorOffset + i] = normalize(profile.preferredCreators[creatorId] ?: 0f, maxAbsCreator)
+            vec[creatorOffset + i] = normalize(profile.preferredCreators[creatorId] ?: 0f, maxAbsCreator).coerceAtLeast(0f)
         }
         return vec
     }
