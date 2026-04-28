@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
+import com.andrea.showmateapp.data.model.ReasonType
 import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.model.MediaContent
@@ -14,6 +15,7 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.andrea.showmateapp.util.BaseUiState
+import com.andrea.showmateapp.util.GenreMapper
 import com.andrea.showmateapp.util.NarrativeStyleMapper
 import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.UiText
@@ -35,7 +37,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
-
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(
@@ -111,8 +112,8 @@ class DetailViewModel @Inject constructor(
                         loadUserRating(scoredDetails.id)
                         loadUserReview(scoredDetails.id)
 
-                        if (scoredDetails.reasons.isNotEmpty()) {
-                            _whyFactors.value = scoredDetails.reasons
+                        _whyFactors.value = scoredDetails.reasons.ifEmpty {
+                            buildFallbackReasons(scoredDetails, profile)
                         }
 
                         loadCustomLists()
@@ -563,7 +564,7 @@ class DetailViewModel @Inject constructor(
                 var similar = showRepository.getSimilarShows(showId)
 
                 if (similar.isEmpty()) {
-                    // Retry once after a short delay
+
                     delay(500)
                     similar = showRepository.getSimilarShows(showId)
                 }
@@ -619,6 +620,57 @@ class DetailViewModel @Inject constructor(
         _uiState.update { it.copy(snackbarMessage = null) }
     }
 
+    private fun buildFallbackReasons(show: MediaContent, profile: UserProfile?): List<RecommendationReason> {
+        val reasons = mutableListOf<RecommendationReason>()
+
+        if (profile != null) {
+            val topGenreId = profile.genreScores
+                .entries.sortedByDescending { it.value }
+                .firstOrNull { entry -> show.safeGenreIds.any { it.toString() == entry.key } }
+                ?.key
+            if (topGenreId != null) {
+                reasons += RecommendationReason(
+                    type = ReasonType.GENRE,
+                    weight = 0.7f,
+                    description = UiText.DynamicString("Coincide con tu preferencia de ${GenreMapper.getGenreName(topGenreId)}"),
+                    iconEmoji = "🎭"
+                )
+            }
+
+            val actorMatch = show.credits?.cast?.map { it.id.toString() }
+                ?.firstOrNull { profile.preferredActors.containsKey(it) }
+            if (actorMatch != null) {
+                val actorName = show.credits?.cast?.firstOrNull { it.id.toString() == actorMatch }?.name ?: ""
+                reasons += RecommendationReason(
+                    type = ReasonType.ACTOR,
+                    weight = 0.6f,
+                    description = UiText.DynamicString("Protagonizada por $actorName, que te gusta"),
+                    iconEmoji = "🎬"
+                )
+            }
+        }
+
+        if (show.voteAverage >= 7.5f && show.voteCount > 1000) {
+            reasons += RecommendationReason(
+                type = ReasonType.TRENDING,
+                weight = 0.5f,
+                description = UiText.DynamicString("Altamente valorada por la comunidad"),
+                iconEmoji = "⭐"
+            )
+        }
+
+        if (show.voteAverage >= 7.0f && show.voteCount in 100..4999) {
+            reasons += RecommendationReason(
+                type = ReasonType.HIDDEN_GEM,
+                weight = 0.5f,
+                description = UiText.DynamicString("Joya oculta con gran valoración"),
+                iconEmoji = "💎"
+            )
+        }
+
+        return reasons.distinctBy { it.type }.take(3)
+    }
+
     private suspend fun trackInteraction(show: MediaContent, type: IInteractionRepository.InteractionType) {
         interactionRepository.trackMediaInteraction(
             mediaId = show.id,
@@ -631,4 +683,3 @@ class DetailViewModel @Inject constructor(
         )
     }
 }
-

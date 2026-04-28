@@ -10,6 +10,7 @@ import com.andrea.showmateapp.domain.repository.ISocialRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
+import com.andrea.showmateapp.domain.usecase.GetFriendCompatibilityUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -47,7 +48,8 @@ data class FriendsUiState(
 class FriendsViewModel @Inject constructor(
     private val socialRepository: ISocialRepository,
     private val userRepository: IUserRepository,
-    private val achievementChecker: AchievementChecker
+    private val achievementChecker: AchievementChecker,
+    private val getFriendCompatibilityUseCase: GetFriendCompatibilityUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FriendsUiState())
@@ -102,6 +104,23 @@ class FriendsViewModel @Inject constructor(
                 emptyList()
             }
             _uiState.update { it.copy(isFriendsLoading = false, friends = friends) }
+            friends.forEach { friend ->
+                launch {
+                    val score = try {
+                        getFriendCompatibilityUseCase.execute(friend.uid).overallScore
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        return@launch
+                    }
+                    _uiState.update { state ->
+                        state.copy(
+                            friends = state.friends.map { f ->
+                                if (f.uid == friend.uid) f.copy(compatibilityScore = score) else f
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 

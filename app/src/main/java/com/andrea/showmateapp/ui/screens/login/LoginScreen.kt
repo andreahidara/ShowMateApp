@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -126,12 +127,12 @@ fun LoginScreenContent(
             },
             containerColor = Color(0xFF1A1A2E),
             title = {
-                Text("Recuperar contraseña", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.login_recover_password), color = Color.White, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.",
+                        stringResource(R.string.login_reset_instructions),
                         color = TextGray,
                         fontSize = 14.sp,
                         lineHeight = 20.sp
@@ -160,7 +161,7 @@ fun LoginScreenContent(
                                 .padding(horizontal = 12.dp, vertical = 10.dp)
                         ) {
                             Text(
-                                "¡Correo enviado! Revisa tu bandeja de entrada.",
+                                stringResource(R.string.login_email_sent),
                                 color = Color(0xFF4CAF50),
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
@@ -178,14 +179,14 @@ fun LoginScreenContent(
                     Button(
                         onClick = { onSendPasswordReset(forgotEmail.ifBlank { state.email }) },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
-                    ) { Text("Enviar", fontWeight = FontWeight.Bold) }
+                    ) { Text(stringResource(R.string.login_send), fontWeight = FontWeight.Bold) }
                 } else {
                     TextButton(onClick = {
                         showForgotDialog = false
                         onDismissResetDialog()
                         forgotEmail = ""
                     }) {
-                        Text("Cerrar", color = PrimaryPurpleLight)
+                        Text(stringResource(R.string.close), color = PrimaryPurpleLight)
                     }
                 }
             },
@@ -196,7 +197,7 @@ fun LoginScreenContent(
                         onDismissResetDialog()
                         forgotEmail = ""
                     }) {
-                        Text("Cancelar", color = TextGray)
+                        Text(stringResource(R.string.cancel), color = TextGray)
                     }
                 }
             }
@@ -219,7 +220,7 @@ fun LoginScreenContent(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "ShowMate",
+                        text = stringResource(R.string.showmate),
                         style = TextStyle(
                             brush = Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryMagenta)),
                             fontSize = 28.sp,
@@ -231,7 +232,7 @@ fun LoginScreenContent(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Bienvenido de nuevo",
+                        text = stringResource(R.string.login_welcome_back),
                         color = Color.White,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
@@ -239,7 +240,7 @@ fun LoginScreenContent(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Inicia sesión para continuar",
+                        text = stringResource(R.string.login_subtitle),
                         color = TextGray,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium
@@ -274,7 +275,7 @@ fun LoginScreenContent(
                     PrimaryTextField(
                         value = state.password,
                         onValueChange = onPasswordChanged,
-                        label = "Contraseña",
+                        label = stringResource(R.string.login_password),
                         leadingIcon = Icons.Default.Lock,
                         visualTransformation = if (state.isPasswordVisible) {
                             VisualTransformation.None
@@ -307,7 +308,7 @@ fun LoginScreenContent(
                         modifier = Modifier.align(Alignment.End),
                         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
                     ) {
-                        Text("¿Olvidaste tu contraseña?", color = PrimaryPurpleLight, fontSize = 13.sp)
+                        Text(stringResource(R.string.login_forgot_password), color = PrimaryPurpleLight, fontSize = 13.sp)
                     }
 
                     state.error?.let { error ->
@@ -330,7 +331,7 @@ fun LoginScreenContent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     PrimaryButton(
-                        text = "Iniciar Sesión",
+                        text = stringResource(R.string.sign_in),
                         onClick = onLoginClick,
                         isLoading = state.isLoading,
                         modifier = Modifier.fillMaxWidth()
@@ -343,12 +344,12 @@ fun LoginScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "¿No tienes cuenta?  ",
+                            text = stringResource(R.string.login_no_account),
                             color = TextGray,
                             fontSize = 14.sp
                         )
                         Text(
-                            text = "Regístrate",
+                            text = stringResource(R.string.login_register),
                             color = PrimaryPurpleLight,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
@@ -364,7 +365,7 @@ fun LoginScreenContent(
                     ) {
                         HorizontalDivider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.12f))
                         Text(
-                            text = "  o continúa con  ",
+                            text = stringResource(R.string.login_or_continue_with),
                             color = TextGray,
                             fontSize = 12.sp
                         )
@@ -408,7 +409,7 @@ fun LoginScreenContent(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "Continuar con Google",
+                                    text = stringResource(R.string.login_continue_with_google),
                                     color = Color.White,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold

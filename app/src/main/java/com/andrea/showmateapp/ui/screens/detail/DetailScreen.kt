@@ -314,8 +314,6 @@ fun DetailScreenContent(
                         }
                     }
 
-
-
                     val year = remember(show.firstAirDate) { show.firstAirDate?.take(4) ?: "" }
                     val seasonsCount = remember(show.numberOfSeasons) {
                         show.numberOfSeasons?.let { "$it ${if (it == 1) "Temporada" else "Temporadas"}" } ?: ""
@@ -514,7 +512,7 @@ fun DetailScreenContent(
                                     Spacer(modifier = Modifier.height(14.dp))
                                     if (uiState.isSimilarLoading) {
                                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            items(5) {
+                                            items(5, key = { it }) {
                                                 Box(
                                                     modifier = Modifier
                                                         .width(120.dp)
@@ -602,12 +600,11 @@ fun DetailScreenContent(
                         putExtra(android.content.Intent.EXTRA_SUBJECT, show.name)
                         putExtra(
                             android.content.Intent.EXTRA_TEXT,
-                            "¡Echa un vistazo a \"${show.name}\" en ShowMate! 🎬\n" +
-                                "https://www.themoviedb.org/tv/${show.id}"
+                            context.getString(R.string.detail_share_text, show.name, show.id)
                         )
                     }
                     context.startActivity(
-                        android.content.Intent.createChooser(shareIntent, "Compartir con...")
+                        android.content.Intent.createChooser(shareIntent, context.getString(R.string.detail_share_chooser))
                     )
                 },
                 shape = CircleShape,
@@ -687,4 +684,3 @@ private fun DetailScreenSkeleton() {
         }
     }
 }
-

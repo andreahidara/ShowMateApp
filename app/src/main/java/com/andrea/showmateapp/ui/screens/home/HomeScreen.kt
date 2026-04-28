@@ -209,7 +209,7 @@ fun HomeScreenContent(
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
                 HomeTopAppBar(
-                    userName = "Cargando...",
+                    userName = stringResource(R.string.home_loading),
                     onPickWhatToWatch = {},
                     onAvatarClick = {}
                 )
@@ -557,4 +557,3 @@ private fun FeedbackOption(
         }
     }
 }
-

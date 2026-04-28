@@ -79,4 +79,3 @@ class ListDetailViewModel @Inject constructor(
         }
     }
 }
-

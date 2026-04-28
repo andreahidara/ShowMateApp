@@ -22,11 +22,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.components.outlinedTextFieldColors
 import com.andrea.showmateapp.ui.navigation.Screen
@@ -105,7 +107,7 @@ fun CustomListsScreen(navController: NavController, viewModel: CustomListsViewMo
                 ) { Text("Crear", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::hideCreateDialog) { Text("Cancelar", color = TextGray) }
+                TextButton(onClick = viewModel::hideCreateDialog) { Text(stringResource(R.string.cancel), color = TextGray) }
             }
         )
     }
@@ -143,7 +145,7 @@ fun CustomListsScreen(navController: NavController, viewModel: CustomListsViewMo
                 ) { Text("Eliminar", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { listToDelete = null }) { Text("Cancelar", color = TextGray) }
+                TextButton(onClick = { listToDelete = null }) { Text(stringResource(R.string.cancel), color = TextGray) }
             }
         )
     }

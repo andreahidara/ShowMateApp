@@ -332,7 +332,6 @@ class UserInteractionRepository @Inject constructor(
             showDao.syncCategory("liked", validFav.map { it.toEntity("liked") })
             showDao.syncCategory("watched", validWat.map { it.toEntity("watched") })
 
-            // If Firestore watchlist is empty, check for locally pending items that failed to sync
             val pendingWatchlistIds = interactionDao.getPendingSyncInteractions()
                 .filter { it.isInWatchlist }.map { it.mediaId }.toSet()
 
@@ -383,4 +382,3 @@ class UserInteractionRepository @Inject constructor(
         }
     }
 }
-

@@ -52,11 +52,21 @@ import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
 
-private val discoverGenreNames = mapOf(
-    10759 to "Acción", 16 to "Animación", 35 to "Comedia", 80 to "Crimen",
-    99 to "Documental", 18 to "Drama", 10751 to "Familiar", 9648 to "Misterio",
-    10765 to "Sci-Fi", 10768 to "Política", 37 to "Western", 53 to "Thriller",
-    10762 to "Infantil", 10764 to "Reality"
+private val discoverGenreResIds = mapOf(
+    10759 to R.string.discover_genre_action_name,
+    16 to R.string.discover_genre_animation_name,
+    35 to R.string.discover_genre_comedy_name,
+    80 to R.string.discover_genre_crime_name,
+    99 to R.string.discover_genre_documentary_name,
+    18 to R.string.discover_genre_drama_name,
+    10751 to R.string.discover_genre_family_name,
+    9648 to R.string.discover_genre_mystery_name,
+    10765 to R.string.discover_genre_scifi_name,
+    10768 to R.string.discover_genre_politics_name,
+    37 to R.string.discover_genre_western_name,
+    53 to R.string.discover_genre_thriller_name,
+    10762 to R.string.discover_genre_kids_name,
+    10764 to R.string.discover_genre_reality_name
 )
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
@@ -173,7 +183,7 @@ fun DiscoverScreenContent(
                 if (state.contextPicksShows.isNotEmpty() && state.contextPicksTitle.isNotEmpty() ||
                     state.dayOfWeekShows.isNotEmpty() && state.dayOfWeekTitle.isNotEmpty()
                 ) {
-                    item { DiscoverCategoryDivider("Para ti ahora") }
+                    item { DiscoverCategoryDivider(R.string.discover_for_you_now) }
                 }
 
                 if (state.contextPicksShows.isNotEmpty() && state.contextPicksTitle.isNotEmpty()) {
@@ -186,7 +196,7 @@ fun DiscoverScreenContent(
                             onItemClick = onMediaClick,
                             accentColor = AccentBlue,
                             tag = "discover_context",
-                            subtitle = "Adaptado a cómo consumes series",
+                            subtitle = stringResource(R.string.discover_context_subtitle),
                             listState = sectionStates[0]
                         )
                     }
@@ -202,17 +212,17 @@ fun DiscoverScreenContent(
                             onItemClick = onMediaClick,
                             accentColor = PrimaryPurpleLight,
                             tag = "discover_dayofweek",
-                            subtitle = "Basado en tu patrón de visualización",
+                            subtitle = stringResource(R.string.discover_dayofweek_subtitle),
                             listState = sectionStates[1]
                         )
                     }
                 }
 
-                item { DiscoverCategoryDivider("Tus géneros favoritos") }
+                item { DiscoverCategoryDivider(R.string.discover_your_fav_genres) }
 
                 item {
                     ShowSection(
-                        title = "Porque te gusta: ${state.topGenreName}",
+                        title = stringResource(R.string.discover_top_genre_title, state.topGenreName),
                         items = state.topGenreShows,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
@@ -234,7 +244,7 @@ fun DiscoverScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_narrative",
-                            subtitle = "Tu estilo narrativo preferido según el algoritmo",
+                            subtitle = stringResource(R.string.discover_narrative_subtitle),
                             listState = sectionStates[3]
                         )
                     }
@@ -242,7 +252,7 @@ fun DiscoverScreenContent(
 
                 item {
                     ShowSection(
-                        title = "Más de: ${state.secondGenreName}",
+                        title = stringResource(R.string.discover_second_genre_title, state.secondGenreName),
                         items = state.secondGenreShows,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
@@ -258,7 +268,7 @@ fun DiscoverScreenContent(
                 if (state.thirdGenreShows.isNotEmpty() && state.thirdGenreName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "También te puede gustar: ${state.thirdGenreName}",
+                            title = stringResource(R.string.discover_third_genre_title, state.thirdGenreName),
                             items = state.thirdGenreShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -274,20 +284,20 @@ fun DiscoverScreenContent(
                     state.explorationShows.isNotEmpty() ||
                     state.moodSectionShows.isNotEmpty()
                 ) {
-                    item { DiscoverCategoryDivider("Explora algo nuevo") }
+                    item { DiscoverCategoryDivider(R.string.discover_explore_new) }
                 }
 
                 if (state.hiddenGemShows.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Joyas ocultas para ti",
+                            title = stringResource(R.string.discover_hidden_gems),
                             items = state.hiddenGemShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             accentColor = AccentBlue,
                             tag = "discover_hidden",
-                            subtitle = "Alta afinidad, pocas valoraciones globales",
+                            subtitle = stringResource(R.string.discover_hidden_gems_subtitle),
                             listState = sectionStates[5]
                         )
                     }
@@ -296,14 +306,14 @@ fun DiscoverScreenContent(
                 if (state.explorationShows.isNotEmpty() && state.explorationGenreName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Sal de tu zona de confort: ${state.explorationGenreName}",
+                            title = stringResource(R.string.discover_exploration_title, state.explorationGenreName),
                             items = state.explorationShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             accentColor = PillCreator,
                             tag = "discover_exploration",
-                            subtitle = "Tu género menos explorado con buenos scores",
+                            subtitle = stringResource(R.string.discover_exploration_subtitle),
                             listState = sectionStates[8]
                         )
                     }
@@ -318,7 +328,7 @@ fun DiscoverScreenContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_mood",
-                            subtitle = "Seleccionado por tu tono favorito",
+                            subtitle = stringResource(R.string.discover_mood_subtitle),
                             listState = sectionStates[7]
                         )
                     }
@@ -329,13 +339,13 @@ fun DiscoverScreenContent(
                     state.creatorShows.isNotEmpty() ||
                     state.timeTravelShows.isNotEmpty()
                 ) {
-                    item { DiscoverCategoryDivider("Porque viste y te gustó") }
+                    item { DiscoverCategoryDivider(R.string.discover_because_you_watched) }
                 }
 
                 if (state.similarShows.isNotEmpty() && state.similarToName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque viste ${state.similarToName}",
+                            title = stringResource(R.string.discover_similar_title, state.similarToName),
                             items = state.similarShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -349,7 +359,7 @@ fun DiscoverScreenContent(
                 if (state.actorShows.isNotEmpty() && state.actorName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gusta ${state.actorName}",
+                            title = stringResource(R.string.discover_actor_title, state.actorName),
                             items = state.actorShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -377,13 +387,13 @@ fun DiscoverScreenContent(
                 if (state.creatorShows.isNotEmpty() && state.creatorName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Del creador: ${state.creatorName}",
+                            title = stringResource(R.string.discover_creator_title, state.creatorName),
                             items = state.creatorShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             tag = "discover_creator",
-                            subtitle = "Series del showrunner que más te gusta",
+                            subtitle = stringResource(R.string.discover_creator_subtitle),
                             listState = sectionStates[13]
                         )
                     }
@@ -392,7 +402,7 @@ fun DiscoverScreenContent(
                 if (state.timeTravelShows.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Porque te gustan los viajes en el tiempo",
+                            title = stringResource(R.string.discover_timetravel),
                             items = state.timeTravelShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -407,7 +417,7 @@ fun DiscoverScreenContent(
                     state.topRatedShows.isNotEmpty() ||
                     state.collaborativeShows.isNotEmpty()
                 ) {
-                    item { DiscoverCategoryDivider("Valorados y populares") }
+                    item { DiscoverCategoryDivider(R.string.discover_rated_popular) }
                 }
 
                 if (state.topKeywordShows.isNotEmpty() && state.topKeywordLabel.isNotEmpty()) {
@@ -427,7 +437,7 @@ fun DiscoverScreenContent(
                 if (state.topRatedShows.isNotEmpty() && state.topGenreName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Los mejor valorados en ${state.topGenreName}",
+                            title = stringResource(R.string.discover_top_rated_title, state.topGenreName),
                             items = state.topRatedShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -441,14 +451,14 @@ fun DiscoverScreenContent(
                 if (state.collaborativeShows.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = "Lo que ven usuarios con tu gusto",
+                            title = stringResource(R.string.discover_collab),
                             items = state.collaborativeShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
                             accentColor = SuccessGreen,
                             tag = "discover_collab",
-                            subtitle = "Popular entre usuarios con gustos similares",
+                            subtitle = stringResource(R.string.discover_collab_subtitle),
                             listState = sectionStates[16]
                         )
                     }
@@ -470,7 +480,7 @@ private fun DiscoverHeader() {
     ) {
         Column {
             Text(
-                text = "Descubrir",
+                text = stringResource(R.string.discover_header_title),
                 style = TextStyle(
                     brush = Brush.linearGradient(listOf(PrimaryPurple, PrimaryMagenta))
                 ),
@@ -487,7 +497,7 @@ private fun DiscoverHeader() {
                     .background(Brush.linearGradient(listOf(PrimaryPurple, PrimaryMagenta)))
             )
             Text(
-                text = "Recomendaciones personalizadas para ti",
+                text = stringResource(R.string.discover_header_subtitle),
                 color = Color.White.copy(alpha = 0.5f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Normal
@@ -497,16 +507,17 @@ private fun DiscoverHeader() {
 }
 
 private val dividerIcons = mapOf(
-    "Para ti ahora" to Icons.Default.AutoAwesome,
-    "Tus géneros favoritos" to Icons.Default.Favorite,
-    "Explora algo nuevo" to Icons.Default.TravelExplore,
-    "Porque viste y te gustó" to Icons.Default.PlayArrow,
-    "Valorados y populares" to Icons.Default.Star
+    R.string.discover_for_you_now to Icons.Default.AutoAwesome,
+    R.string.discover_your_fav_genres to Icons.Default.Favorite,
+    R.string.discover_explore_new to Icons.Default.TravelExplore,
+    R.string.discover_because_you_watched to Icons.Default.PlayArrow,
+    R.string.discover_rated_popular to Icons.Default.Star
 )
 
 @Composable
-private fun DiscoverCategoryDivider(label: String) {
-    val icon = dividerIcons[label]
+private fun DiscoverCategoryDivider(@androidx.annotation.StringRes labelRes: Int) {
+    val label = stringResource(labelRes)
+    val icon = dividerIcons[labelRes]
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -567,10 +578,11 @@ fun DiscoverHeroSection(
     onClick: (MediaContent) -> Unit
 ) {
     val tag = "discover_hero"
+    val context = androidx.compose.ui.platform.LocalContext.current
     val genreNames = remember(media.id) {
         (
             media.genres?.map { it.name }?.takeIf { it.isNotEmpty() }
-                ?: media.safeGenreIds.mapNotNull { discoverGenreNames[it] }
+                ?: media.safeGenreIds.mapNotNull { discoverGenreResIds[it]?.let { resId -> context.getString(resId) } }
             ).take(3)
     }
 
@@ -750,7 +762,7 @@ fun DiscoverHeroSection(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(6.dp))
-                Text("Ver ahora", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                Text(stringResource(R.string.discover_see_now), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
             }
         }
     }
@@ -792,9 +804,9 @@ private fun DiscoverSkeleton() {
                     .background(shimmerBrush())
             )
         }
-        item { ShowSectionSkeleton("Para ti ahora") }
-        item { ShowSectionSkeleton("Tus géneros favoritos") }
-        item { ShowSectionSkeleton("Explora algo nuevo") }
+        item { ShowSectionSkeleton(stringResource(R.string.discover_skeleton_for_you_now)) }
+        item { ShowSectionSkeleton(stringResource(R.string.discover_skeleton_fav_genres)) }
+        item { ShowSectionSkeleton(stringResource(R.string.discover_skeleton_explore)) }
         item { Spacer(Modifier.height(100.dp)) }
     }
 }
@@ -802,4 +814,3 @@ private fun DiscoverSkeleton() {
 private fun navigateToDetail(navController: NavController, media: MediaContent, tag: String) {
     navController.navigate(Screen.Detail(media.id, tag))
 }
-

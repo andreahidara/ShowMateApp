@@ -14,6 +14,7 @@ import com.andrea.showmateapp.domain.repository.IGroupSessionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
+import com.andrea.showmateapp.domain.usecase.GetCollaborativeBoostUseCase
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -67,7 +68,8 @@ class GroupMatchViewModel @Inject constructor(
     private val showRepository: ShowRepository,
     private val groupSessionRepository: IGroupSessionRepository,
     private val achievementChecker: AchievementChecker,
-    private val achievementRepository: IAchievementRepository
+    private val achievementRepository: IAchievementRepository,
+    private val collaborativeBoostUseCase: GetCollaborativeBoostUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GroupMatchUiState())
@@ -155,10 +157,11 @@ class GroupMatchViewModel @Inject constructor(
     private suspend fun computeAndSaveCandidates(memberEmails: List<String>, filters: GroupFilters) {
         _uiState.update { it.copy(isComputingCandidates = true) }
         try {
+            val myProfile = userRepository.getUserProfile()
             val allProfiles = coroutineScope {
                 memberEmails.map { email ->
                     async { userRepository.getFriendProfile(email) }
-                }.awaitAll().filterNotNull() + listOfNotNull(userRepository.getUserProfile())
+                }.awaitAll().filterNotNull() + listOfNotNull(myProfile)
             }
 
             val allSeenIds = allProfiles.flatMap { it.likedMediaIds + it.essentialMediaIds }.toSet()
@@ -172,6 +175,12 @@ class GroupMatchViewModel @Inject constructor(
                 .sortedByDescending { it.value }
                 .take(3)
                 .joinToString(",") { it.key }
+
+            val boostScores: Map<Int, Float> = if (myProfile != null) {
+                collaborativeBoostUseCase.execute(myProfile)
+            } else {
+                emptyMap()
+            }
 
             val discoveryResults = showRepository.getDetailedRecommendations(topGenres)
             val filteredCandidates = discoveryResults
@@ -187,6 +196,7 @@ class GroupMatchViewModel @Inject constructor(
                     true
                 }
                 .distinctBy { it.id }
+                .sortedByDescending { show -> boostScores.getOrDefault(show.id, 0f) }
                 .take(20)
 
             sessionId?.let { groupSessionRepository.updateCandidates(it, filteredCandidates.map { s -> s.id }) }
@@ -358,4 +368,3 @@ class GroupMatchViewModel @Inject constructor(
 
     fun isHost(): Boolean = myEmail != null && myEmail == _uiState.value.session?.hostEmail
 }
-

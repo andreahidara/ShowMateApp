@@ -63,4 +63,3 @@ fun MediaEntity.toDomain(): MediaContent {
         firstAirDate = this.firstAirDate
     )
 }
-

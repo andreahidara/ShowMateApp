@@ -102,13 +102,13 @@ class HomeViewModel @Inject constructor(
             val top10Scored = getRecommendationsUseCase.scoreShows(state.top10Shows)
             val newReleasesScored = getRecommendationsUseCase.scoreShows(state.newReleasesShows)
             val thisWeekScored = getRecommendationsUseCase.scoreShows(state.thisWeekShows)
-            
+
             val actionScored = getRecommendationsUseCase.scoreShows(state.genres.action)
             val comedyScored = getRecommendationsUseCase.scoreShows(state.genres.comedy)
             val dramaScored = getRecommendationsUseCase.scoreShows(state.genres.drama)
             val sciFiScored = getRecommendationsUseCase.scoreShows(state.genres.sciFi)
             val mysteryScored = getRecommendationsUseCase.scoreShows(state.genres.mystery)
-            
+
             val platformScored = state.platformShows.mapValues { getRecommendationsUseCase.scoreShows(it.value) }
             val whatToWatchScored = state.whatToWatchToday?.let { getRecommendationsUseCase.scoreForDetail(it) }
 
@@ -594,4 +594,3 @@ class HomeViewModel @Inject constructor(
         }
     }
 }
-

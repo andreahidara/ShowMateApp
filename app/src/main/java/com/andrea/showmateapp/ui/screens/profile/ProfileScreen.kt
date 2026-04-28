@@ -56,6 +56,7 @@ import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.*
 import com.andrea.showmateapp.domain.usecase.GetProfileStatsUseCase
+import com.andrea.showmateapp.ui.components.ErrorView
 import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.navigation.Screen
@@ -88,6 +89,7 @@ fun ProfileScreen(
     val avatarColorInt by viewModel.avatarColorInt.collectAsStateWithLifecycle()
     val photoUrl by viewModel.photoUrl.collectAsStateWithLifecycle()
     val isUploadingPhoto by viewModel.isUploadingPhoto.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
 
     var showColorPicker by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -214,17 +216,21 @@ fun ProfileScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showAvatarOptions = false }) {
-                    Text("Cancelar", color = TextGray)
+                    Text(stringResource(R.string.cancel), color = TextGray)
                 }
             }
         )
     }
 
-
-
     Scaffold(containerColor = MaterialTheme.colorScheme.background, contentWindowInsets = WindowInsets(0.dp)) { padding ->
         if (isLoading) {
             ProfileSkeleton()
+        } else if (error != null) {
+            ErrorView(
+                message = error!!,
+                onRetry = viewModel::retryLoad,
+                modifier = Modifier.padding(padding)
+            )
         } else {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -1714,4 +1720,3 @@ fun AchievementsEntryButton(onClick: () -> Unit, unlockedCount: Int = 0, totalCo
         }
     }
 }
-

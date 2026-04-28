@@ -62,4 +62,3 @@ interface IInteractionRepository {
     suspend fun updateLastKnownSeasons(mediaId: Int, seasons: Int)
     suspend fun syncFavoritesAndWatchedToRoom()
 }
-

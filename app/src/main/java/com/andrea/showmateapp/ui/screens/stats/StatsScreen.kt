@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.domain.usecase.GetViewerPersonalityUseCase
+import com.andrea.showmateapp.ui.components.ErrorView
 import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.theme.*
 
@@ -42,6 +43,12 @@ fun StatsScreen(navController: NavController, viewModel: StatsViewModel = hiltVi
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
         if (uiState.isLoading) {
             StatsSkeleton(modifier = Modifier.padding(paddingValues))
+        } else if (uiState.error != null) {
+            ErrorView(
+                message = uiState.error!!,
+                onRetry = viewModel::retry,
+                modifier = Modifier.padding(paddingValues)
+            )
         } else {
             Column(
                 modifier = Modifier

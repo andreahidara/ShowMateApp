@@ -29,6 +29,9 @@ object MoodContextEngine {
         return MoodContext(timeSlot, dayType)
     }
 
+    // Multiplicadores calibrados por contexto: entre semana/noche favorece comedia y familia
+    // (sesiones cortas de descanso), viernes/noche potencia acción/sci-fi (inicio de fin de semana),
+    // madrugada prioriza misterio y drama de ritmo lento que no requiere alta atención sostenida
     private fun genreMultipliers(context: MoodContext): Map<Int, Float> = when (context) {
         MoodContext(TimeSlot.EVENING, DayType.WEEKDAY) -> mapOf(
             35 to 1.28f,
@@ -69,6 +72,8 @@ object MoodContextEngine {
         else -> emptyMap()
     }
 
+    // Entre semana por la noche y en madrugada se penalizan episodios largos (>50 min)
+    // porque el usuario tiene menor disponibilidad de tiempo o menor energía
     private fun runtimeMultiplier(episodeRuntime: Int?, context: MoodContext): Float {
         val runtime = episodeRuntime ?: 45
         return when {
@@ -95,9 +100,9 @@ object MoodContextEngine {
         val genrePenalty = genreMults.entries
             .filter { (genreId, mult) -> genreId in showGenres && mult < 1.0f }
             .minOfOrNull { it.value } ?: 1.0f
+        // Si el show tiene géneros tanto con boost como con penalización, prevalece el boost (señal positiva gana)
         val finalGenre = if (genreMultiplier >= 1.0f) genreMultiplier else genrePenalty
         val rtMult = runtimeMultiplier(show.episodeRunTime?.firstOrNull(), context)
         return (finalGenre * rtMult).coerceIn(0.80f, 1.35f)
     }
 }
-

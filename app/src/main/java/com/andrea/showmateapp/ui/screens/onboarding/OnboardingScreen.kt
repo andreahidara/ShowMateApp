@@ -245,7 +245,7 @@ private fun GenreStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(state.availableGenres.entries.toList()) { (id, name) ->
+            items(state.availableGenres.entries.toList(), key = { it.key }) { (id, name) ->
                 val isSelected = state.selectedGenres.contains(id)
                 val disabled = !isSelected && state.selectedGenres.size >= 5
                 GenreCard(

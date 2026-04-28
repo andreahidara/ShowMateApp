@@ -6,11 +6,13 @@ import kotlin.math.sqrt
 
 object ContentEmbeddingEngine {
 
+    // IDs de géneros TMDB: orden fijo porque define la posición de cada dimensión en el vector
     private val GENRE_IDS = intArrayOf(
         10759, 16, 35, 80, 99, 18, 10751, 10762,
         9648, 10763, 10764, 10765, 10766, 10767, 10768, 37
     )
 
+    // Límites empíricos: suficiente señal sin inflar la dimensión hasta degradar la similitud coseno
     private const val MAX_KEYWORDS = 30
     private const val MAX_ACTORS = 20
     private const val MAX_CREATORS = 10
@@ -36,6 +38,7 @@ object ContentEmbeddingEngine {
     fun buildUserVector(profile: UserProfile, space: EmbeddingSpace): FloatArray {
         val vec = FloatArray(space.totalDim)
 
+        // tanh comprime scores arbitrariamente grandes a [-1,1] sin saturar al nivel máximo observado
         fun normalize(score: Float, maxAbs: Float): Float = kotlin.math.tanh((score / maxAbs).toDouble()).toFloat()
 
         val maxAbsGenre = profile.genreScores.values.maxOfOrNull { kotlin.math.abs(it) }?.coerceAtLeast(1f) ?: 1f
@@ -44,7 +47,6 @@ object ContentEmbeddingEngine {
         val maxAbsCreator = profile.preferredCreators.values
             .maxOfOrNull { kotlin.math.abs(it) }?.coerceAtLeast(1f) ?: 1f
 
-        // Clamp negatives to 0: dislikes inflate norm and lower ALL cosine similarities; handled elsewhere via genre filtering.
         GENRE_IDS.forEachIndexed { i, genreId ->
             vec[i] = normalize(profile.genreScores[genreId.toString()] ?: 0f, maxAbsGenre).coerceAtLeast(0f)
         }
@@ -100,6 +102,7 @@ object ContentEmbeddingEngine {
             normB += (b[i] * b[i]).toDouble()
         }
         val denom = sqrt(normA) * sqrt(normB)
+        // Umbral 1e-9 evita división por cero con vectores casi nulos (usuario sin historial)
         return if (denom < 1e-9) 0f else (dot / denom).toFloat().coerceIn(-1f, 1f)
     }
 
@@ -118,4 +121,3 @@ object ContentEmbeddingEngine {
         return if (denom == 0.0) 0f else (dot / denom).toFloat().coerceIn(-1f, 1f)
     }
 }
-

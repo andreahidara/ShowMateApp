@@ -104,7 +104,6 @@ class UserRepository @Inject constructor(
                 newGenreDates[id] = now
             }
 
-            // Seed narrative styles from selected genres so new users get populated sections in Discover
             val narrativeSeeds = mapOf(
                 "35" to mapOf("tono_ligero" to 8f, "ritmo_episodico" to 6f),
                 "18" to mapOf("tono_emocional" to 8f, "ritmo_lento" to 5f),
@@ -124,7 +123,6 @@ class UserRepository @Inject constructor(
                 }
             }
 
-            // Seed keywords from genres so the keyword embedding dimensions are populated from day 1
             val keywordSeeds = mapOf(
                 "9648" to mapOf("mystery" to 8f, "detective" to 6f, "murder mystery" to 6f),
                 "80" to mapOf("crime" to 8f, "heist" to 6f, "drugs" to 5f),
@@ -343,10 +341,9 @@ class UserRepository @Inject constructor(
 
     override suspend fun deleteAccount() = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
-        // Auth must succeed first — if it fails (e.g. requires re-auth) we don't lose local data
+
         auth.currentUser?.delete()?.await()
         safeFirestoreCall(Unit) { userDoc(uid).delete().await() }
         showDao.clearUserData()
     }
 }
-

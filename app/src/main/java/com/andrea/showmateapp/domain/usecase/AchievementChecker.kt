@@ -16,6 +16,7 @@ class AchievementChecker @Inject constructor(
     private val repo: IAchievementRepository,
     private val social: ISocialRepository
 ) {
+    // Buffer de 8: permite emitir varios logros simultáneos sin bloquear el hilo llamante
     private val _unlockEvents = MutableSharedFlow<Achievement>(extraBufferCapacity = 8)
     val unlockEvents = _unlockEvents.asSharedFlow()
 
@@ -48,6 +49,7 @@ class AchievementChecker @Inject constructor(
         val fCount = social.getFriends().size
         if ("first_friend" !in unlocked && fCount >= 1) c += "first_friend"
         if ("social_butterfly" !in unlocked && fCount >= 5) c += "social_butterfly"
+        // voteCount null significa que no se conoce → Int.MAX_VALUE evita desbloqueo accidental
         if ("hidden_gem" !in unlocked && (ctx.voteCount ?: Int.MAX_VALUE) < 1000) c += "hidden_gem"
 
         emit(c, unlocked)
@@ -75,6 +77,7 @@ class AchievementChecker @Inject constructor(
             if (p.size < 2) return@mapNotNull null
             runCatching { LocalDate.parse(p[0], fmt) }.getOrNull()?.let { it to p[1] }
         }.filter { it.first.dayOfWeek.value >= 6 }
+         // Se agrupa por showId+semana: el logro requiere ver el mismo contenido en sábado Y domingo
          .groupBy { "${it.second}_${it.first.year}W${it.first.dayOfYear / 7}" }
          .any { (_, es) -> es.map { it.first.dayOfWeek.value }.toSet().size >= 2 }
     }

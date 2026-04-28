@@ -52,7 +52,7 @@ object KeywordMapper {
     fun getTopMappedKeywords(
         preferredKeywords: Map<String, Float>,
         limit: Int = 3,
-        excludeKeywordIds: Set<String> = setOf("4363") // exclude time travel by default as it has its own section
+        excludeKeywordIds: Set<String> = setOf("4363") 
     ): List<Triple<String, String, String>> {
         return preferredKeywords.entries
             .sortedByDescending { it.value }

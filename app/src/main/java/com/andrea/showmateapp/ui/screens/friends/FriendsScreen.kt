@@ -27,11 +27,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.FriendInfo
 import com.andrea.showmateapp.data.model.FriendRequest
 import com.andrea.showmateapp.data.model.UserProfile
@@ -645,7 +647,7 @@ private fun OutgoingRequestCard(request: FriendRequest, onCancel: () -> Unit, mo
                 .clickable(onClick = onCancel)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-            Text("Cancelar", color = TextGray, fontSize = 12.sp)
+            Text(stringResource(R.string.cancel), color = TextGray, fontSize = 12.sp)
         }
     }
 }

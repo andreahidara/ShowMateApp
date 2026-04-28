@@ -87,7 +87,6 @@ class DataExportManager @Inject constructor(
         }
     }
 
-
     fun parseJsonBackup(content: String): UserProfile? {
         return try {
             val json = JSONObject(content)

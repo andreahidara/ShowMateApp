@@ -353,4 +353,3 @@ private fun ListDetailEmptyState(modifier: Modifier = Modifier, listName: String
         }
     }
 }
-

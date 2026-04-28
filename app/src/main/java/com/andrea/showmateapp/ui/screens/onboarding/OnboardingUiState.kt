@@ -130,4 +130,3 @@ data class OnboardingUiState(
     val isLoading: Boolean = false,
     val isComplete: Boolean = false
 )
-

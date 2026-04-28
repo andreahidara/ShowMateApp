@@ -30,6 +30,7 @@ class GetProfileStatsUseCase @Inject constructor(
             if (watchedList != null) {
                 watchedList.size
             } else {
+                // Sin datos de seguimiento por episodio se estima con la constante de la fórmula bayesiana del uso case de recomendaciones
                 (show.numberOfSeasons ?: 1) * 10
             }
         }
@@ -40,6 +41,7 @@ class GetProfileStatsUseCase @Inject constructor(
             } else {
                 (show.numberOfSeasons ?: 1) * 10
             }
+            // 45 min es la duración media de episodio cuando TMDB no reporta runtime
             val runtime = show.episodeRunTime?.firstOrNull()?.takeIf { it > 0 } ?: 45
             count * runtime
         }
@@ -80,4 +82,3 @@ class GetProfileStatsUseCase @Inject constructor(
         val likeRate: Float = 0f
     )
 }
-

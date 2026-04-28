@@ -83,6 +83,9 @@ class ProfileViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     private val _xp = MutableStateFlow(0)
     val xp: StateFlow<Int> = _xp.asStateFlow()
 
@@ -91,8 +94,29 @@ class ProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            loadAchievementsData()
-            _isLoading.value = false
+            try {
+                loadAchievementsData()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _error.value = e.message ?: "Error desconocido"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun retryLoad() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                loadAchievementsData()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _error.value = e.message ?: "Error desconocido"
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -238,4 +262,3 @@ class ProfileViewModel @Inject constructor(
         }
     }
 }
-

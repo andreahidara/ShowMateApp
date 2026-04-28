@@ -197,4 +197,3 @@ class ShowRepository @Inject constructor(
 
     override suspend fun getSimilarShows(showId: Int): List<MediaContent> = (safeApiCall { api.getSimilarMediaByShow(showId).results } as? Resource.Success)?.data ?: emptyList()
 }
-

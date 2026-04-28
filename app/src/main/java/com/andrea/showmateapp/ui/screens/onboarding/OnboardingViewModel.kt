@@ -47,13 +47,13 @@ class OnboardingViewModel @Inject constructor(
                     val result = showRepository.discoverShows(
                         genreId = genreId,
                         sortBy = "popularity.desc",
-                        minRating = 6f // Solo series con buena puntuación
+                        minRating = 6f 
                     )
                     val candidates = when (result) {
                         is Resource.Success -> result.data
                             .filter { show ->
                                 !show.posterPath.isNullOrBlank() &&
-                                show.safeGenreIds.contains(genreId.toIntOrNull() ?: -1) // Doble comprobación de género
+                                show.safeGenreIds.contains(genreId.toIntOrNull() ?: -1) 
                             }
                             .map { it.posterPath!! }
                         else -> emptyList()
@@ -202,7 +202,6 @@ class OnboardingViewModel @Inject constructor(
                 )
             }
 
-            // Siempre guardar localmente, aunque Firebase haya fallado
             runCatching {
                 dataStore.edit { prefs -> prefs[booleanPreferencesKey("onboarding_completed")] = true }
             }

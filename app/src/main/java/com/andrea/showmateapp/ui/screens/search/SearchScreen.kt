@@ -1141,7 +1141,6 @@ fun TrendingPersonCard(person: com.andrea.showmateapp.data.model.PersonSearchRes
                 )
             }
 
-
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)

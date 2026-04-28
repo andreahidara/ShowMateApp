@@ -2,7 +2,6 @@ package com.andrea.showmateapp.data.model
 
 import com.google.gson.annotations.SerializedName
 
-
 data class PersonResponse(
     val id: Int = 0,
     val name: String = "",

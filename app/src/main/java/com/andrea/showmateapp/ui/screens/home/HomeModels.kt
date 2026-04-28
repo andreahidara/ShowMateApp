@@ -63,4 +63,3 @@ enum class TimeOption(val label: String, val maxRuntime: Int?) {
     MEDIUM("1 hora", 65),
     MARATHON("Maratón", null)
 }
-

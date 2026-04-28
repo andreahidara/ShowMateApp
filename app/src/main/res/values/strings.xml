@@ -246,6 +246,9 @@
     <string name="reason_binge_short">Corta y perfecta para un maratón</string>
     <string name="reason_completeness">Serie terminada, puedes ver el final ya</string>
     <string name="reason_trending">Todo el mundo habla de ella ahora mismo</string>
+    <string name="reason_fallback_genre">Coincide con tu preferencia de %1$s</string>
+    <string name="reason_fallback_rating">Altamente valorada por la comunidad</string>
+    <string name="reason_fallback_creator">Del mismo creador que te ha gustado antes</string>
 
     <string name="narrative_desc_complex">Tiene esa narrativa compleja que te engancha</string>
     <string name="narrative_desc_detective">Con ese detective que tanto te gusta</string>
@@ -336,4 +339,118 @@
     <string name="notif_streak_danger_body">Llevas %1$d días seguidos viendo series. ¡Pon aunque sea un episodio esta noche para no romperla!</string>
     <string name="notif_streak_active_body">Tienes una racha de %1$d día%2$s. ¡No la pierdas, pon un episodio!</string>
     <string name="notif_streak_inactive_body">¡Vuelve a ShowMate y empieza una nueva racha hoy!</string>
+
+    <!-- LoginScreen -->
+    <string name="login_recover_password">Recuperar contraseña</string>
+    <string name="login_reset_instructions">Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.</string>
+    <string name="login_email_sent">¡Correo enviado! Revisa tu bandeja de entrada.</string>
+    <string name="login_send">Enviar</string>
+    <string name="login_welcome_back">Bienvenido de nuevo</string>
+    <string name="login_subtitle">Inicia sesión para continuar</string>
+    <string name="login_password">Contraseña</string>
+    <string name="login_forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="login_no_account">¿No tienes cuenta?  </string>
+    <string name="login_register">Regístrate</string>
+    <string name="login_or_continue_with">  o continúa con  </string>
+    <string name="login_continue_with_google">Continuar con Google</string>
+
+    <!-- HomeScreen -->
+    <string name="home_loading">Cargando…</string>
+
+    <!-- SwipeScreen -->
+    <string name="swipe_cd_skip">Paso</string>
+    <string name="swipe_cd_undo">Deshacer</string>
+    <string name="swipe_cd_like">Me gusta</string>
+    <string name="swipe_cd_essential">Esencial</string>
+    <string name="swipe_label_like">ME GUSTA</string>
+    <string name="swipe_label_skip">PASO</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_version">ShowMate · Versión 1.0.0</string>
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_back_cd">Volver</string>
+    <string name="settings_section_account">Cuenta</string>
+    <string name="settings_edit_username">Editar nombre de usuario</string>
+    <string name="settings_change_password">Cambiar contraseña</string>
+    <string name="settings_change_password_subtitle">Te enviaremos un enlace por email</string>
+    <string name="settings_section_notifications">Notificaciones</string>
+    <string name="settings_push_notifications">Notificaciones push</string>
+    <string name="settings_notifications_on">Activas</string>
+    <string name="settings_notifications_off">Desactivadas</string>
+    <string name="settings_notifications_enabled">Notificaciones activadas</string>
+    <string name="settings_notifications_disabled">Notificaciones desactivadas</string>
+    <string name="settings_section_support">Soporte</string>
+    <string name="settings_report_problem">Reportar un problema</string>
+    <string name="settings_report_problem_subtitle">Sugerencias o errores</string>
+    <string name="settings_no_email_apps">No hay apps de correo instaladas</string>
+    <string name="settings_section_danger">Zona de riesgo</string>
+    <string name="settings_reset_tastes">Reiniciar mis gustos</string>
+    <string name="settings_reset_tastes_subtitle">Borra todos tus datos y reinicia tu cuenta</string>
+    <string name="settings_delete_account">Eliminar cuenta</string>
+    <string name="settings_delete_account_subtitle">Acción irreversible</string>
+    <string name="settings_delete_account_title">Eliminar cuenta</string>
+    <string name="settings_delete_account_message">Tu cuenta y todos tus datos personales asociados serán eliminados permanentemente.</string>
+    <string name="settings_delete_action">Eliminar</string>
+    <string name="settings_delete_error">Error al eliminar la cuenta. Vuelve a iniciar sesión e inténtalo de nuevo.</string>
+    <string name="settings_reset_title">Reiniciar gustos</string>
+    <string name="settings_reset_message">Esto borrará todos los datos de tu cuenta (preferencias, amigos, experiencia) y tendrás que volver a pasar por el onboarding para empezar de nuevo.</string>
+    <string name="settings_resetting">Reiniciando…</string>
+    <string name="settings_reset_action">Reiniciar</string>
+    <string name="settings_reset_error">Error al reiniciar los datos. Comprueba tu conexión.</string>
+    <string name="settings_edit_name_title">Editar nombre</string>
+    <string name="settings_username_label">Nombre de usuario</string>
+    <string name="settings_name_updated">Nombre actualizado correctamente</string>
+    <string name="settings_name_update_error">Error al actualizar el nombre</string>
+    <string name="settings_password_reset_sent">Email de recuperación enviado a %1$s.</string>
+    <string name="settings_password_reset_error">Error al enviar el email.</string>
+
+    <!-- DiscoverScreen -->
+    <string name="discover_header_title">Descubrir</string>
+    <string name="discover_header_subtitle">Recomendaciones personalizadas para ti</string>
+    <string name="discover_for_you_now">Para ti ahora</string>
+    <string name="discover_your_fav_genres">Tus géneros favoritos</string>
+    <string name="discover_explore_new">Explora algo nuevo</string>
+    <string name="discover_because_you_watched">Porque viste y te gustó</string>
+    <string name="discover_rated_popular">Valorados y populares</string>
+    <string name="discover_context_subtitle">Adaptado a cómo consumes series</string>
+    <string name="discover_dayofweek_subtitle">Basado en tu patrón de visualización</string>
+    <string name="discover_narrative_subtitle">Tu estilo narrativo preferido según el algoritmo</string>
+    <string name="discover_top_genre_title">Porque te gusta: %1$s</string>
+    <string name="discover_second_genre_title">Más de: %1$s</string>
+    <string name="discover_third_genre_title">También te puede gustar: %1$s</string>
+    <string name="discover_hidden_gems">Joyas ocultas para ti</string>
+    <string name="discover_hidden_gems_subtitle">Alta afinidad, pocas valoraciones globales</string>
+    <string name="discover_exploration_title">Sal de tu zona de confort: %1$s</string>
+    <string name="discover_exploration_subtitle">Tu género menos explorado con buenos scores</string>
+    <string name="discover_mood_subtitle">Seleccionado por tu tono favorito</string>
+    <string name="discover_similar_title">Porque viste %1$s</string>
+    <string name="discover_actor_title">Porque te gusta %1$s</string>
+    <string name="discover_creator_title">Del creador: %1$s</string>
+    <string name="discover_creator_subtitle">Series del showrunner que más te gusta</string>
+    <string name="discover_timetravel">Porque te gustan los viajes en el tiempo</string>
+    <string name="discover_top_rated_title">Los mejor valorados en %1$s</string>
+    <string name="discover_collab">Lo que ven usuarios con tu gusto</string>
+    <string name="discover_collab_subtitle">Popular entre usuarios con gustos similares</string>
+    <string name="discover_see_now">Ver ahora</string>
+    <string name="discover_skeleton_for_you_now">Para ti ahora</string>
+    <string name="discover_skeleton_fav_genres">Tus géneros favoritos</string>
+    <string name="discover_skeleton_explore">Explora algo nuevo</string>
+    <string name="discover_genre_action_name">Acción</string>
+    <string name="discover_genre_animation_name">Animación</string>
+    <string name="discover_genre_comedy_name">Comedia</string>
+    <string name="discover_genre_crime_name">Crimen</string>
+    <string name="discover_genre_documentary_name">Documental</string>
+    <string name="discover_genre_drama_name">Drama</string>
+    <string name="discover_genre_family_name">Familiar</string>
+    <string name="discover_genre_mystery_name">Misterio</string>
+    <string name="discover_genre_scifi_name">Sci-Fi</string>
+    <string name="discover_genre_politics_name">Política</string>
+    <string name="discover_genre_western_name">Western</string>
+    <string name="discover_genre_thriller_name">Thriller</string>
+    <string name="discover_genre_kids_name">Infantil</string>
+    <string name="discover_genre_reality_name">Reality</string>
+
+    <!-- DetailScreen share -->
+    <string name="detail_share_text">¡Echa un vistazo a \"%1$s\" en ShowMate! 🎬\nhttps://www.themoviedb.org/tv/%2$d</string>
+    <string name="detail_share_chooser">Compartir con…</string>
 </resources>

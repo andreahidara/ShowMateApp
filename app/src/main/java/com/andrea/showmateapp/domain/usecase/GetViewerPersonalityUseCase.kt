@@ -18,6 +18,7 @@ class GetViewerPersonalityUseCase @Inject constructor() {
         if (profile.genreScores.isEmpty()) return null
         val maxScore = profile.genreScores.values.filter { it > 0 }.maxOrNull() ?: return null
 
+        // Se normaliza por el score máximo para obtener pesos relativos comparables entre usuarios
         val topGenres = profile.genreScores
             .filter { it.value > 0 }
             .entries
@@ -53,6 +54,8 @@ class GetViewerPersonalityUseCase @Inject constructor() {
     }
 
     private fun buildLabel(genres: List<String>): String {
+        // Los 8 tipos se derivan del género dominante: el orden de los `when` es la jerarquía de prioridad
+        // (Crimen > Misterio > ... > Ecléctico) cuando varios géneros tienen puntuaciones similares
         val primary = when {
             genres.any { it.contains("Crimen") } -> "Analítico"
             genres.any { it.contains("Misterio") } -> "Intuitivo"

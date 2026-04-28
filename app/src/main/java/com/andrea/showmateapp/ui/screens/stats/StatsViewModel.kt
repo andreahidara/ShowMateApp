@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 @Immutable
 data class StatsUiState(
     val isLoading: Boolean = true,
+    val error: String? = null,
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
     val dailyRecord: Int = 0,
@@ -53,9 +54,14 @@ class StatsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
             }
         }
+    }
+
+    fun retry() {
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        observeProfile()
     }
 
     private suspend fun processProfileData(profile: UserProfile) {
@@ -83,6 +89,7 @@ class StatsViewModel @Inject constructor(
                 val dailyRecord = episodesPerDay.values.maxOrNull() ?: 0
 
                 val today = LocalDate.now()
+                // Si hoy no hay actividad se acepta ayer como inicio de racha para no penalizar al usuario que todavía no ha visto nada hoy
                 val streakStart = if (episodesPerDay.containsKey(today)) today else today.minusDays(1)
                 var streak = 0
                 var day = streakStart
@@ -128,7 +135,7 @@ class StatsViewModel @Inject constructor(
                 }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            _uiState.update { it.copy(isLoading = false) }
+            _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
         }
     }
 }

@@ -23,10 +23,12 @@ class GetFriendCompatibilityUseCase @Inject constructor(
         val friend = socialRepository.getFriendProfile(friendUid)
             ?: return CompatibilityResult(0, 0, 0, emptyList(), emptyList())
 
+        // Jaccard mide solapamiento de géneros sin importar la magnitud de las puntuaciones
         val genreJaccard = GenreMapper.jaccardSimilarity(me.genreScores, friend.genreScores)
 
         val myRatings = me.ratings.mapKeys { it.key.toIntOrNull() ?: 0 }.filterKeys { it > 0 }
         val friendRatings = friend.ratings.mapKeys { it.key.toIntOrNull() ?: 0 }.filterKeys { it > 0 }
+        // Coseno sobre ratings explícitos captura si valoran igual los mismos títulos, independientemente del sesgo de escala personal
         val ratingCorr = ContentEmbeddingEngine
             .cosineSimilarityRatings(myRatings.mapValues { it.value }, friendRatings.mapValues { it.value })
             .coerceIn(0f, 1f)
@@ -35,6 +37,7 @@ class GetFriendCompatibilityUseCase @Inject constructor(
         val friendFavorites = (friend.likedMediaIds + friend.essentialMediaIds).toSet()
         val shared = (myFavorites intersect friendFavorites).toList()
 
+        // 50/50 entre géneros y ratings: ninguna dimensión domina; ambas aportan información complementaria
         val overall = ((genreJaccard * 0.5f + ratingCorr * 0.5f) * 100)
             .toInt().coerceIn(0, 100)
 

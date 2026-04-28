@@ -286,7 +286,6 @@ fun MatchBadge(score: Float, isAffinity: Boolean, modifier: Modifier = Modifier)
     }
 }
 
-
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ShowSection(
@@ -411,7 +410,6 @@ fun ShowSection(
         }
     }
 }
-
 
 @Composable
 fun ErrorView(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
@@ -638,5 +636,3 @@ fun <T> PremiumTabRow(
         }
     }
 }
-
-

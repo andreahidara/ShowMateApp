@@ -294,7 +294,7 @@ fun SwipeScreenContent(
                 ) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Paso",
+                        contentDescription = stringResource(R.string.swipe_cd_skip),
                         tint = HeartRed.copy(alpha = 0.9f),
                         modifier = Modifier.size(26.dp)
                     )
@@ -327,7 +327,7 @@ fun SwipeScreenContent(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Undo,
-                        contentDescription = "Deshacer",
+                        contentDescription = stringResource(R.string.swipe_cd_undo),
                         tint = if (undoActive) Color.White.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.15f),
                         modifier = Modifier.size(18.dp)
                     )
@@ -354,7 +354,7 @@ fun SwipeScreenContent(
                 ) {
                     Icon(
                         Icons.Default.Favorite,
-                        contentDescription = "Me gusta",
+                        contentDescription = stringResource(R.string.swipe_cd_like),
                         tint = Color.White,
                         modifier = Modifier.size(34.dp)
                     )
@@ -376,7 +376,7 @@ fun SwipeScreenContent(
                 ) {
                     Icon(
                         Icons.Default.Star,
-                        contentDescription = "Esencial",
+                        contentDescription = stringResource(R.string.swipe_cd_essential),
                         tint = StarYellow,
                         modifier = Modifier.size(26.dp)
                     )
@@ -598,7 +598,7 @@ fun SwipeableCard(media: MediaContent, stackIndex: Int, onSwiped: (Boolean) -> U
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
                     Text(
-                        text = if (isLiking) "ME GUSTA" else "PASO",
+                        text = if (isLiking) stringResource(R.string.swipe_label_like) else stringResource(R.string.swipe_label_skip),
                         color = overlayColor,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Black,
@@ -788,4 +788,3 @@ private fun SwipeCardSkeleton() {
         Spacer(Modifier.height(32.dp))
     }
 }
-

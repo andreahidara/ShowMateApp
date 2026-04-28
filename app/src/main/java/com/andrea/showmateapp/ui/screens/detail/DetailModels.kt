@@ -30,4 +30,3 @@ data class DetailUiState(
     val customLists: Map<String, List<Int>> = emptyMap(),
     val showAddToListDialog: Boolean = false
 ) : BaseUiState
-

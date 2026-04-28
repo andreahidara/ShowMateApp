@@ -241,4 +241,3 @@ class SwipeViewModel @Inject constructor(
         }
     }
 }
-

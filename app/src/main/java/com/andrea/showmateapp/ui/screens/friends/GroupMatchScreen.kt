@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.GroupFilters
 import com.andrea.showmateapp.data.model.MemberVoteDoc
 import com.andrea.showmateapp.data.model.MediaContent
@@ -352,7 +354,7 @@ private fun VotingContent(uiState: GroupMatchUiState, viewModel: GroupMatchViewM
             modifier = Modifier.padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(uiState.session?.memberEmails ?: emptyList()) { email ->
+            items(uiState.session?.memberEmails ?: emptyList(), key = { it }) { email ->
                 MemberProgress(
                     email = email,
                     votedCount = uiState.memberVoteCount(email),
@@ -612,7 +614,7 @@ private fun MatchFoundContent(
             Text("Disponible en:", color = TextGray, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(esProviders.flatrate ?: emptyList()) { provider ->
+                items(esProviders.flatrate ?: emptyList(), key = { it.providerId }) { provider ->
                     TmdbImage(
                         path = provider.logoPath,
                         contentDescription = provider.providerName,
@@ -1189,7 +1191,7 @@ private fun NightTitleDialog(initial: String, onConfirm: (String) -> Unit, onDis
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextGray) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = TextGray) }
         }
     )
 }
@@ -1361,4 +1363,3 @@ private fun ActiveFiltersBanner(filters: GroupFilters, modifier: Modifier = Modi
 
 private fun Modifier.shadow(elevation: androidx.compose.ui.unit.Dp, shape: RoundedCornerShape) =
     this.then(Modifier.graphicsLayer { shadowElevation = elevation.value })
-

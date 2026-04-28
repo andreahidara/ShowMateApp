@@ -160,7 +160,7 @@ class SearchViewModel @Inject constructor(
             val trendingScored = getRecommendationsUseCase.scoreShows(_trendingShows.value)
             val suggestionsScored = getRecommendationsUseCase.scoreShows(_suggestions.value)
             val resultsScored = getRecommendationsUseCase.scoreShows(_searchResults.value)
-            
+
             _trendingShows.value = trendingScored
             _suggestions.value = suggestionsScored
             _searchResults.value = resultsScored
@@ -379,4 +379,3 @@ class SearchViewModel @Inject constructor(
         }
     }
 }
-

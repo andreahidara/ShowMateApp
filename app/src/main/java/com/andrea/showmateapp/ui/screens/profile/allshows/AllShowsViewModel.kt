@@ -35,4 +35,3 @@ class AllShowsViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     }
 }
-

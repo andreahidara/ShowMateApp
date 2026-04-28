@@ -41,23 +41,21 @@ class SplashViewModel @Inject constructor(
                 val user = authRepository.getCurrentUser()
                 val loggedIn = sessionValid && user != null
 
-                // Verificar si el usuario ya dio consentimiento
                 val prefs = dataStore.data.first()
                 val consentGiven = prefs[KEY_CONSENT] == true
                 val onboardingLocal = prefs[KEY_ONBOARDING] == true
 
-                // Si no ha dado consentimiento, mostrar Welcome → Consent → Login
                 if (!consentGiven) {
                     _authDecision.value = SplashDestination.WELCOME_NEW
                 } else if (loggedIn) {
-                    // Si ya consintió y está logueado
+
                     sessionRepository.updateLastActivity()
-                    
+
                     if (onboardingLocal) {
-                        // Si está localmente completado, vamos rápido a HOME
+
                         _authDecision.value = SplashDestination.HOME
                     } else {
-                        // Si no está localmente, comprobamos en remoto (por si viene de otro dispositivo o borró datos)
+
                         val profile = userRepository.getUserProfile()
                         if (profile?.onboardingCompleted == true) {
                             runCatching {
@@ -69,7 +67,7 @@ class SplashViewModel @Inject constructor(
                         }
                     }
                 } else {
-                    // Si ya consintió pero NO está logueado, ir directo a LOGIN
+
                     _authDecision.value = SplashDestination.LOGIN
                 }
             } catch (e: Exception) {
@@ -86,5 +84,5 @@ enum class SplashDestination {
     HOME,
     ONBOARDING,
     LOGIN,
-    WELCOME_NEW  // Para usuarios nuevos que aún no dieron consentimiento
+    WELCOME_NEW  
 }

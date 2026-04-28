@@ -28,4 +28,3 @@ interface IUserRepository {
     suspend fun deleteAccount()
     suspend fun restoreBackup(partial: UserProfile)
 }
-

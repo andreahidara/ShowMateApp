@@ -2,7 +2,6 @@ package com.andrea.showmateapp.data.model
 
 import com.google.gson.annotations.SerializedName
 
-
 data class SeasonResponse(
     @SerializedName("_id") val tmdbId: String = "",
     @SerializedName("air_date") val airDate: String? = null,

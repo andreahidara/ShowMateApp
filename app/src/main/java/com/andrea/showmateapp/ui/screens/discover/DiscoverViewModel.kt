@@ -327,7 +327,7 @@ class DiscoverViewModel @Inject constructor(
                     if (sortedGenres.size > 1) {
                         secondGenreId = sortedGenres[1].key
                     } else {
-                        // Only 1 genre selected: pick a complementary default to avoid duplicate sections
+
                         secondGenreId = when (topGenreId) {
                             "18" -> "35"; "35" -> "18"; "10765" -> "10759"
                             "9648" -> "80"; "80" -> "9648"; "10759" -> "53"
@@ -400,15 +400,15 @@ class DiscoverViewModel @Inject constructor(
                 val actor1ShowsDef = actorIdStr1?.let { id -> async { repository.discoverShows(withCast = id) } }
                 val person2Def = actorId2?.let { id -> async { repository.getPersonDetails(id) } }
                 val actor2ShowsDef = actorIdStr2?.let { id -> async { repository.discoverShows(withCast = id) } }
-                
+
                 val kwResults = KeywordMapper.getTopMappedKeywords(profile?.preferredKeywords ?: emptyMap(), limit = 2)
                 val firstKw = kwResults.getOrNull(0)
                 val secondKw = kwResults.getOrNull(1)
-                
+
                 val kw1ShowsDef = firstKw?.let { it -> async { repository.discoverShows(keywords = it.second) } }
                 val kw2ShowsDef = secondKw?.let { it -> async { repository.discoverShows(keywords = it.second) } }
                 val timeTravelDef = async { repository.discoverShows(keywords = "4363") }
-                
+
                 val unexploredGenreId = ExplorationEngine.unexploredGenres(profile ?: UserProfile(""), setOf(10759, 16, 35, 80, 99, 18, 10751, 9648, 10765, 37, 53)).randomOrNull()
                 val explorationShowsDef = unexploredGenreId?.let { id -> async { repository.discoverShows(genreId = id.toString(), minRating = 7.0f) } }
 
@@ -745,4 +745,3 @@ class DiscoverViewModel @Inject constructor(
         else -> Pair(null, "")
     }
 }
-

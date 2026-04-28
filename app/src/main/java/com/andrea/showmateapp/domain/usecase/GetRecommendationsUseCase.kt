@@ -31,25 +31,36 @@ class GetRecommendationsUseCase @Inject constructor(
     private val getCollaborativeBoostUseCase: GetCollaborativeBoostUseCase
 ) {
     companion object {
+        // 70/30: el gusto personal domina; la valoración global evita recomendar contenido mal puntuado
         private const val W_PERSONAL = 0.70f
         private const val W_GLOBAL = 0.30f
+        // El estilo narrativo aporta hasta ±1.5 puntos aditivos sobre la puntuación base de embedding
         private const val NARRATIVE_ADDITIVE_MAX = 1.50f
+        // C y M son los parámetros de la fórmula bayesiana de IMDb: C=media global estimada, M=votos mínimos de confianza
         private const val C = 6.5f
         private const val M = 50f
+        // λ de decaimiento exponencial: ~90 días para reducir a la mitad el peso de una interacción antigua
         private const val DECAY_LAMBDA = 0.0077f
+        // Máximo 35% de los resultados puede pertenecer al mismo género principal (diversidad)
         private const val MAX_GENRE_FRACTION = 0.35f
+        // 15% de los slots se reservan para serendipia: sorpresas fuera del perfil habitual
         private const val SERENDIPITY_FRACTION = 0.15f
+        // Si el usuario vio menos del 20% de una serie con >1 temporada, se penaliza (probable abandono)
         private const val ABANDONMENT_THRESHOLD = 0.20f
         private const val ABANDONMENT_PENALTY = 1.50f
         private const val AVG_EPISODES_PER_SEASON = 10
+        // Impulsos decrecientes por novedad: una serie reciente compite mejor aunque tenga pocos votos
         private const val NOVELTY_BOOST_1M = 0.40f
         private const val NOVELTY_BOOST_3M = 0.20f
         private const val NOVELTY_BOOST_6M = 0.10f
+        // Si un género supera el 45% de la afinidad total del usuario, se penaliza su sobrerepresentación
         private const val GENRE_SATURATION_THRESHOLD = 0.45f
         private const val GENRE_SATURATION_PENALTY = 2.50f
+        // Una "joya oculta" requiere poca audiencia (<500 votos) pero alta afinidad personal (≥6.5)
         private const val HIDDEN_GEM_VOTE_THRESHOLD = 500
         private const val HIDDEN_GEM_MIN_AFFINITY = 6.5f
         private const val HIDDEN_GEM_BOOST = 0.35f
+        // Umbral de sesión intensa: ≥3 episodios/sesión define al usuario como binge-watcher
         private const val BINGE_THRESHOLD_EPS = 3.0f
         private const val BINGE_PROFILE_BOOST = 0.60f
         private const val EXPLORATION_BONUS = 0.30f
@@ -321,6 +332,8 @@ class GetRecommendationsUseCase @Inject constructor(
             prefBoost += 1.5f
         }
 
+        // El boost colaborativo se aplica como sumando aditivo al final para que no amplifique
+        // multiplicativamente los errores del perfil personal cuando la señal social es débil
         val score = (
             (personalAffinity * moodMultiplier * temporalMultiplier * W_PERSONAL) +
                 (global * W_GLOBAL) +
@@ -329,7 +342,6 @@ class GetRecommendationsUseCase @Inject constructor(
                 abandonmentPenalty - saturationPenalty
             ).coerceIn(0f, 10f)
 
-        // Unify rounding to 1 decimal place to ensure consistency across screens (e.g. 8.5)
         val finalScore = (score * 10).let { kotlin.math.round(it) } / 10f
 
         val reasons = buildReasons(
@@ -353,6 +365,7 @@ class GetRecommendationsUseCase @Inject constructor(
         if (showStyles.isEmpty()) return 0f
         val raw = showStyles.entries.fold(0f) { acc, (style, relevance) ->
             val userPref = (user.narrativeStyleScores[style] ?: 0f)
+            // tanh comprime preferencias extremas a [-1,1] para evitar que un único estilo muy marcado domine
             val clampedPref = kotlin.math.tanh(userPref / 15.0).toFloat()
             acc + clampedPref * relevance
         }
@@ -363,6 +376,7 @@ class GetRecommendationsUseCase @Inject constructor(
     private fun calculateBayesianRating(show: MediaContent): Float {
         val v = show.voteCount.toFloat()
         val r = show.voteAverage
+        // Fórmula bayesiana de IMDb: series con pocos votos se acercan a C (media global) para evitar sobreestimación
         return if (v + M > 0) ((v * r) + (M * C)) / (v + M) else C
     }
 
@@ -458,9 +472,12 @@ class GetRecommendationsUseCase @Inject constructor(
         bingeBoost: Float
     ): List<RecommendationReason> {
         val profile = context.decayedProfile
+        // "personal" agrupa razones derivadas del perfil del usuario (XAI explicable al usuario);
+        // "systemic" agrupa señales de calidad objetiva (popularidad, completitud) independientes del perfil
         val personal = mutableListOf<RecommendationReason>()
         val systemic = mutableListOf<RecommendationReason>()
 
+        // Umbral >3f: solo se expone al usuario una razón de género si la afinidad es genuina, no ruido
         val qualifiedGenres = show.safeGenreIds
             .mapNotNull { id -> profile.genreScores[id.toString()]?.let { id to it } }
             .filter { it.second > 3f }
@@ -567,6 +584,8 @@ class GetRecommendationsUseCase @Inject constructor(
 
         val sortedPersonal = personal.sortedByDescending { r: RecommendationReason -> r.weight }
         val sortedSystemic = systemic.sortedByDescending { r: RecommendationReason -> r.weight }
+        // Las razones personales preceden a las sistémicas; distinctBy evita repetir el mismo tipo (ej. dos géneros);
+        // take(5) limita la UI a lo que cabe en ReasonPill sin saturar la tarjeta del show
         return (sortedPersonal + sortedSystemic).distinctBy { it.type }.take(5)
     }
 
@@ -650,4 +669,3 @@ class GetRecommendationsUseCase @Inject constructor(
         return main
     }
 }
-

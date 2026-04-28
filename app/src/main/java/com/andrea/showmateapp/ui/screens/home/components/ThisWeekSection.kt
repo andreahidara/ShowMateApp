@@ -300,4 +300,3 @@ fun ThisWeekCard(
         }
     }
 }
-

@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.HeartRed
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
@@ -94,6 +96,16 @@ fun SettingsScreenContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val deleteErrorMsg = stringResource(R.string.settings_delete_error)
+    val resetErrorMsg = stringResource(R.string.settings_reset_error)
+    val nameUpdatedMsg = stringResource(R.string.settings_name_updated)
+    val nameUpdateErrorMsg = stringResource(R.string.settings_name_update_error)
+    val notifEnabledMsg = stringResource(R.string.settings_notifications_enabled)
+    val notifDisabledMsg = stringResource(R.string.settings_notifications_disabled)
+    val noEmailAppsMsg = stringResource(R.string.settings_no_email_apps)
+    val passwordResetSentMsg = stringResource(R.string.settings_password_reset_sent, currentEmail)
+    val passwordResetErrorMsg = stringResource(R.string.settings_password_reset_error)
+
     fun showFeedback(message: String) {
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -114,12 +126,12 @@ fun SettingsScreenContent(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Eliminar cuenta", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.settings_delete_account_title), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             text = {
                 Text(
-                    "Tu cuenta y todos tus datos personales asociados serán eliminados permanentemente.",
+                    stringResource(R.string.settings_delete_account_message),
                     color = TextGray,
                     lineHeight = 20.sp
                 )
@@ -131,16 +143,16 @@ fun SettingsScreenContent(
                         onDeleteAccount { success ->
                             if (!success) {
                                 showFeedback(
-                                    "Error al eliminar la cuenta. Vuelve a iniciar sesión e inténtalo de nuevo."
+                                    deleteErrorMsg
                                 )
                             }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = HeartRed)
-                ) { Text("Eliminar", fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.settings_delete_action), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar", color = TextGray) }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel), color = TextGray) }
             }
         )
     }
@@ -149,11 +161,11 @@ fun SettingsScreenContent(
         AlertDialog(
             onDismissRequest = { if (!isResetting) showResetDialog = false },
             containerColor = Color(0xFF1A1A2E),
-            title = { Text("Reiniciar gustos", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.settings_reset_title), color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(
-                        "Esto borrará todos los datos de tu cuenta (preferencias, amigos, experiencia) y tendrás que volver a pasar por el onboarding para empezar de nuevo.",
+                        stringResource(R.string.settings_reset_message),
                         color = TextGray
                     )
                     if (isResetting) {
@@ -172,7 +184,7 @@ fun SettingsScreenContent(
                             if (success) {
                                 showResetDialog = false
                             } else {
-                                showFeedback("Error al reiniciar los datos. Comprueba tu conexión.")
+                                showFeedback(resetErrorMsg)
                                 showResetDialog = false
                             }
                         }
@@ -181,9 +193,9 @@ fun SettingsScreenContent(
                     colors = ButtonDefaults.buttonColors(containerColor = HeartRed)
                 ) {
                     if (isResetting) {
-                        Text("Reiniciando...", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.settings_resetting), fontWeight = FontWeight.Bold)
                     } else {
-                        Text("Reiniciar", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.settings_reset_action), fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -191,17 +203,16 @@ fun SettingsScreenContent(
                 TextButton(
                     onClick = { showResetDialog = false },
                     enabled = !isResetting
-                ) { Text("Cancelar", color = TextGray) }
+                ) { Text(stringResource(R.string.cancel), color = TextGray) }
             }
         )
     }
-
 
     if (showEditProfileDialog) {
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },
             containerColor = Color(0xFF1A1A2E),
-            title = { Text("Editar nombre", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.settings_edit_name_title), color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (currentEmail.isNotBlank()) {
@@ -220,7 +231,7 @@ fun SettingsScreenContent(
                     OutlinedTextField(
                         value = editNameValue,
                         onValueChange = { editNameValue = it },
-                        label = { Text("Nombre de usuario", color = TextGray) },
+                        label = { Text(stringResource(R.string.settings_username_label), color = TextGray) },
                         singleLine = true,
                         leadingIcon = {
                             Icon(
@@ -250,17 +261,17 @@ fun SettingsScreenContent(
                             onUpdateDisplayName(name) { success ->
                                 showEditProfileDialog = false
                                 showFeedback(
-                                    if (success) "Nombre actualizado correctamente" else "Error al actualizar el nombre"
+                                    if (success) nameUpdatedMsg else nameUpdateErrorMsg
                                 )
                             }
                         }
                     },
                     enabled = editNameValue.trim().isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
-                ) { Text("Guardar", fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.save), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }) { Text("Cancelar", color = TextGray) }
+                TextButton(onClick = { showEditProfileDialog = false }) { Text(stringResource(R.string.cancel), color = TextGray) }
             }
         )
     }
@@ -270,7 +281,7 @@ fun SettingsScreenContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Ajustes",
+                        text = stringResource(R.string.settings_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -279,7 +290,7 @@ fun SettingsScreenContent(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back_cd), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -295,9 +306,9 @@ fun SettingsScreenContent(
             contentPadding = PaddingValues(bottom = 48.dp)
         ) {
             item {
-                SettingsSection(title = "Cuenta") {
+                SettingsSection(title = stringResource(R.string.settings_section_account)) {
                     SettingsItem(
-                        title = "Editar nombre de usuario",
+                        title = stringResource(R.string.settings_edit_username),
                         icon = Icons.Default.Edit,
                         iconTint = Color(0xFF7C4DFF),
                         onClick = {
@@ -307,8 +318,8 @@ fun SettingsScreenContent(
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Cambiar contraseña",
-                        subtitle = "Te enviaremos un enlace por email",
+                        title = stringResource(R.string.settings_change_password),
+                        subtitle = stringResource(R.string.settings_change_password_subtitle),
                         icon = Icons.Default.Lock,
                         iconTint = Color(0xFF2196F3),
                         onClick = {
@@ -316,9 +327,9 @@ fun SettingsScreenContent(
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
                                         if (success) {
-                                            "Email de recuperación enviado a $currentEmail."
+                                            passwordResetSentMsg
                                         } else {
-                                            "Error al enviar el email."
+                                            passwordResetErrorMsg
                                         }
                                     )
                                 }
@@ -329,16 +340,16 @@ fun SettingsScreenContent(
             }
 
             item {
-                SettingsSection(title = "Notificaciones") {
+                SettingsSection(title = stringResource(R.string.settings_section_notifications)) {
                     SettingsItemSwitch(
-                        title = "Notificaciones push",
-                        subtitle = if (notifEnabled) "Activas" else "Desactivadas",
+                        title = stringResource(R.string.settings_push_notifications),
+                        subtitle = if (notifEnabled) stringResource(R.string.settings_notifications_on) else stringResource(R.string.settings_notifications_off),
                         icon = Icons.Default.Notifications,
                         iconTint = Color(0xFFE91E63),
                         checked = notifEnabled,
                         onCheckedChange = {
                             onNotifEnabledChange(it)
-                            showFeedback(if (it) "Notificaciones activadas" else "Notificaciones desactivadas")
+                            showFeedback(if (it) notifEnabledMsg else notifDisabledMsg)
                         }
                     )
                 }
@@ -346,10 +357,10 @@ fun SettingsScreenContent(
 
             item {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                SettingsSection(title = "Soporte") {
+                SettingsSection(title = stringResource(R.string.settings_section_support)) {
                     SettingsItem(
-                        title = "Reportar un problema",
-                        subtitle = "Sugerencias o errores",
+                        title = stringResource(R.string.settings_report_problem),
+                        subtitle = stringResource(R.string.settings_report_problem_subtitle),
                         icon = Icons.Default.BugReport,
                         iconTint = Color(0xFFFF5722),
                         onClick = {
@@ -360,7 +371,7 @@ fun SettingsScreenContent(
                             try {
                                 context.startActivity(intent)
                             } catch (_: Exception) {
-                                showFeedback("No hay apps de correo instaladas")
+                                showFeedback(noEmailAppsMsg)
                             }
                         }
                     )
@@ -368,18 +379,18 @@ fun SettingsScreenContent(
             }
 
             item {
-                SettingsSection(title = "Zona de riesgo") {
+                SettingsSection(title = stringResource(R.string.settings_section_danger)) {
                     SettingsItem(
-                        title = "Reiniciar mis gustos",
-                        subtitle = "Borra todos tus datos y reinicia tu cuenta",
+                        title = stringResource(R.string.settings_reset_tastes),
+                        subtitle = stringResource(R.string.settings_reset_tastes_subtitle),
                         icon = Icons.Default.Update,
                         iconTint = PrimaryPurpleLight,
                         onClick = { showResetDialog = true }
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Eliminar cuenta",
-                        subtitle = "Acción irreversible",
+                        title = stringResource(R.string.settings_delete_account),
+                        subtitle = stringResource(R.string.settings_delete_account_subtitle),
                         icon = Icons.Default.DeleteForever,
                         iconTint = HeartRed,
                         showChevron = false,
@@ -399,7 +410,7 @@ fun SettingsScreenContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "ShowMate · Versión 1.0.0",
+                        text = stringResource(R.string.settings_version),
                         color = TextGray.copy(alpha = 0.5f),
                         fontSize = 12.sp
                     )
