@@ -46,8 +46,16 @@ class ShowRepository @Inject constructor(
         }
         when (network) {
             is Resource.Success -> {
-                dao.insertShows(listOf(network.data.toEntity(CAT_DETAILS)))
-                network
+                val data = if (network.data.videos?.results.isNullOrEmpty()) {
+                    val videos = runCatching {
+                        withTimeoutOrNull(5_000L) { api.getShowVideos(showId) }
+                    }.getOrNull()
+                    if (!videos?.results.isNullOrEmpty()) network.data.copy(videos = videos) else network.data
+                } else {
+                    network.data
+                }
+                dao.insertShows(listOf(data.toEntity(CAT_DETAILS)))
+                Resource.Success(data)
             }
             is Resource.Error -> {
                 dao.getLikedShowById(showId)?.toDomain()?.let { Resource.Success(it) }
@@ -59,9 +67,9 @@ class ShowRepository @Inject constructor(
     }
 
     override suspend fun getSeasonDetails(showId: Int, seasonNumber: Int): Resource<SeasonResponse> = withContext(ioDispatcher) {
-        dao.getSeason(showId, seasonNumber)?.takeIf { System.currentTimeMillis() - it.cachedAt < CACHE_TTL }?.let {
-            return@withContext Resource.Success(it.toDomain())
-        }
+        dao.getSeason(showId, seasonNumber)
+            ?.takeIf { System.currentTimeMillis() - it.cachedAt < CACHE_TTL && it.episodesJson != "[]" && it.episodesJson.isNotBlank() }
+            ?.let { return@withContext Resource.Success(it.toDomain()) }
         safeApiCall {
             withTimeoutOrNull(TIMEOUT) { api.getSeasonDetails(showId, seasonNumber) }?.also {
                 dao.insertSeason(it.toEntity(showId))
@@ -113,17 +121,19 @@ class ShowRepository @Inject constructor(
     }
 
     private suspend fun enrichWithLocalData(shows: List<MediaContent>): List<MediaContent> {
+        if (shows.isEmpty()) return shows
+        val ids = shows.map { it.id }
+        val likedById = dao.getShowsByIds(ids, "liked").associateBy { it.id }
+        val watchedById = dao.getShowsByIds(ids, "watched").associateBy { it.id }
         return shows.map { show ->
-            val local = dao.getLikedShowById(show.id) ?: dao.getWatchedShowById(show.id)
+            val local = likedById[show.id] ?: watchedById[show.id]
             if (local != null) {
                 show.copy(
                     status = local.status ?: show.status,
                     numberOfSeasons = local.numberOfSeasons ?: show.numberOfSeasons,
                     firstAirDate = local.firstAirDate ?: show.firstAirDate
                 )
-            } else {
-                show
-            }
+            } else show
         }
     }
 
@@ -141,11 +151,11 @@ class ShowRepository @Inject constructor(
         val excludedSet = excludedIds.toHashSet()
         val result = safeApiCall {
             coroutineScope {
-                val p1 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 1).results }
-                val p2 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 2).results }
-                val p3 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5f, minVoteCount = 10, page = 3).results }
-                val p4 = async { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5f, minVoteCount = 10, page = 4).results }
-                val p5 = async { api.discoverMedia(genreId = genres, sortBy = "vote_average.desc", minRating = 7.5f, minVoteCount = 100, page = 1).results }
+                val p1 = async { withTimeoutOrNull(TIMEOUT) { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 1) }?.results.orEmpty() }
+                val p2 = async { withTimeoutOrNull(TIMEOUT) { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5.5f, minVoteCount = 20, page = 2) }?.results.orEmpty() }
+                val p3 = async { withTimeoutOrNull(TIMEOUT) { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5f, minVoteCount = 10, page = 3) }?.results.orEmpty() }
+                val p4 = async { withTimeoutOrNull(TIMEOUT) { api.discoverMedia(genreId = genres, sortBy = "popularity.desc", minRating = 5f, minVoteCount = 10, page = 4) }?.results.orEmpty() }
+                val p5 = async { withTimeoutOrNull(TIMEOUT) { api.discoverMedia(genreId = genres, sortBy = "vote_average.desc", minRating = 7.5f, minVoteCount = 100, page = 1) }?.results.orEmpty() }
                 val all = (p1.await() + p2.await() + p3.await() + p4.await() + p5.await()).distinctBy { it.id }
                 val enriched = enrichWithLocalData(all)
                 if (excludedSet.isEmpty()) enriched else enriched.filter { it.id !in excludedSet }

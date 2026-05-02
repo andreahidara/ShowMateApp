@@ -83,7 +83,7 @@ fun AchievementsScreen(navController: NavController, viewModel: AchievementsView
                         Text(
                             text = "Logros",
                             style = TextStyle(
-                                brush = Brush.linearGradient(listOf(GoldAccent, Color(0xFFFFB300)))
+                                brush = Brush.linearGradient(listOf(GoldAccent, GoldAmber))
                             ),
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Black,
@@ -95,7 +95,7 @@ fun AchievementsScreen(navController: NavController, viewModel: AchievementsView
                                 .width(34.dp)
                                 .height(3.dp)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(Brush.linearGradient(listOf(GoldAccent, Color(0xFFFFB300))))
+                                .background(Brush.linearGradient(listOf(GoldAccent, GoldAmber)))
                         )
                     }
                 }
@@ -151,7 +151,7 @@ private fun XpBanner(xp: Int) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(
-                Brush.horizontalGradient(listOf(PrimaryPurpleDark, Color(0xFF1A1040)))
+                Brush.horizontalGradient(listOf(PrimaryPurpleDark, PurpleDeep))
             )
             .border(1.dp, PrimaryPurple.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
             .padding(20.dp)

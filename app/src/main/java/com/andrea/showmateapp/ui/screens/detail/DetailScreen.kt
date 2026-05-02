@@ -27,17 +27,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.RecommendationReason
 import com.andrea.showmateapp.data.model.MediaContent
@@ -45,8 +43,6 @@ import com.andrea.showmateapp.ui.components.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.util.TmdbUtils
-import kotlinx.coroutines.launch
-
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
@@ -153,7 +149,6 @@ fun DetailScreenContent(
     viewModel: DetailViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     if (uiState.showAddToListDialog) {
         AddToListDialog(
@@ -374,38 +369,60 @@ fun DetailScreenContent(
                         }
                     }
 
-                    val trailerKey = remember(show.id) {
-                        show.videos?.results?.firstOrNull {
-                            it.site == "YouTube" && it.type == "Trailer"
-                        }?.key
-                    }
+                    val trailerKey = show.videos?.results?.firstOrNull {
+                        it.site == "YouTube" && it.type == "Trailer"
+                    }?.key ?: show.videos?.results?.firstOrNull {
+                        it.site == "YouTube" && it.type == "Teaser"
+                    }?.key
                     if (trailerKey != null) {
                         Spacer(modifier = Modifier.height(24.dp))
                         DetailSectionHeader(title = stringResource(R.string.detail_official_trailer))
                         Spacer(modifier = Modifier.height(14.dp))
-                        androidx.compose.ui.viewinterop.AndroidView(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(210.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .background(Color.Black),
-                            factory = { ctx ->
-                                android.webkit.WebView(ctx).apply {
-                                    settings.javaScriptEnabled = true
-                                    settings.domStorageEnabled = true
-                                    settings.loadWithOverviewMode = true
-                                    settings.useWideViewPort = true
-                                    webChromeClient = android.webkit.WebChromeClient()
-                                }
-                            },
-                            update = { webView ->
-                                val safeKey = trailerKey?.replace(Regex("[^A-Za-z0-9_\\-]"), "") ?: ""
-                                if (webView.tag != safeKey && safeKey.isNotEmpty()) {
-                                    webView.tag = safeKey
-                                    webView.loadUrl("https://www.youtube.com/embed/$safeKey?rel=0")
-                                }
-                            }
-                        )
+                                .background(Color.Black)
+                                .clickable {
+                                    val ytIntent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("vnd.youtube:$trailerKey")
+                                    )
+                                    try {
+                                        context.startActivity(ytIntent)
+                                    } catch (_: android.content.ActivityNotFoundException) {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse("https://www.youtube.com/watch?v=$trailerKey")
+                                            )
+                                        )
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data("https://img.youtube.com/vi/$trailerKey/hqdefault.jpg")
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.25f))
+                            )
+                            Icon(
+                                imageVector = Icons.Default.PlayCircle,
+                                contentDescription = stringResource(R.string.detail_official_trailer),
+                                tint = Color.White.copy(alpha = 0.90f),
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(28.dp))
@@ -561,6 +578,8 @@ fun DetailScreenContent(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.navigationBarsPadding())
                 }
             }
         }

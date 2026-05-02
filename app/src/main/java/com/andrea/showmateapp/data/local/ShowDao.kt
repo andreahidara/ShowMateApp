@@ -27,6 +27,12 @@ interface ShowDao {
     @Query("SELECT * FROM media_content WHERE id = :id AND category = 'watched' LIMIT 1")
     suspend fun getWatchedShowById(id: Int): MediaEntity?
 
+    @Query("SELECT * FROM media_content WHERE id IN (:ids) AND category = :category")
+    suspend fun getShowsByIds(ids: List<Int>, category: String): List<MediaEntity>
+
+    @Query("DELETE FROM media_content WHERE id IN (:ids) AND category = :category")
+    suspend fun deleteShowsByIds(ids: List<Int>, category: String)
+
     @Query("DELETE FROM media_content WHERE category = :category")
     suspend fun deleteShowsByCategory(category: String)
 
@@ -66,12 +72,9 @@ interface ShowDao {
     @Transaction
     suspend fun syncCategory(category: String, shows: List<MediaEntity>) {
         val incomingIds = shows.map { it.id }.toSet()
-        val existing = getShowsByCategory(category)
-        val toDelete = existing.filter { it.id !in incomingIds }
-        toDelete.forEach { deleteShowById(it.id, category) }
-        if (shows.isNotEmpty()) {
-            insertShows(shows)
-        }
+        val toDeleteIds = getShowsByCategory(category).filter { it.id !in incomingIds }.map { it.id }
+        if (toDeleteIds.isNotEmpty()) deleteShowsByIds(toDeleteIds, category)
+        if (shows.isNotEmpty()) insertShows(shows)
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -30,11 +30,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.AuthBackground
 import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils
 
@@ -105,7 +108,7 @@ private fun OnboardingHeader(step: Int, onBack: () -> Unit) {
             }
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "$step / 4",
+                text = stringResource(R.string.onboarding_step_counter, step),
                 color = TextGray,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
@@ -147,14 +150,14 @@ private fun OnboardingButton(state: OnboardingUiState, viewModel: OnboardingView
         else -> false
     }
     val label = when (state.step) {
-        1 -> if (state.selectedGenres.size < 3) "Elige al menos 3 géneros" else "Continuar →"
+        1 -> if (state.selectedGenres.size < 3) stringResource(R.string.onboarding_btn_genres_min) else stringResource(R.string.onboarding_btn_continue)
         2 -> if (state.watchedShowIds.isEmpty()) {
-            "Saltar este paso →"
+            stringResource(R.string.onboarding_btn_skip)
         } else {
-            "Continuar (${state.watchedShowIds.size} vistas) →"
+            stringResource(R.string.onboarding_btn_continue_count, state.watchedShowIds.size)
         }
-        3 -> if (!enabled) "Responde todas las preguntas" else "Analizar mis gustos →"
-        else -> "¡Empezar ShowMate!"
+        3 -> if (!enabled) stringResource(R.string.onboarding_btn_answer_all) else stringResource(R.string.onboarding_btn_analyze)
+        else -> stringResource(R.string.onboarding_btn_start)
     }
 
     Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
@@ -172,7 +175,7 @@ private fun OnboardingButton(state: OnboardingUiState, viewModel: OnboardingView
             enabled = enabled && !state.isLoading,
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (state.step == 5) Color(0xFF4CAF50) else Color.White,
+                containerColor = if (state.step == 5) SuccessGreen else Color.White,
                 disabledContainerColor = Color.White.copy(alpha = 0.1f)
             )
         ) {
@@ -199,7 +202,7 @@ private fun GenreStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "¿Qué tipo de series\nte enganchan?",
+            text = stringResource(R.string.onboarding_genres_title),
             color = Color.White,
             fontSize = 28.sp,
             fontWeight = FontWeight.Black,
@@ -209,7 +212,7 @@ private fun GenreStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Elige entre 3 y 5 géneros favoritos",
+            text = stringResource(R.string.onboarding_genres_subtitle),
             color = TextGray,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
@@ -368,7 +371,7 @@ private fun ShowsStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "¿Cuáles de estas ya has visto?",
+            text = stringResource(R.string.onboarding_shows_title),
             color = Color.White,
             fontSize = 26.sp,
             fontWeight = FontWeight.Black,
@@ -377,7 +380,7 @@ private fun ShowsStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Toca para marcar · ❤️ para las que te encantaron",
+            text = stringResource(R.string.onboarding_shows_subtitle),
             color = TextGray,
             fontSize = 13.sp,
             textAlign = TextAlign.Center
@@ -436,7 +439,7 @@ private fun ShowPosterCard(
             .clip(RoundedCornerShape(10.dp))
             .border(
                 width = if (watched) 2.dp else 0.dp,
-                color = if (loved) Color(0xFFE91E63) else if (watched) Color(0xFF4CAF50) else Color.Transparent,
+                color = if (loved) Color(0xFFE91E63) else if (watched) SuccessGreen else Color.Transparent,
                 shape = RoundedCornerShape(10.dp)
             )
             .clickable(onClick = onToggleWatched)
@@ -474,7 +477,7 @@ private fun ShowPosterCard(
                     .padding(4.dp)
                     .size(20.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF4CAF50)),
+                    .background(SuccessGreen),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(13.dp))
@@ -510,7 +513,7 @@ private fun PreferencesStep(state: OnboardingUiState, viewModel: OnboardingViewM
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Text(
-            text = "Cuéntanos cómo\ndisfrutas las series",
+            text = stringResource(R.string.onboarding_prefs_title),
             color = Color.White,
             fontSize = 28.sp,
             fontWeight = FontWeight.Black,
@@ -519,7 +522,7 @@ private fun PreferencesStep(state: OnboardingUiState, viewModel: OnboardingViewM
         )
 
         PreferenceQuestion(
-            question = "¿Prefieres episodios cortos o largos?",
+            question = stringResource(R.string.onboarding_pref_q_episode_length),
             emoji = "⏱️",
             options = EpisodeLengthPref.entries,
             selected = state.episodeLengthPref,
@@ -529,7 +532,7 @@ private fun PreferencesStep(state: OnboardingUiState, viewModel: OnboardingViewM
         )
 
         PreferenceQuestion(
-            question = "¿Series finalizadas o en emisión?",
+            question = stringResource(R.string.onboarding_pref_q_status),
             emoji = "📡",
             options = StatusPref.entries,
             selected = state.statusPref,
@@ -539,7 +542,7 @@ private fun PreferencesStep(state: OnboardingUiState, viewModel: OnboardingViewM
         )
 
         PreferenceQuestion(
-            question = "¿Dobladas o en versión original?",
+            question = stringResource(R.string.onboarding_pref_q_dubbed),
             emoji = "🌍",
             options = DubbedPref.entries,
             selected = state.dubbedPref,
@@ -628,15 +631,14 @@ private fun <T> PreferenceQuestion(
     }
 }
 
-private val analysisPhrases = listOf(
-    "Analizando tus géneros favoritos...",
-    "Procesando las series que has visto...",
-    "Calculando tu perfil de espectador...",
-    "¡Casi listo!"
-)
-
 @Composable
 private fun AnalysisStep(state: OnboardingUiState) {
+    val analysisPhrases = listOf(
+        stringResource(R.string.onboarding_analysis_1),
+        stringResource(R.string.onboarding_analysis_2),
+        stringResource(R.string.onboarding_analysis_3),
+        stringResource(R.string.onboarding_analysis_4)
+    )
     val infiniteTransition = rememberInfiniteTransition(label = "analysis")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 0.92f,
@@ -731,7 +733,7 @@ private fun PersonalityStep(state: OnboardingUiState, viewModel: OnboardingViewM
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Tu perfil de espectador",
+            text = stringResource(R.string.onboarding_personality_label),
             color = TextGray,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
@@ -802,10 +804,10 @@ private fun PersonalityStep(state: OnboardingUiState, viewModel: OnboardingViewM
             val watched = state.watchedShowIds.size
             val genres = state.selectedGenres.size
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatChip(emoji = "🎬", label = "$genres géneros")
-                if (watched > 0) StatChip(emoji = "👁️", label = "$watched vistas")
+                StatChip(emoji = "🎬", label = stringResource(R.string.onboarding_stat_genres, genres))
+                if (watched > 0) StatChip(emoji = "👁️", label = stringResource(R.string.onboarding_stat_watched, watched))
                 if (state.lovedShowIds.isNotEmpty()) {
-                    StatChip(emoji = "❤️", label = "${state.lovedShowIds.size} favoritas")
+                    StatChip(emoji = "❤️", label = stringResource(R.string.onboarding_stat_loved, state.lovedShowIds.size))
                 }
             }
         }

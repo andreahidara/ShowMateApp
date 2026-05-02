@@ -220,7 +220,8 @@ fun SwipeScreenContent(
             } else if (showsToRate.isEmpty()) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(24.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -241,6 +242,22 @@ fun SwipeScreenContent(
                         )
                     }
                     Text(stringResource(R.string.swipe_no_more_shows), color = TextGray, fontSize = 15.sp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Brush.linearGradient(listOf(PrimaryPurple, DarkPurple)))
+                            .clickable { onNavigateToHome() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.swipe_start_exploring),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             } else {
                 val stackLimit = 3
@@ -340,7 +357,7 @@ fun SwipeScreenContent(
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(PrimaryPurple, PrimaryMagenta),
+                                colors = listOf(PrimaryPurple, DarkPurple),
                                 start = androidx.compose.ui.geometry.Offset(0f, 0f),
                                 end = androidx.compose.ui.geometry.Offset(100f, 100f)
                             )
@@ -484,7 +501,7 @@ fun SuccessState(onNavigateToHome: () -> Unit) {
                 .height(60.dp)
                 .clip(RoundedCornerShape(20.dp))
                 .background(
-                    Brush.linearGradient(listOf(PrimaryPurple, Color(0xFF9C27B0)))
+                    Brush.linearGradient(listOf(PrimaryPurple, DarkPurple))
                 )
                 .clickable { onNavigateToHome() },
             contentAlignment = Alignment.Center
@@ -578,7 +595,7 @@ fun SwipeableCard(media: MediaContent, stackIndex: Int, onSwiped: (Boolean) -> U
         if (isTopCard && offsetX.value != 0f) {
             val swipeAlpha = (offsetX.value.absoluteValue / 280f).coerceIn(0f, 0.50f)
             val isLiking = offsetX.value > 0
-            val overlayColor = if (isLiking) Color(0xFF4CAF50) else HeartRed
+            val overlayColor = if (isLiking) SuccessGreen else HeartRed
             Box(
                 modifier = Modifier
                     .fillMaxSize()

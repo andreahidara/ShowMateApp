@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.HeartRed
+import com.andrea.showmateapp.ui.theme.InputBackground
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
@@ -116,7 +117,7 @@ fun SettingsScreenContent(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor = Color(0xFF1A1A2E),
+            containerColor = InputBackground,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -160,7 +161,7 @@ fun SettingsScreenContent(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { if (!isResetting) showResetDialog = false },
-            containerColor = Color(0xFF1A1A2E),
+            containerColor = InputBackground,
             title = { Text(stringResource(R.string.settings_reset_title), color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
@@ -211,7 +212,7 @@ fun SettingsScreenContent(
     if (showEditProfileDialog) {
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },
-            containerColor = Color(0xFF1A1A2E),
+            containerColor = InputBackground,
             title = { Text(stringResource(R.string.settings_edit_name_title), color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

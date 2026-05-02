@@ -40,7 +40,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,10 +64,14 @@ import com.andrea.showmateapp.ui.components.ErrorView
 import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.components.shimmerBrush
 import com.andrea.showmateapp.ui.navigation.Screen
+import com.andrea.showmateapp.ui.theme.ErrorRed
+import com.andrea.showmateapp.ui.theme.GoldAccent
+import com.andrea.showmateapp.ui.theme.InputBackground
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.StarYellow
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.SurfaceVariantDark
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils
@@ -136,11 +144,7 @@ fun ProfileScreen(
         LogoutConfirmDialog(
             onConfirm = {
                 showLogoutDialog = false
-                viewModel.logout(onSuccess = {
-                    globalNavController.navigate(Screen.Login) {
-                        popUpTo(Screen.Main) { inclusive = true }
-                    }
-                })
+                viewModel.logout()
             },
             onDismiss = { showLogoutDialog = false }
         )
@@ -161,8 +165,8 @@ fun ProfileScreen(
     if (showAvatarOptions) {
         AlertDialog(
             onDismissRequest = { showAvatarOptions = false },
-            containerColor = Color(0xFF1A1A2E),
-            title = { Text("Cambiar avatar", color = Color.White, fontWeight = FontWeight.Bold) },
+            containerColor = InputBackground,
+            title = { Text(stringResource(R.string.profile_change_avatar), color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
@@ -173,7 +177,7 @@ fun ProfileScreen(
                             )
                         },
                         color = Color.White.copy(alpha = 0.06f),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -186,7 +190,7 @@ fun ProfileScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text("Subir foto de perfil", color = Color.White, fontSize = 15.sp)
+                            Text(stringResource(R.string.profile_upload_photo), color = Color.White, fontSize = 15.sp)
                         }
                     }
                     Surface(
@@ -195,7 +199,7 @@ fun ProfileScreen(
                             showColorPicker = true
                         },
                         color = Color.White.copy(alpha = 0.06f),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -208,7 +212,7 @@ fun ProfileScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text("Elegir color de avatar", color = Color.White, fontSize = 15.sp)
+                            Text(stringResource(R.string.profile_choose_avatar_color), color = Color.White, fontSize = 15.sp)
                         }
                     }
                 }
@@ -273,7 +277,8 @@ fun ProfileScreen(
                             items = watchedShows,
                             ratings = watchedRatings,
                             onShowClick = { id -> globalNavController.navigate(Screen.Detail(id)) },
-                            onViewAll = { globalNavController.navigate(Screen.AllShows("watched")) }
+                            onViewAll = { globalNavController.navigate(Screen.AllShows("watched")) },
+                            title = stringResource(R.string.profile_watched_section)
                         )
                     }
 
@@ -287,12 +292,12 @@ fun ProfileScreen(
 
                     item {
                         FavoritesInlineSection(
-                            title = "Pendientes",
+                            title = stringResource(R.string.profile_watchlist_title),
                             items = watchlistShows,
                             onShowClick = { id -> globalNavController.navigate(Screen.Detail(id)) },
                             onViewAll = { globalNavController.navigate(Screen.AllShows("watchlist")) },
                             accentColor = PrimaryPurple,
-                            emptyMessage = "Aún no tienes series en tu lista de pendientes",
+                            emptyMessage = stringResource(R.string.profile_watchlist_empty),
                             icon = Icons.Default.WatchLater
                         )
                     }
@@ -395,15 +400,15 @@ fun ProfileHeaderPremium(
                     contentAlignment = Alignment.Center
                 ) {
                     if (photoUrl != null) {
-                        coil.compose.AsyncImage(
-                            model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
                                 .data(photoUrl)
                                 .crossfade(true)
-                                .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
                                 .build(),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            contentScale = ContentScale.Crop
                         )
                     } else {
                         Text(
@@ -567,7 +572,7 @@ fun ProfileHeaderPremium(
                     value = friendCount.toString(),
                     label = "Amigos",
                     icon = Icons.Default.Star,
-                    color = Color(0xFF4CAF50),
+                    color = SuccessGreen,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -579,7 +584,7 @@ fun ProfileHeaderPremium(
 private fun ProfileQuickStat(
     value: String,
     label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     color: Color,
     modifier: Modifier = Modifier
 ) {
@@ -648,11 +653,12 @@ fun WatchedShowsSection(
     onShowClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     ratings: Map<Int, Int> = emptyMap(),
+    title: String = "Lo que he visto",
     onViewAll: (() -> Unit)? = null
 ) {
     Column(modifier = modifier.padding(top = 32.dp)) {
         ProfileSectionHeader(
-            title = "Lo que he visto",
+            title = title,
             accentColor = PrimaryPurple,
             count = items.size,
             onViewAll = onViewAll
@@ -678,7 +684,7 @@ fun WatchedShowsSection(
                         showTitle = true
                     ) {
                         val badgeText = if (item.episodesWatched > 0) "${item.episodesWatched} ep" else "Vista ✓"
-                        val badgeColor = Color(0xFF4CAF50).copy(alpha = if (item.episodesWatched > 0) 0.9f else 0.6f)
+                        val badgeColor = SuccessGreen.copy(alpha = if (item.episodesWatched > 0) 0.9f else 0.6f)
                         Surface(
                             modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
                             color = badgeColor,
@@ -1057,7 +1063,7 @@ fun FavoritesInlineSection(
                             ) {
                                 Text(
                                     text = "★ ${"%.1f".format(media.voteAverage)}",
-                                    color = Color(0xFFFFD700),
+                                    color = GoldAccent,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -1098,7 +1104,7 @@ fun StatsSection(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Mis estadísticas",
+                text = stringResource(R.string.profile_my_stats),
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
@@ -1130,7 +1136,7 @@ fun StatsSection(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Tu perfil de espectador",
+                            text = stringResource(R.string.profile_viewer_profile_label),
                             color = TextGray,
                             fontSize = 11.sp
                         )
@@ -1188,7 +1194,7 @@ fun StatsSection(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Géneros favoritos",
+                        text = stringResource(R.string.stats_favorite_genres),
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -1261,13 +1267,13 @@ fun StatsSection(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Afinidad positiva",
+                                text = stringResource(R.string.profile_positive_affinity),
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "${(stats.likeRate * 100).toInt()}% de valoradas son Me Gusta",
+                                text = stringResource(R.string.profile_likes_percentage, (stats.likeRate * 100).toInt()),
                                 color = TextGray,
                                 fontSize = 11.sp
                             )
@@ -1313,7 +1319,7 @@ fun StatsSection(
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Valoración media",
+                        text = stringResource(R.string.profile_average_rating),
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -1321,11 +1327,9 @@ fun StatsSection(
                     )
                     Text(
                         text = if (stats.ratingsCount > 0) {
-                            "${"%.1f".format(
-                                stats.avgRating
-                            )} / 10"
+                            "${"%.1f".format(stats.avgRating)} / 10"
                         } else {
-                            "Sin valoraciones"
+                            stringResource(R.string.profile_no_ratings)
                         },
                         color = if (stats.ratingsCount > 0) StarYellow else TextGray,
                         fontSize = 14.sp,
@@ -1399,7 +1403,7 @@ fun SettingsSectionPremium(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Cuenta y Preferencias",
+                text = stringResource(R.string.profile_account_settings),
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
@@ -1413,19 +1417,19 @@ fun SettingsSectionPremium(
                 .background(Color.White.copy(alpha = 0.05f))
         ) {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                SettingsItemPremium(Icons.Default.Settings, "Configuración", onSettingsClick)
+                SettingsItemPremium(Icons.Default.Settings, stringResource(R.string.profile_settings_item), onSettingsClick)
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     color = Color.White.copy(alpha = 0.05f)
                 )
-                SettingsItemPremium(Icons.Default.Info, "Sobre ShowMate", onAboutClick)
+                SettingsItemPremium(Icons.Default.Info, stringResource(R.string.profile_about_item), onAboutClick)
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     color = Color.White.copy(alpha = 0.05f)
                 )
                 SettingsItemPremium(
                     Icons.AutoMirrored.Filled.Logout,
-                    "Cerrar sesión",
+                    stringResource(R.string.profile_logout),
                     onLogoutClick,
                     isDestructive = true
                 )
@@ -1444,13 +1448,13 @@ fun SettingsItemPremium(
     isAction: Boolean = false
 ) {
     val tint = when {
-        isDestructive -> Color(0xFFFF5252)
+        isDestructive -> ErrorRed
         isAction -> PrimaryPurpleLight
         else -> Color.White.copy(alpha = 0.75f)
     }
     val iconBg: Brush = when {
         isDestructive -> Brush.linearGradient(
-            listOf(Color(0xFFFF5252).copy(alpha = 0.22f), Color(0xFFFF5252).copy(alpha = 0.08f))
+            listOf(ErrorRed.copy(alpha = 0.22f), ErrorRed.copy(alpha = 0.08f))
         )
         isAction -> Brush.linearGradient(
             listOf(PrimaryPurple.copy(alpha = 0.30f), PrimaryPurpleDark.copy(alpha = 0.15f))

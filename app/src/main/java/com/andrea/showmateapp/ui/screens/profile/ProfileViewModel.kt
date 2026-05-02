@@ -181,7 +181,9 @@ class ProfileViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val watchedRatings: StateFlow<Map<Int, Int>> = userProfileFlow.map { profile ->
-        profile?.ratings?.mapKeys { it.key.toIntOrNull() ?: 0 }?.mapValues { it.value.toInt() } ?: emptyMap()
+        profile?.ratings?.mapNotNull { (k, v) ->
+            k.toIntOrNull()?.let { id -> id to v.toInt() }
+        }?.toMap() ?: emptyMap()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     fun refresh() {
@@ -198,7 +200,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun logout(onSuccess: () -> Unit) {
+    fun logout() {
         viewModelScope.launch {
             try {
                 userRepository.clearUserCache()
@@ -207,7 +209,6 @@ class ProfileViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 Timber.e(e)
             }
-            onSuccess()
         }
     }
 

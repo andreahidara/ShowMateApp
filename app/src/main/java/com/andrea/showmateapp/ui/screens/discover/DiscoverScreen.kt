@@ -156,12 +156,12 @@ fun DiscoverScreenContent(
                             Icon(
                                 Icons.Default.WifiOff,
                                 contentDescription = null,
-                                tint = Color(0xFFFFC107),
+                                tint = StarYellow,
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
                                 text = stringResource(R.string.offline_cached_content),
-                                color = Color(0xFFFFC107),
+                                color = StarYellow,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )

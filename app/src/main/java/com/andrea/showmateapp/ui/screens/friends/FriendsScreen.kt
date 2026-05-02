@@ -44,6 +44,7 @@ import com.andrea.showmateapp.ui.theme.PillGenre
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.SuccessDark
+import com.andrea.showmateapp.ui.theme.StarYellow
 import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
@@ -887,8 +888,8 @@ private fun ShimmerList(count: Int = 4, itemHeight: Int = 80) {
 }
 
 private fun compatibilityColor(score: Int): Color = when {
-    score >= 75 -> Color(0xFF4CAF50)
+    score >= 75 -> SuccessGreen
     score >= 50 -> Color(0xFF2196F3)
-    score >= 25 -> Color(0xFFFFC107)
+    score >= 25 -> StarYellow
     else -> TextGray
 }

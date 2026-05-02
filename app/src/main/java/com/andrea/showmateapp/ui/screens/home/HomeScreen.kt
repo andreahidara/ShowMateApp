@@ -34,6 +34,7 @@ import com.andrea.showmateapp.ui.components.*
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.screens.home.components.*
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
+import com.andrea.showmateapp.ui.theme.StarYellow
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.ErrorType
@@ -272,12 +273,12 @@ fun HomeScreenContent(
                             Icon(
                                 Icons.Default.WifiOff,
                                 contentDescription = null,
-                                tint = Color(0xFFFFC107),
+                                tint = StarYellow,
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
                                 text = stringResource(R.string.offline_cached_content),
-                                color = Color(0xFFFFC107),
+                                color = StarYellow,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )

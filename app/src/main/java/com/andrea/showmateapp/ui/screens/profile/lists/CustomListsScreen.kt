@@ -33,8 +33,10 @@ import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.components.outlinedTextFieldColors
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.HeartRed
+import com.andrea.showmateapp.ui.theme.InputBackground
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.SurfaceVariantDark
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.andrea.showmateapp.util.TmdbUtils
@@ -43,7 +45,7 @@ private val ListAccentColors = listOf(
     Color(0xFF7C4DFF),
     Color(0xFF2196F3),
     Color(0xFF00BCD4),
-    Color(0xFF4CAF50),
+    SuccessGreen,
     Color(0xFFFFB300),
     Color(0xFFFF5722),
     Color(0xFFE91E63),
@@ -68,7 +70,7 @@ fun CustomListsScreen(navController: NavController, viewModel: CustomListsViewMo
     if (uiState.showCreateDialog) {
         AlertDialog(
             onDismissRequest = viewModel::hideCreateDialog,
-            containerColor = Color(0xFF1A1A2E),
+            containerColor = InputBackground,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -115,7 +117,7 @@ fun CustomListsScreen(navController: NavController, viewModel: CustomListsViewMo
     if (listToDelete != null) {
         AlertDialog(
             onDismissRequest = { listToDelete = null },
-            containerColor = Color(0xFF1A1A2E),
+            containerColor = InputBackground,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(

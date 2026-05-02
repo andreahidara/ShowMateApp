@@ -56,6 +56,11 @@ object DatabaseMigrations {
                 database.execSQL("ALTER TABLE media_content ADD COLUMN numberOfSeasons INTEGER")
                 database.execSQL("ALTER TABLE media_content ADD COLUMN firstAirDate TEXT")
             }
+        },
+        object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE seasons ADD COLUMN episodesJson TEXT NOT NULL DEFAULT '[]'")
+            }
         }
     )
 }

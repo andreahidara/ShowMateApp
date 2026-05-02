@@ -67,6 +67,8 @@ import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.ui.theme.AccentBlue
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
+import com.andrea.showmateapp.ui.theme.StarYellow
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.SurfaceDark
 import com.andrea.showmateapp.ui.theme.TextGray
 
@@ -268,7 +270,7 @@ fun SearchScreen(
                             Box(
                                 modifier = Modifier
                                     .size(10.dp)
-                                    .background(Color(0xFF4CAF50), CircleShape)
+                                    .background(SuccessGreen, CircleShape)
                                     .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
                                     .align(Alignment.TopEnd)
                                     .offset(x = (-2).dp, y = 2.dp)
@@ -904,14 +906,14 @@ fun FilterSheetContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(15.dp))
+                Icon(Icons.Default.Star, null, tint = StarYellow, modifier = Modifier.size(15.dp))
                 Text(
                     text = if (selectedRating == null || selectedRating == 0f) {
                         stringResource(R.string.search_rating_all)
                     } else {
                         stringResource(R.string.search_rating_format, selectedRating)
                     },
-                    color = Color(0xFFFFC107),
+                    color = StarYellow,
                     fontWeight = FontWeight.Black,
                     fontSize = 14.sp
                 )

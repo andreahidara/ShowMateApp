@@ -47,7 +47,11 @@ class UserInteractionRepository @Inject constructor(
     private fun userDoc() = uid?.let { db.collection("users").document(it) }
 
     private suspend fun <T> getCollection(path: String, clazz: Class<T>): List<T> = withContext(ioDispatcher) {
-        safeFirestoreCall(emptyList()) { userDoc()?.collection(path)?.get()?.await()?.toObjects(clazz) ?: emptyList() }
+        safeFirestoreCall(emptyList()) {
+            userDoc()?.collection(path)?.get()?.await()
+                ?.documents?.mapNotNull { runCatching { it.toObject(clazz) }.getOrNull() }
+                ?: emptyList()
+        }
     }
 
     override fun getLikedShowsFlow() = showDao.getLikedShowsFlow()
@@ -81,7 +85,9 @@ class UserInteractionRepository @Inject constructor(
 
         try {
             val ref = userDoc()?.collection(coll)?.document(media.id.toString())
-            if (set) ref?.set(media)?.await() else ref?.delete()?.await()
+            // Strip client-side computed fields — UiText is a sealed class Firestore can't round-trip
+            val mediaToStore = media.copy(reasons = emptyList(), affinityScore = 0f)
+            if (set) ref?.set(mediaToStore)?.await() else ref?.delete()?.await()
             interactionDao.upsert(optimisticState.copy(syncPending = false))
             userRepo.get().getUserProfile()
         } catch (e: Exception) {
@@ -317,9 +323,9 @@ class UserInteractionRepository @Inject constructor(
             val watSnapshot = doc.collection("watched").get().await()
             val wlsSnapshot = doc.collection("watchlist").get().await()
 
-            val fav = favSnapshot.toObjects(MediaContent::class.java)
-            val wat = watSnapshot.toObjects(MediaContent::class.java)
-            val wls = wlsSnapshot.toObjects(MediaContent::class.java)
+            val fav = favSnapshot.documents.mapNotNull { runCatching { it.toObject(MediaContent::class.java) }.getOrNull() }
+            val wat = watSnapshot.documents.mapNotNull { runCatching { it.toObject(MediaContent::class.java) }.getOrNull() }
+            val wls = wlsSnapshot.documents.mapNotNull { runCatching { it.toObject(MediaContent::class.java) }.getOrNull() }
 
             val validFav = fav.filter { it.id != 0 }
             val validWat = wat.filter { it.id != 0 }
@@ -329,22 +335,58 @@ class UserInteractionRepository @Inject constructor(
             if (wat.isNotEmpty() && validWat.isEmpty()) return@withContext
             if (wls.isNotEmpty() && validWls.isEmpty()) return@withContext
 
-            showDao.syncCategory("liked", validFav.map { it.toEntity("liked") })
-            showDao.syncCategory("watched", validWat.map { it.toEntity("watched") })
+            // Retry any pending local writes that failed to reach Firestore
+            val pending = interactionDao.getPendingSyncInteractions()
+            val pendingLikedIds = pending.filter { it.isLiked }.map { it.mediaId }.toSet()
+            val pendingWatchedIds = pending.filter { it.isWatched }.map { it.mediaId }.toSet()
+            val pendingWatchlistIds = pending.filter { it.isInWatchlist }.map { it.mediaId }.toSet()
 
-            val pendingWatchlistIds = interactionDao.getPendingSyncInteractions()
-                .filter { it.isInWatchlist }.map { it.mediaId }.toSet()
+            suspend fun retryPendingWrites(localIds: Set<Int>, firestoreIds: Set<Int>, coll: String, roomCategory: String) {
+                val toRetry = showDao.getShowsByCategory(roomCategory)
+                    .filter { it.id in localIds && it.id !in firestoreIds }
+                toRetry.forEach { entity ->
+                    try {
+                        doc.collection(coll).document(entity.id.toString())
+                            .set(entity.toDomain().copy(reasons = emptyList(), affinityScore = 0f)).await()
+                        interactionDao.getById(entity.id)?.let { interactionDao.upsert(it.copy(syncPending = false)) }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Timber.w(e, "Retry $coll write failed for ${entity.id}")
+                    }
+                }
+            }
+
+            val favFirestoreIds = validFav.map { it.id }.toSet()
+            val watFirestoreIds = validWat.map { it.id }.toSet()
+            val wlsFirestoreIds = validWls.map { it.id }.toSet()
+
+            retryPendingWrites(pendingLikedIds, favFirestoreIds, "favorites", "liked")
+            retryPendingWrites(pendingWatchedIds, watFirestoreIds, "watched", "watched")
+
+            // Re-fetch after retries so syncCategory gets the complete list
+            val updatedFav = if (pendingLikedIds.isNotEmpty()) {
+                doc.collection("favorites").get().await()
+                    .documents.mapNotNull { runCatching { it.toObject(MediaContent::class.java) }.getOrNull() }
+                    .filter { it.id != 0 }
+            } else validFav
+            val updatedWat = if (pendingWatchedIds.isNotEmpty()) {
+                doc.collection("watched").get().await()
+                    .documents.mapNotNull { runCatching { it.toObject(MediaContent::class.java) }.getOrNull() }
+                    .filter { it.id != 0 }
+            } else validWat
+
+            showDao.syncCategory("liked", updatedFav.map { it.toEntity("liked") })
+            showDao.syncCategory("watched", updatedWat.map { it.toEntity("watched") })
 
             val extraLocalEntities = if (pendingWatchlistIds.isNotEmpty()) {
-                val firestoreIds = validWls.map { it.id }.toSet()
                 showDao.getShowsByCategory("watchlist")
-                    .filter { it.id in pendingWatchlistIds && it.id !in firestoreIds }
+                    .filter { it.id in pendingWatchlistIds && it.id !in wlsFirestoreIds }
                     .also { localShows ->
                         localShows.forEach { entity ->
                             try {
                                 doc.collection("watchlist")
                                     .document(entity.id.toString())
-                                    .set(entity.toDomain()).await()
+                                    .set(entity.toDomain().copy(reasons = emptyList(), affinityScore = 0f)).await()
                                 interactionDao.getById(entity.id)?.let { interaction ->
                                     interactionDao.upsert(interaction.copy(syncPending = false))
                                 }
@@ -359,8 +401,8 @@ class UserInteractionRepository @Inject constructor(
             val effectiveWatchlist = validWls.map { it.toEntity("watchlist") } + extraLocalEntities
             showDao.syncCategory("watchlist", effectiveWatchlist)
 
-            val fIds = validFav.map { it.id }.toSet()
-            val wIds = validWat.map { it.id }.toSet()
+            val fIds = updatedFav.map { it.id }.toSet()
+            val wIds = updatedWat.map { it.id }.toSet()
             val wlIds = effectiveWatchlist.map { it.id }.toSet()
             val all = (fIds + wIds + wlIds).toList()
 

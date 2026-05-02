@@ -30,6 +30,7 @@ import com.andrea.showmateapp.ui.components.MatchBadge
 import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
+import com.andrea.showmateapp.ui.theme.StarYellow
 import com.andrea.showmateapp.util.TmdbUtils
 import kotlinx.coroutines.delay
 
@@ -125,7 +126,7 @@ fun FeaturedBanner(
                     if (media.voteAverage > 0f) {
                         Text(
                             text = "${"%.1f".format(media.voteAverage)} ★",
-                            color = Color(0xFFFFC107),
+                            color = StarYellow,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )

@@ -10,6 +10,7 @@ import com.andrea.showmateapp.data.local.ThemePreference
 import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.di.AppPrefsDataStore
 import com.andrea.showmateapp.domain.repository.IUserRepository
+import com.andrea.showmateapp.util.AppPrefsKeys
 import com.andrea.showmateapp.util.DataExportManager
 import com.andrea.showmateapp.util.NotificationPrefsKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,23 +36,23 @@ class SettingsViewModel @Inject constructor(
 
     val isDarkTheme = themePreference.isDarkTheme
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     val notifEnabled = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_ENABLED] != false }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     val notifNewEpisodes = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_NEW_EPISODES] != false }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     val notifFriends = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_FRIENDS] != false }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     val notifRecommendations = dataStore.data.map { it[NotificationPrefsKeys.NOTIF_RECOMMENDATIONS] == true }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _loggedOut = MutableStateFlow(false)
     val loggedOut: StateFlow<Boolean> = _loggedOut.asStateFlow()
@@ -87,8 +88,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun logout() {
-        authRepository.signOut()
-        _loggedOut.value = true
+        viewModelScope.launch {
+            runCatching { userRepository.clearUserCache() }
+            authRepository.signOut()
+            _loggedOut.value = true
+        }
     }
 
     fun deleteAccount(onComplete: (Boolean) -> Unit) {
@@ -125,6 +129,7 @@ class SettingsViewModel @Inject constructor(
             _isResetting.value = true
             try {
                 userRepository.resetAlgorithmData()
+                dataStore.edit { it[AppPrefsKeys.KEY_ONBOARDING] = false }
                 onComplete(true)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

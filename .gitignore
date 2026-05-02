@@ -53,4 +53,5 @@ keystore.properties
 .claude/
 .mcp.json
 .swarm/
+.hive-mind/
 CLAUDE.md

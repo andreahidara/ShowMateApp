@@ -37,7 +37,8 @@ val MatchGreen = Color(0xFF4CAF50)
 val MatchYellow = StarYellow
 val GoldAccent = Color(0xFFFFD700)
 
-val PillGenre = Color(0xFF9C27B0)
+val DarkPurple = Color(0xFF9C27B0)
+val PillGenre = DarkPurple
 val PillActor = Color(0xFF2196F3)
 val PillNarrative = Color(0xFF009688)
 val PillCreator = Color(0xFFFF9800)
@@ -50,3 +51,6 @@ val PillTrending = Color(0xFFFF5722)
 val SuccessGreenLight = Color(0xFF66BB6A)
 val SuccessDark = Color(0xFF2E7D32)
 val ErrorDark = Color(0xFFE53935)
+
+val GoldAmber = Color(0xFFFFB300)
+val PurpleDeep = Color(0xFF1A1040)

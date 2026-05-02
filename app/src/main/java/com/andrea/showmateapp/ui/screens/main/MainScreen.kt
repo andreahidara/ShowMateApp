@@ -30,8 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.andrea.showmateapp.R
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,6 +46,7 @@ import com.andrea.showmateapp.ui.screens.friends.FriendsScreen
 import com.andrea.showmateapp.ui.screens.home.HomeScreen
 import com.andrea.showmateapp.ui.screens.profile.ProfileScreen
 import com.andrea.showmateapp.ui.screens.search.SearchScreen
+import com.andrea.showmateapp.ui.theme.StarYellow
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -60,7 +63,7 @@ fun MainScreen(
 
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) {
-            globalNavController.navigate(com.andrea.showmateapp.ui.navigation.Screen.Welcome) {
+            globalNavController.navigate(com.andrea.showmateapp.ui.navigation.Screen.Login) {
                 popUpTo(0) { inclusive = true }
             }
         }
@@ -151,13 +154,13 @@ fun MainScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFFFC107))
+                    .background(StarYellow)
                     .statusBarsPadding()
                     .padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Sin conexión a internet",
+                    text = stringResource(R.string.error_no_connection),
                     color = Color.Black,
                     fontSize = 13.sp
                 )

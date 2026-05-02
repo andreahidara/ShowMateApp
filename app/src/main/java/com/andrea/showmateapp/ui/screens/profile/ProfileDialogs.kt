@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrea.showmateapp.R
+import com.andrea.showmateapp.ui.theme.ErrorRed
+import com.andrea.showmateapp.ui.theme.InputBackground
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.TextGray
 
@@ -24,7 +26,7 @@ import com.andrea.showmateapp.ui.theme.TextGray
 fun LogoutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = InputBackground,
         title = {
             Text(
                 stringResource(R.string.profile_logout),
@@ -41,7 +43,7 @@ fun LogoutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
+                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
             ) {
                 Text(stringResource(R.string.profile_logout_action), fontWeight = FontWeight.Bold)
             }
@@ -63,7 +65,7 @@ fun AvatarColorPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = InputBackground,
         title = {
             Text(
                 stringResource(R.string.profile_avatar_color_title),
@@ -120,7 +122,7 @@ fun AvatarColorPickerDialog(
 fun ResetAlgorithmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = InputBackground,
         title = {
             Text(
                 stringResource(R.string.profile_reset_title),

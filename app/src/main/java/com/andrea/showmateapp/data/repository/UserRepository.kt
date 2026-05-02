@@ -1,6 +1,7 @@
 package com.andrea.showmateapp.data.repository
 
 import com.andrea.showmateapp.data.local.MediaInteractionDao
+import com.andrea.showmateapp.data.local.MediaInteractionEntity
 import com.andrea.showmateapp.data.local.ShowDao
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.di.IoDispatcher
@@ -31,6 +32,28 @@ class UserRepository @Inject constructor(
     private val mediaInteractionDao: MediaInteractionDao,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : IUserRepository {
+
+    companion object {
+        private val NARRATIVE_SEEDS: Map<String, Map<String, Float>> = mapOf(
+            "35" to mapOf("tono_ligero" to 8f, "ritmo_episodico" to 6f),
+            "18" to mapOf("tono_emocional" to 8f, "ritmo_lento" to 5f),
+            "10765" to mapOf("narrativa_compleja" to 7f),
+            "9648" to mapOf("narrativa_compleja" to 8f, "protagonista_detective" to 6f),
+            "80" to mapOf("protagonista_antihero" to 7f),
+            "10759" to mapOf("ritmo_intenso" to 8f),
+            "53" to mapOf("tono_oscuro" to 8f),
+            "16" to mapOf("tono_ligero" to 7f)
+        )
+        private val KEYWORD_SEEDS: Map<String, Map<String, Float>> = mapOf(
+            "9648" to mapOf("mystery" to 8f, "detective" to 6f, "murder mystery" to 6f),
+            "80" to mapOf("crime" to 8f, "heist" to 6f, "drugs" to 5f),
+            "10765" to mapOf("space" to 8f, "artificial intelligence" to 6f, "dystopia" to 6f),
+            "10759" to mapOf("spy" to 6f, "survival" to 6f),
+            "53" to mapOf("serial killer" to 5f, "conspiracy" to 5f),
+            "99" to mapOf("based on true story" to 7f)
+        )
+    }
+
     private val usersCollection = db.collection("users")
     private fun userDoc(uid: String) = usersCollection.document(uid)
 
@@ -49,7 +72,9 @@ class UserRepository @Inject constructor(
 
         val listener = userDoc(uid).addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                // PERMISSION_DENIED on logout — close gracefully instead of crashing collectors
+                trySend(null)
+                close()
                 return@addSnapshotListener
             }
             val profile = snapshot?.toObject(UserProfile::class.java)
@@ -104,37 +129,19 @@ class UserRepository @Inject constructor(
                 newGenreDates[id] = now
             }
 
-            val narrativeSeeds = mapOf(
-                "35" to mapOf("tono_ligero" to 8f, "ritmo_episodico" to 6f),
-                "18" to mapOf("tono_emocional" to 8f, "ritmo_lento" to 5f),
-                "10765" to mapOf("narrativa_compleja" to 7f),
-                "9648" to mapOf("narrativa_compleja" to 8f, "protagonista_detective" to 6f),
-                "80" to mapOf("protagonista_antihero" to 7f),
-                "10759" to mapOf("ritmo_intenso" to 8f),
-                "53" to mapOf("tono_oscuro" to 8f),
-                "16" to mapOf("tono_ligero" to 7f)
-            )
             val newNarrativeScores = profile.narrativeStyleScores.toMutableMap()
             val newNarrativeDates = profile.narrativeStyleDates.toMutableMap()
             genres.forEach { genreId ->
-                narrativeSeeds[genreId]?.forEach { (style, score) ->
+                NARRATIVE_SEEDS[genreId]?.forEach { (style, score) ->
                     newNarrativeScores[style] = maxOf(newNarrativeScores[style] ?: 0f, score)
                     newNarrativeDates[style] = now
                 }
             }
 
-            val keywordSeeds = mapOf(
-                "9648" to mapOf("mystery" to 8f, "detective" to 6f, "murder mystery" to 6f),
-                "80" to mapOf("crime" to 8f, "heist" to 6f, "drugs" to 5f),
-                "10765" to mapOf("space" to 8f, "artificial intelligence" to 6f, "dystopia" to 6f),
-                "10759" to mapOf("spy" to 6f, "survival" to 6f),
-                "53" to mapOf("serial killer" to 5f, "conspiracy" to 5f),
-                "99" to mapOf("based on true story" to 7f)
-            )
             val newKeywordScores = profile.preferredKeywords.toMutableMap()
             val newKeywordDates = profile.keywordScoreDates.toMutableMap()
             genres.forEach { genreId ->
-                keywordSeeds[genreId]?.forEach { (kw, score) ->
+                KEYWORD_SEEDS[genreId]?.forEach { (kw, score) ->
                     newKeywordScores[kw] = maxOf(newKeywordScores[kw] ?: 0f, score)
                     newKeywordDates[kw] = now
                 }
@@ -167,13 +174,20 @@ class UserRepository @Inject constructor(
             )
 
             watchedShows.forEach { show ->
-                transaction.set(userRef.collection("watched").document(show.id.toString()), show)
+                transaction.set(userRef.collection("watched").document(show.id.toString()), show.copy(reasons = emptyList(), affinityScore = 0f))
             }
             lovedShows.forEach { show ->
-                transaction.set(userRef.collection("favorites").document(show.id.toString()), show)
+                transaction.set(userRef.collection("favorites").document(show.id.toString()), show.copy(reasons = emptyList(), affinityScore = 0f))
             }
         }.await()
-        getUserProfile()
+
+        // Sync onboarding interactions to local Room so the exclusion filter works immediately
+        watchedShows.forEach { show ->
+            mediaInteractionDao.upsert(MediaInteractionEntity(mediaId = show.id, isLiked = true))
+        }
+        lovedShows.forEach { show ->
+            mediaInteractionDao.upsert(MediaInteractionEntity(mediaId = show.id, isLiked = true, isEssential = true))
+        }
     }
 
     override suspend fun updateProfile(username: String) = withContext(ioDispatcher) {
@@ -181,7 +195,6 @@ class UserRepository @Inject constructor(
         userDoc(uid)
             .set(mapOf("username" to username), SetOptions.merge())
             .await()
-        getUserProfile()
     }
 
     override suspend fun getSimilarUsers(limit: Long): List<UserProfile> = withContext(ioDispatcher) {
@@ -241,7 +254,6 @@ class UserRepository @Inject constructor(
             transaction.update(userRef, "viewingHistory", history)
             null
         }.await()
-        getUserProfile()
     }
 
     override suspend fun resetAlgorithmData() = withContext(ioDispatcher) {
@@ -303,12 +315,12 @@ class UserRepository @Inject constructor(
 
     override suspend fun clearUserCache() = withContext(ioDispatcher) {
         showDao.clearUserData()
+        mediaInteractionDao.deleteAll()
     }
 
     override suspend fun updateProfilePhoto(url: String) = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
         userDoc(uid).set(mapOf("photoUrl" to url), SetOptions.merge()).await()
-        getUserProfile()
     }
 
     override suspend fun restoreBackup(partial: UserProfile) = withContext(ioDispatcher) {
@@ -345,5 +357,6 @@ class UserRepository @Inject constructor(
         auth.currentUser?.delete()?.await()
         safeFirestoreCall(Unit) { userDoc(uid).delete().await() }
         showDao.clearUserData()
+        mediaInteractionDao.deleteAll()
     }
 }

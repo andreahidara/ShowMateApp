@@ -229,6 +229,22 @@
     <string name="notif_gem_action">Ver detalles</string>
 
 
+    <string name="profile_change_avatar">Cambiar avatar</string>
+    <string name="profile_upload_photo">Subir foto de perfil</string>
+    <string name="profile_choose_avatar_color">Elegir color de avatar</string>
+    <string name="profile_watched_section">Lo que he visto</string>
+    <string name="profile_watchlist_title">Pendientes</string>
+    <string name="profile_watchlist_empty">Aún no tienes series en tu lista de pendientes</string>
+    <string name="profile_favorites_empty">Aún no tienes series favoritas</string>
+    <string name="profile_my_stats">Mis estadísticas</string>
+    <string name="profile_viewer_profile_label">Tu perfil de espectador</string>
+    <string name="profile_positive_affinity">Afinidad positiva</string>
+    <string name="profile_likes_percentage">%1$d%% de valoradas son Me Gusta</string>
+    <string name="profile_average_rating">Valoración media</string>
+    <string name="profile_no_ratings">Sin valoraciones</string>
+    <string name="profile_account_settings">Cuenta y Preferencias</string>
+    <string name="profile_settings_item">Configuración</string>
+    <string name="profile_about_item">Sobre ShowMate</string>
     <string name="profile_logout">Cerrar Sesión</string>
     <string name="profile_logout_confirm">¿Estás seguro de que quieres salir de ShowMate?</string>
     <string name="profile_logout_action">Salir</string>
@@ -453,4 +469,46 @@
     <!-- DetailScreen share -->
     <string name="detail_share_text">¡Echa un vistazo a \"%1$s\" en ShowMate! 🎬\nhttps://www.themoviedb.org/tv/%2$d</string>
     <string name="detail_share_chooser">Compartir con…</string>
+
+    <!-- ConsentScreen -->
+    <string name="consent_privacy_title">Tu privacidad, primero</string>
+    <string name="consent_privacy_subtitle">Queremos que sepas exactamente\ncómo usamos tus datos</string>
+    <string name="consent_privacy_footer">No vendemos tus datos a terceros · Solo para mejorar tu experiencia</string>
+    <string name="consent_decline_exit">No acepto — salir de la app</string>
+    <string name="consent_data_account_title">Datos de cuenta</string>
+    <string name="consent_data_account_desc">Tu email se usa para identificarte y proteger tu cuenta.</string>
+    <string name="consent_data_history_title">Historial de uso</string>
+    <string name="consent_data_history_desc">Tus valoraciones personalizan las recomendaciones que ves.</string>
+    <string name="consent_data_gdpr_title">Cumplimiento RGPD</string>
+    <string name="consent_data_gdpr_desc">Tus datos están protegidos según la normativa europea.</string>
+
+    <!-- OnboardingScreen -->
+    <string name="onboarding_step_counter">%1$d / 4</string>
+    <string name="onboarding_btn_genres_min">Elige al menos 3 géneros</string>
+    <string name="onboarding_btn_continue">Continuar →</string>
+    <string name="onboarding_btn_skip">Saltar este paso →</string>
+    <string name="onboarding_btn_continue_count">Continuar (%1$d vistas) →</string>
+    <string name="onboarding_btn_answer_all">Responde todas las preguntas</string>
+    <string name="onboarding_btn_analyze">Analizar mis gustos →</string>
+    <string name="onboarding_btn_start">¡Empezar ShowMate!</string>
+    <string name="onboarding_genres_title">¿Qué tipo de series\nte enganchan?</string>
+    <string name="onboarding_genres_subtitle">Elige entre 3 y 5 géneros favoritos</string>
+    <string name="onboarding_shows_title">¿Cuáles de estas ya has visto?</string>
+    <string name="onboarding_shows_subtitle">Toca para marcar · ❤️ para las que te encantaron</string>
+    <string name="onboarding_prefs_title">Cuéntanos cómo\ndisfrutas las series</string>
+    <string name="onboarding_pref_q_episode_length">¿Prefieres episodios cortos o largos?</string>
+    <string name="onboarding_pref_q_status">¿Series finalizadas o en emisión?</string>
+    <string name="onboarding_pref_q_dubbed">¿Dobladas o en versión original?</string>
+    <string name="onboarding_personality_label">Tu perfil de espectador</string>
+    <string name="onboarding_analysis_1">Analizando tus géneros favoritos...</string>
+    <string name="onboarding_analysis_2">Procesando las series que has visto...</string>
+    <string name="onboarding_analysis_3">Calculando tu perfil de espectador...</string>
+    <string name="onboarding_analysis_4">¡Casi listo!</string>
+    <string name="onboarding_stat_genres">%1$d géneros</string>
+    <string name="onboarding_stat_watched">%1$d vistas</string>
+    <string name="onboarding_stat_loved">%1$d favoritas</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">Acerca de ShowMate</string>
+    <string name="about_tagline">Tu compañero inteligente para descubrir series</string>
 </resources>

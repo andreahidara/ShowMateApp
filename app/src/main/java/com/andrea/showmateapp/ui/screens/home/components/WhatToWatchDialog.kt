@@ -33,9 +33,11 @@ import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.screens.home.MoodOption
 import com.andrea.showmateapp.ui.screens.home.TimeOption
 import com.andrea.showmateapp.ui.theme.AccentBlue
+import com.andrea.showmateapp.ui.theme.InputBackground
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.StarYellow
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.util.GenreMapper
 import com.andrea.showmateapp.util.TmdbUtils
 
@@ -49,8 +51,8 @@ fun WhatToWatchDialog(media: MediaContent, onDismiss: () -> Unit, onViewDetails:
         }
     }
     val matchColor = when {
-        matchPct >= 80 -> Color(0xFF4CAF50)
-        matchPct >= 50 -> Color(0xFFFFC107)
+        matchPct >= 80 -> SuccessGreen
+        matchPct >= 50 -> StarYellow
         else -> Color(0xFFE91E63)
     }
 
@@ -75,7 +77,7 @@ fun WhatToWatchDialog(media: MediaContent, onDismiss: () -> Unit, onViewDetails:
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(32.dp),
-            color = Color(0xFF1A1A2E),
+            color = InputBackground,
             tonalElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()

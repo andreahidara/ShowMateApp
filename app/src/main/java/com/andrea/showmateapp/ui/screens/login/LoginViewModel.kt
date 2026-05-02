@@ -66,18 +66,29 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(isGoogleLoading = true, error = null) }
             authRepository.signInWithGoogle(idToken)
                 .onSuccess { isNewUser ->
+                    var onboardingCompleted = false
                     if (isNewUser) {
                         val displayName = authRepository.getCurrentUser()?.displayName
                             ?: authRepository.getCurrentUser()?.email?.substringBefore("@")
                             ?: "Usuario"
                         runCatching { userRepository.initUserProfile(displayName) }
+                    } else {
+                        val profile = userRepository.getUserProfile()
+                        onboardingCompleted = profile?.onboardingCompleted == true
                     }
                     try {
                         interactionRepository.syncFavoritesAndWatchedToRoom()
                     } catch (e: Exception) {
                         Timber.e(e, "Error syncing initial data upon google login")
                     }
-                    _uiState.update { it.copy(isGoogleLoading = false, isSuccess = true, isNewGoogleUser = isNewUser) }
+                    _uiState.update {
+                        it.copy(
+                            isGoogleLoading = false,
+                            isSuccess = true,
+                            isNewGoogleUser = isNewUser,
+                            isOnboardingCompleted = onboardingCompleted
+                        )
+                    }
                 }
                 .onFailure { e ->
                     _uiState.update {
@@ -111,11 +122,16 @@ class LoginViewModel @Inject constructor(
                     } catch (e: Exception) {
                         Timber.e(e, "Error syncing initial data upon login")
                     }
+
+                    // If profile is null (error), we can't be sure, but usually it's safer to go to Main if they are returning users
+                    // or check DataStore if we had access to it here. But here we usually have network.
+                    val isCompleted = profile?.onboardingCompleted == true
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             isSuccess = true,
-                            isOnboardingCompleted = profile?.onboardingCompleted == true
+                            isOnboardingCompleted = isCompleted
                         )
                     }
                 }

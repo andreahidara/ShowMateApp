@@ -21,7 +21,7 @@ data class DetailUiState(
     val isSavingReview: Boolean = false,
     val isReviewSaved: Boolean = false,
     val similarShows: List<MediaContent> = emptyList(),
-    val isSimilarLoading: Boolean = true,
+    val isSimilarLoading: Boolean = false,
     val actionError: UiText? = null,
     val snackbarMessage: UiText? = null,
     val watchedEpisodes: List<Int> = emptyList(),

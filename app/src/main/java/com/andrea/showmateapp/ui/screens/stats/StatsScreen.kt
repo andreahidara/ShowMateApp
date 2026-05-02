@@ -137,7 +137,7 @@ fun StatsScreen(navController: NavController, viewModel: StatsViewModel = hiltVi
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Movie,
-                            iconTint = Color(0xFF4CAF50),
+                            iconTint = SuccessGreen,
                             value = "${uiState.totalEpisodesWatched}",
                             label = "Total episodios",
                             subtitle = "vistos"

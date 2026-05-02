@@ -2,8 +2,8 @@ package com.andrea.showmateapp.ui.screens.onboarding
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.andrea.showmateapp.util.AppPrefsKeys
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.repository.ShowRepository
@@ -47,13 +47,13 @@ class OnboardingViewModel @Inject constructor(
                     val result = showRepository.discoverShows(
                         genreId = genreId,
                         sortBy = "popularity.desc",
-                        minRating = 6f 
+                        minRating = 6f
                     )
                     val candidates = when (result) {
                         is Resource.Success -> result.data
                             .filter { show ->
                                 !show.posterPath.isNullOrBlank() &&
-                                show.safeGenreIds.contains(genreId.toIntOrNull() ?: -1) 
+                                show.safeGenreIds.contains(genreId.toIntOrNull() ?: -1)
                             }
                             .map { it.posterPath!! }
                         else -> emptyList()
@@ -179,7 +179,7 @@ class OnboardingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             val state = _uiState.value
 
-            runCatching {
+            val saveResult = runCatching {
                 userRepository.saveOnboardingInterests(
                     genres = state.selectedGenres.toList(),
                     watchedShows = state.popularShows.filter { it.id in state.watchedShowIds },
@@ -202,16 +202,21 @@ class OnboardingViewModel @Inject constructor(
                 )
             }
 
-            runCatching {
-                dataStore.edit { prefs -> prefs[booleanPreferencesKey("onboarding_completed")] = true }
-            }
+            if (saveResult.isSuccess) {
+                runCatching {
+                    dataStore.edit { prefs -> prefs[AppPrefsKeys.KEY_ONBOARDING] = true }
+                }
 
-            runCatching {
-                val token = FirebaseMessaging.getInstance().token.await()
-                socialRepository.saveDeviceToken(token)
-            }
+                runCatching {
+                    val token = FirebaseMessaging.getInstance().token.await()
+                    socialRepository.saveDeviceToken(token)
+                }
 
-            _uiState.update { it.copy(isLoading = false, isComplete = true) }
+                _uiState.update { it.copy(isLoading = false, isComplete = true) }
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+                // Optional: add error message to UI state if we had one
+            }
         }
     }
 }

@@ -18,6 +18,12 @@ interface TmdbApiService {
         ) appendToResponse: String? = "credits,keywords,watch/providers,content_ratings,videos"
     ): MediaContent
 
+    @GET("tv/{tv_id}/videos")
+    suspend fun getShowVideos(
+        @Path("tv_id") tvId: Int,
+        @Query("language") language: String = "en-US"
+    ): VideosResponse
+
     @GET("trending/tv/week")
     suspend fun getTrendingThisWeek(@Query("language") language: String = "es-ES"): MediaResponse
 

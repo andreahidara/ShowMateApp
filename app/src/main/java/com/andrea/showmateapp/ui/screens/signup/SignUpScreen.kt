@@ -34,8 +34,10 @@ import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.AuthBackground
 import com.andrea.showmateapp.ui.components.PrimaryButton
 import com.andrea.showmateapp.ui.components.PrimaryTextField
+import com.andrea.showmateapp.ui.theme.ErrorRed
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.TextGray
 
 @Composable
@@ -190,9 +192,9 @@ fun SignUpScreen(
                             label = "strengthBar"
                         )
                         val (strengthColor, strengthLabel) = when (strength) {
-                            0 -> Color(0xFFFF5252) to "Débil"
+                            0 -> ErrorRed to "Débil"
                             1 -> Color(0xFFFF9800) to "Media"
-                            2 -> Color(0xFF4CAF50) to "Fuerte"
+                            2 -> SuccessGreen to "Fuerte"
                             else -> Color(0xFF00BCD4) to "Muy fuerte"
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -262,11 +264,11 @@ fun SignUpScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFFF5252).copy(alpha = 0.12f))
+                                .background(ErrorRed.copy(alpha = 0.12f))
                         ) {
                             Text(
                                 text = error.asString(),
-                                color = Color(0xFFFF5252),
+                                color = ErrorRed,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                             )

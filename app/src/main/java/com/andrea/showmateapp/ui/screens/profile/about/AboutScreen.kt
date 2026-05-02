@@ -37,6 +37,8 @@ import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleDark
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
+import com.andrea.showmateapp.ui.theme.GoldAmber
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.SurfaceVariantDark
 import com.andrea.showmateapp.ui.theme.TextGray
 
@@ -62,10 +64,10 @@ fun AboutScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Acerca de ShowMate", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.about_title), color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back_cd), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -129,7 +131,7 @@ fun AboutScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "Tu compañero inteligente para descubrir series",
+                    text = stringResource(R.string.about_tagline),
                     color = TextGray,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
@@ -140,7 +142,7 @@ fun AboutScreen(navController: NavController) {
                 AboutSectionCard(
                     title = "Características",
                     icon = Icons.Default.AutoAwesome,
-                    iconTint = Color(0xFFFFB300)
+                    iconTint = GoldAmber
                 ) {
                     FeatureRow(
                         Icons.Default.Recommend,
@@ -158,14 +160,14 @@ fun AboutScreen(navController: NavController) {
                     Spacer(Modifier.height(10.dp))
                     FeatureRow(
                         Icons.Default.EmojiEvents,
-                        Color(0xFFFFB300),
+                        GoldAmber,
                         "Gamificación",
                         "Logros, niveles de XP y racha de visualización"
                     )
                     Spacer(Modifier.height(10.dp))
                     FeatureRow(
                         Icons.Default.BarChart,
-                        Color(0xFF4CAF50),
+                        SuccessGreen,
                         "Estadísticas Wrapped",
                         "Resumen anual con géneros, horas y perfil de espectador"
                     )
@@ -265,14 +267,14 @@ fun AboutScreen(navController: NavController) {
                         "Estilo narrativo",
                         "19%",
                         "11 clusters detectados automáticamente a partir de keywords TMDB",
-                        Color(0xFFFFB300)
+                        GoldAmber
                     )
                     Spacer(Modifier.height(8.dp))
                     AlgorithmWeightRow(
                         "Actores",
                         "12%",
                         "Reparto con el que el usuario ha interactuado positivamente",
-                        Color(0xFF4CAF50)
+                        SuccessGreen
                     )
                     Spacer(Modifier.height(8.dp))
                     AlgorithmWeightRow(
@@ -300,13 +302,13 @@ fun AboutScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                AboutSectionCard(title = "Stack Tecnológico", icon = Icons.Default.Code, iconTint = Color(0xFF4CAF50)) {
+                AboutSectionCard(title = "Stack Tecnológico", icon = Icons.Default.Code, iconTint = SuccessGreen) {
                     TechRow(Icons.Default.Brush, Color(0xFFE91E63), "UI", "Jetpack Compose + Material 3")
                     TechRow(Icons.Default.Architecture, Color(0xFF7C4DFF), "Arquitectura", "MVVM + Clean Architecture")
                     TechRow(Icons.Default.Hub, Color(0xFF2196F3), "DI", "Dagger Hilt 2.52")
-                    TechRow(Icons.Default.Storage, Color(0xFFFFB300), "Base de datos", "Room 2.6 + Firestore")
+                    TechRow(Icons.Default.Storage, GoldAmber, "Base de datos", "Room 2.6 + Firestore")
                     TechRow(Icons.Default.Cloud, Color(0xFF00BCD4), "Red", "Retrofit 2.9 + OkHttp")
-                    TechRow(Icons.Default.Security, Color(0xFF4CAF50), "Auth", "Firebase Authentication")
+                    TechRow(Icons.Default.Security, SuccessGreen, "Auth", "Firebase Authentication")
                     TechRow(Icons.Default.Image, Color(0xFFFF5722), "Imágenes", "Coil 2.7")
                     TechRow(Icons.Default.Movie, Color(0xFFFF9800), "API datos", "TMDB API v3")
                 }
@@ -490,7 +492,7 @@ private fun AboutScreenPreview() {
 private fun AboutSectionCardPreview() {
     ShowMateAppTheme {
         Box(modifier = Modifier.padding(16.dp)) {
-            AboutSectionCard(title = "Stack Tecnológico", icon = Icons.Default.Code, iconTint = Color(0xFF4CAF50)) {
+            AboutSectionCard(title = "Stack Tecnológico", icon = Icons.Default.Code, iconTint = SuccessGreen) {
                 TechRow(Icons.Default.Brush, Color(0xFFE91E63), "UI", "Jetpack Compose + Material 3")
                 TechRow(Icons.Default.Architecture, Color(0xFF7C4DFF), "Arquitectura", "MVVM + Clean Architecture")
             }

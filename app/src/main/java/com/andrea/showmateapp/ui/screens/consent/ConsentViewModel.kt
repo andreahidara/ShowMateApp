@@ -2,11 +2,11 @@ package com.andrea.showmateapp.ui.screens.consent
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.di.AppPrefsDataStore
+import com.andrea.showmateapp.util.AppPrefsKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,18 +20,14 @@ class ConsentViewModel @Inject constructor(
     @AppPrefsDataStore private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
-    companion object {
-        private val KEY_CONSENT = booleanPreferencesKey("consent_given")
-    }
-
     val isConsentGiven = dataStore.data
-        .map { prefs -> prefs[KEY_CONSENT] == true }
+        .map { prefs -> prefs[AppPrefsKeys.KEY_CONSENT] == true }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     fun giveConsent() {
         viewModelScope.launch {
-            dataStore.edit { prefs -> prefs[KEY_CONSENT] = true }
+            dataStore.edit { prefs -> prefs[AppPrefsKeys.KEY_CONSENT] = true }
         }
     }
 }

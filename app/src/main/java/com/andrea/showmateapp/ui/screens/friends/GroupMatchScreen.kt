@@ -988,9 +988,9 @@ private data class Particle(
 )
 
 private val confettiColors = listOf(
-    Color(0xFF9C27B0),
-    Color(0xFFFFD700),
-    Color(0xFF4CAF50),
+    DarkPurple,
+    GoldAccent,
+    SuccessGreen,
     Color(0xFFFF5722),
     Color(0xFFE91E63),
     Color(0xFF2196F3),

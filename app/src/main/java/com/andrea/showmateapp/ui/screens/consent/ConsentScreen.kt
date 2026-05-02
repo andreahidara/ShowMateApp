@@ -33,8 +33,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.AuthBackground
 import com.andrea.showmateapp.ui.theme.*
 import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
@@ -59,7 +61,7 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Tu privacidad, primero",
+                text = stringResource(R.string.consent_privacy_title),
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
@@ -70,7 +72,7 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Queremos que sepas exactamente\ncómo usamos tus datos",
+                text = stringResource(R.string.consent_privacy_subtitle),
                 color = TextGray,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
@@ -96,7 +98,7 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "No vendemos tus datos a terceros · Solo para mejorar tu experiencia",
+                    text = stringResource(R.string.consent_privacy_footer),
                     color = TextGray,
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
@@ -127,7 +129,7 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Acepto y continúo",
+                        text = stringResource(R.string.consent_accept),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color.White
@@ -142,7 +144,7 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "No acepto — salir de la app",
+                    text = stringResource(R.string.consent_decline_exit),
                     color = TextGray.copy(alpha = 0.7f),
                     fontSize = 13.sp
                 )
@@ -214,8 +216,8 @@ private fun ConsentCard() {
             ConsentDataRow(
                 icon = Icons.Default.Person,
                 iconColor = AccentBlue,
-                title = "Datos de cuenta",
-                description = "Tu email se usa para identificarte y proteger tu cuenta."
+                title = stringResource(R.string.consent_data_account_title),
+                description = stringResource(R.string.consent_data_account_desc)
             )
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -223,8 +225,8 @@ private fun ConsentCard() {
             ConsentDataRow(
                 icon = Icons.Default.Lock,
                 iconColor = SuccessGreen,
-                title = "Historial de uso",
-                description = "Tus valoraciones personalizan las recomendaciones que ves."
+                title = stringResource(R.string.consent_data_history_title),
+                description = stringResource(R.string.consent_data_history_desc)
             )
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -232,8 +234,8 @@ private fun ConsentCard() {
             ConsentDataRow(
                 icon = Icons.Default.Gavel,
                 iconColor = StarYellow,
-                title = "Cumplimiento RGPD",
-                description = "Tus datos están protegidos según la normativa europea."
+                title = stringResource(R.string.consent_data_gdpr_title),
+                description = stringResource(R.string.consent_data_gdpr_desc)
             )
         }
     }

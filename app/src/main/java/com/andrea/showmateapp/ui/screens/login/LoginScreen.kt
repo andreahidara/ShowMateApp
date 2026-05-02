@@ -39,9 +39,12 @@ import com.andrea.showmateapp.ui.components.AuthBackground
 import com.andrea.showmateapp.ui.components.PrimaryButton
 import com.andrea.showmateapp.ui.components.PrimaryTextField
 import com.andrea.showmateapp.ui.navigation.Screen
+import com.andrea.showmateapp.ui.theme.ErrorRed
+import com.andrea.showmateapp.ui.theme.InputBackground
 import com.andrea.showmateapp.ui.theme.PrimaryMagenta
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
+import com.andrea.showmateapp.ui.theme.SuccessGreen
 import com.andrea.showmateapp.ui.theme.TextGray
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -125,7 +128,7 @@ fun LoginScreenContent(
                 onDismissResetDialog()
                 forgotEmail = ""
             },
-            containerColor = Color(0xFF1A1A2E),
+            containerColor = InputBackground,
             title = {
                 Text(stringResource(R.string.login_recover_password), color = Color.White, fontWeight = FontWeight.Bold)
             },
@@ -157,12 +160,12 @@ fun LoginScreenContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF4CAF50).copy(alpha = 0.12f))
+                                .background(SuccessGreen.copy(alpha = 0.12f))
                                 .padding(horizontal = 12.dp, vertical = 10.dp)
                         ) {
                             Text(
                                 stringResource(R.string.login_email_sent),
-                                color = Color(0xFF4CAF50),
+                                color = SuccessGreen,
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
@@ -170,7 +173,7 @@ fun LoginScreenContent(
                         }
                     }
                     state.resetError?.let { err ->
-                        Text(err.asString(), color = Color(0xFFFF5252), fontSize = 13.sp)
+                        Text(err.asString(), color = ErrorRed, fontSize = 13.sp)
                     }
                 }
             },
@@ -317,11 +320,11 @@ fun LoginScreenContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFFF5252).copy(alpha = 0.12f))
+                                .background(ErrorRed.copy(alpha = 0.12f))
                         ) {
                             Text(
                                 text = error.asString(),
-                                color = Color(0xFFFF5252),
+                                color = ErrorRed,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                             )

@@ -7,7 +7,7 @@ import com.andrea.showmateapp.data.model.SeasonEntity
 
 @Database(
     entities = [MediaEntity::class, MediaInteractionEntity::class, SeasonEntity::class],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

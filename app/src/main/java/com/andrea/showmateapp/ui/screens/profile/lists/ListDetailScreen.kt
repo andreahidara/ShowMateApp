@@ -36,7 +36,9 @@ import androidx.navigation.NavController
 import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.navigation.Screen
+import com.andrea.showmateapp.ui.theme.GoldAccent
 import com.andrea.showmateapp.ui.theme.HeartRed
+import com.andrea.showmateapp.ui.theme.InputBackground
 import com.andrea.showmateapp.ui.theme.PrimaryPurple
 import com.andrea.showmateapp.ui.theme.PrimaryPurpleLight
 import com.andrea.showmateapp.ui.theme.TextGray
@@ -53,7 +55,7 @@ fun ListDetailScreen(navController: NavController, viewModel: ListDetailViewMode
     if (showToRemove != null) {
         AlertDialog(
             onDismissRequest = { showToRemove = null },
-            containerColor = Color(0xFF1A1A2E),
+            containerColor = InputBackground,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -260,7 +262,7 @@ private fun ListDetailShowCard(show: MediaContent, editMode: Boolean, onClick: (
             ) {
                 Text(
                     text = "★ ${"%.1f".format(show.voteAverage)}",
-                    color = Color(0xFFFFD700),
+                    color = GoldAccent,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )

@@ -2,14 +2,15 @@ package com.andrea.showmateapp.ui.screens.splash
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.data.repository.SessionRepository
 import com.andrea.showmateapp.di.AppPrefsDataStore
+import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
+import com.andrea.showmateapp.util.AppPrefsKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -23,13 +24,9 @@ class SplashViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val sessionRepository: SessionRepository,
     private val userRepository: IUserRepository,
+    private val interactionRepository: IInteractionRepository,
     @AppPrefsDataStore private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
-
-    companion object {
-        private val KEY_CONSENT = booleanPreferencesKey("consent_given")
-        private val KEY_ONBOARDING = booleanPreferencesKey("onboarding_completed")
-    }
 
     private val _authDecision = MutableStateFlow<SplashDestination?>(null)
     val authDecision: StateFlow<SplashDestination?> = _authDecision
@@ -42,8 +39,8 @@ class SplashViewModel @Inject constructor(
                 val loggedIn = sessionValid && user != null
 
                 val prefs = dataStore.data.first()
-                val consentGiven = prefs[KEY_CONSENT] == true
-                val onboardingLocal = prefs[KEY_ONBOARDING] == true
+                val consentGiven = prefs[AppPrefsKeys.KEY_CONSENT] == true
+                val onboardingLocal = prefs[AppPrefsKeys.KEY_ONBOARDING] == true
 
                 if (!consentGiven) {
                     _authDecision.value = SplashDestination.WELCOME_NEW
@@ -51,23 +48,30 @@ class SplashViewModel @Inject constructor(
 
                     sessionRepository.updateLastActivity()
 
-                    if (onboardingLocal) {
+                    // Always verify Firestore: DataStore alone can be stale after an account switch
+                    val profile = userRepository.getUserProfile()
+                    runCatching { interactionRepository.syncFavoritesAndWatchedToRoom() }
 
-                        _authDecision.value = SplashDestination.HOME
-                    } else {
-
-                        val profile = userRepository.getUserProfile()
-                        if (profile?.onboardingCompleted == true) {
-                            runCatching {
-                                dataStore.edit { prefs -> prefs[KEY_ONBOARDING] = true }
-                            }
+                    if (profile == null) {
+                        // Fallback: If Firestore fails (e.g., offline), trust local DataStore to avoid loops
+                        if (onboardingLocal) {
                             _authDecision.value = SplashDestination.HOME
                         } else {
                             _authDecision.value = SplashDestination.ONBOARDING
                         }
+                    } else if (profile.onboardingCompleted) {
+                        if (!onboardingLocal) {
+                            runCatching { dataStore.edit { p -> p[AppPrefsKeys.KEY_ONBOARDING] = true } }
+                        }
+                        _authDecision.value = SplashDestination.HOME
+                    } else {
+                        if (onboardingLocal) {
+                            // DataStore was stale — reset it so the next launch is consistent
+                            runCatching { dataStore.edit { p -> p[AppPrefsKeys.KEY_ONBOARDING] = false } }
+                        }
+                        _authDecision.value = SplashDestination.ONBOARDING
                     }
                 } else {
-
                     _authDecision.value = SplashDestination.LOGIN
                 }
             } catch (e: Exception) {
@@ -84,5 +88,5 @@ enum class SplashDestination {
     HOME,
     ONBOARDING,
     LOGIN,
-    WELCOME_NEW  
+    WELCOME_NEW
 }
