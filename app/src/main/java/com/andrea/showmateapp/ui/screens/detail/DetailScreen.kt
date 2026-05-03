@@ -218,7 +218,7 @@ fun DetailScreenContent(
                                 it
                             } else {
                                 it.sharedElement(
-                                    sharedContentState = rememberSharedContentState(key = sharedElementKey),
+                                    rememberSharedContentState(key = sharedElementKey),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }

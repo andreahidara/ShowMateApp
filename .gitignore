@@ -50,8 +50,3 @@ keystore.properties
 
 # --- AI & MISC ---
 *.hprof
-.claude/
-.mcp.json
-.swarm/
-.hive-mind/
-CLAUDE.md

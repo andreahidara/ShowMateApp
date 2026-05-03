@@ -231,7 +231,7 @@ fun ProfileScreen(
             ProfileSkeleton()
         } else if (error != null) {
             ErrorView(
-                message = error!!,
+                message = error ?: "Error desconocido",
                 onRetry = viewModel::retryLoad,
                 modifier = Modifier.padding(padding)
             )

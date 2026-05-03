@@ -64,7 +64,8 @@ class UserRepositoryTest {
 
         every { db.collection("users") } returns mockUsersCollection
 
-        repository = UserRepository(db, auth, showDao, mediaInteractionDao, mainDispatcherRule.testDispatcher)
+        val mockFirebaseStorage: com.google.firebase.storage.FirebaseStorage = mockk(relaxed = true)
+        repository = UserRepository(db, auth, showDao, mediaInteractionDao, mainDispatcherRule.testDispatcher, mockFirebaseStorage)
     }
 
     // region getCurrentUserEmail

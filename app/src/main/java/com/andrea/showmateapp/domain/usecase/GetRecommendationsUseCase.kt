@@ -134,19 +134,19 @@ class GetRecommendationsUseCase @Inject constructor(
         )
     }
 
-    suspend fun execute(): List<MediaContent> {
+    suspend fun execute(): List<MediaContent> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
         val excludedIds = try {
             interactionRepository.getExcludedMediaIds().toList()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             emptyList()
         }
-        return try {
+        try {
             val userProfile = userRepository.getUserProfile()
 
             if (userProfile == null || userProfile.genreScores.all { it.value <= 0 }) {
                 val popular = showRepository.getPopularShows(excludedIds)
-                return if (popular is Resource.Success) scoreShows(popular.data) else emptyList()
+                return@withContext if (popular is Resource.Success) scoreShows(popular.data) else emptyList()
             }
 
             val genres = userProfile.genreScores
@@ -207,12 +207,12 @@ class GetRecommendationsUseCase @Inject constructor(
         }
     }
 
-    suspend fun scoreShows(shows: List<MediaContent>, cachedProfile: UserProfile? = null): List<MediaContent> {
-        return try {
+    suspend fun scoreShows(shows: List<MediaContent>, cachedProfile: UserProfile? = null): List<MediaContent> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        try {
             val userProfile = cachedProfile ?: userRepository.getUserProfile()
             val excludedIds = interactionRepository.getExcludedMediaIds()
             if (userProfile == null || userProfile.genreScores.isEmpty()) {
-                return shows.filter { it.id !in excludedIds }
+                return@withContext shows.filter { it.id !in excludedIds }
             }
             val context = buildRecommendationContext(userProfile, System.currentTimeMillis())
             val collaborativeBoost = try {
@@ -238,10 +238,10 @@ class GetRecommendationsUseCase @Inject constructor(
         }
     }
 
-    suspend fun scoreForDetail(show: MediaContent): MediaContent {
-        return try {
+    suspend fun scoreForDetail(show: MediaContent): MediaContent = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        try {
             val userProfile = userRepository.getUserProfile()
-            if (userProfile == null || userProfile.genreScores.isEmpty()) return show
+            if (userProfile == null || userProfile.genreScores.isEmpty()) return@withContext show
             val context = buildRecommendationContext(userProfile, System.currentTimeMillis())
             val collabBoost = try {
                 getCollaborativeBoostUseCase.execute(userProfile)[show.id] ?: 0f

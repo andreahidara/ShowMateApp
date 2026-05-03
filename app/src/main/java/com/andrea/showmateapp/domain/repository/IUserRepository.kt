@@ -25,6 +25,7 @@ interface IUserRepository {
     suspend fun resetAlgorithmData()
     suspend fun clearUserCache()
     suspend fun updateProfilePhoto(url: String)
+    suspend fun uploadProfilePhoto(uri: android.net.Uri): String
     suspend fun deleteAccount()
     suspend fun restoreBackup(partial: UserProfile)
 }

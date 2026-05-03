@@ -339,8 +339,8 @@ class DiscoverViewModel @Inject constructor(
                     secondSubtitle = getGenreSubtitle(secondGenreId)
                     if (sortedGenres.size > 2) {
                         thirdGenreId = sortedGenres[2].key
-                        thirdName = GenreMapper.getGenreName(thirdGenreId!!)
-                        thirdSubtitle = getGenreSubtitle(thirdGenreId!!)
+                        thirdName = thirdGenreId?.let { GenreMapper.getGenreName(it) } ?: ""
+                        thirdSubtitle = thirdGenreId?.let { getGenreSubtitle(it) } ?: ""
                     }
                 }
 

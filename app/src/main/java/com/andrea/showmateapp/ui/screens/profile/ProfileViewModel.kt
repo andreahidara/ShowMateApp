@@ -11,7 +11,6 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.domain.usecase.GetProfileStatsUseCase
 import com.andrea.showmateapp.domain.usecase.GetViewerPersonalityUseCase
-import com.google.firebase.storage.FirebaseStorage
 import android.net.Uri
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -44,7 +43,6 @@ class ProfileViewModel @Inject constructor(
     private val getViewerPersonalityUseCase: GetViewerPersonalityUseCase,
     private val authRepository: IAuthRepository,
     private val achievementRepository: IAchievementRepository,
-    private val firebaseStorage: FirebaseStorage,
     @ApplicationContext private val context: Context,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
@@ -246,13 +244,10 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun uploadProfilePhoto(uri: Uri) {
-        val uid = authRepository.getCurrentUser()?.uid ?: return
         viewModelScope.launch(ioDispatcher) {
             _isUploadingPhoto.value = true
             try {
-                val ref = firebaseStorage.reference.child("avatars/$uid.jpg")
-                ref.putFile(uri).await()
-                val url = ref.downloadUrl.await().toString()
+                val url = userRepository.uploadProfilePhoto(uri)
                 userRepository.updateProfilePhoto(url)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

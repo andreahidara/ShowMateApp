@@ -201,7 +201,7 @@ fun ShowCard(
                         } else {
                             with(sharedTransitionScope) {
                                 Modifier.sharedElement(
-                                    sharedContentState = rememberSharedContentState(key = sharedElementKey),
+                                    rememberSharedContentState(key = sharedElementKey),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }

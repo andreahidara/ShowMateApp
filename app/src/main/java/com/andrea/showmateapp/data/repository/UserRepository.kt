@@ -9,6 +9,7 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.andrea.showmateapp.util.safeFirestoreCall
@@ -30,7 +31,8 @@ class UserRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val showDao: ShowDao,
     private val mediaInteractionDao: MediaInteractionDao,
-    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val firebaseStorage: FirebaseStorage
 ) : IUserRepository {
 
     companion object {
@@ -321,6 +323,13 @@ class UserRepository @Inject constructor(
     override suspend fun updateProfilePhoto(url: String) = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
         userDoc(uid).set(mapOf("photoUrl" to url), SetOptions.merge()).await()
+    }
+
+    override suspend fun uploadProfilePhoto(uri: android.net.Uri): String = withContext(ioDispatcher) {
+        val uid = auth.currentUser?.uid ?: throw Exception("User not authenticated")
+        val ref = firebaseStorage.reference.child("avatars/$uid.jpg")
+        ref.putFile(uri).await()
+        ref.downloadUrl.await().toString()
     }
 
     override suspend fun restoreBackup(partial: UserProfile) = withContext(ioDispatcher) {

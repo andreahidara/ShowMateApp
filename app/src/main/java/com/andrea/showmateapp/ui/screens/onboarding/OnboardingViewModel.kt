@@ -55,7 +55,7 @@ class OnboardingViewModel @Inject constructor(
                                 !show.posterPath.isNullOrBlank() &&
                                 show.safeGenreIds.contains(genreId.toIntOrNull() ?: -1)
                             }
-                            .map { it.posterPath!! }
+                            .mapNotNull { it.posterPath }
                         else -> emptyList()
                     }
                     genreId to candidates

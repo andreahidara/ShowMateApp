@@ -33,7 +33,7 @@ import java.util.Calendar
 
 @Composable
 fun greeting(): String {
-    val hour by remember { derivedStateOf { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) } }
+    val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     return when {
         hour < 12 -> stringResource(R.string.home_greeting_morning)
         hour < 20 -> stringResource(R.string.home_greeting_afternoon)
