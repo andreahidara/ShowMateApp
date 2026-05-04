@@ -590,7 +590,10 @@ class GetRecommendationsUseCaseTest {
     fun `given 10 drama and 2 comedy shows, when execute, then comedy appears in top half`() = runTest {
         val dramaShows = (1..10).map { show(it, genreIds = listOf(18), voteAverage = 7f, voteCount = 500) }
         val comedyShows = (11..12).map { show(it, genreIds = listOf(35), voteAverage = 7f, voteCount = 500) }
-        stubExecute(candidates = dramaShows + comedyShows)
+        
+        // Increase comedy score to 15f so they aren't filtered out
+        val profile = dramaProfile.copy(genreScores = dramaProfile.genreScores + ("35" to 15f))
+        stubExecute(profile = profile, candidates = dramaShows + comedyShows)
 
         val result = useCase.execute()
 
@@ -609,7 +612,10 @@ class GetRecommendationsUseCaseTest {
         runTest {
             val dramas = (1..20).map { show(it, genreIds = listOf(18), voteAverage = 8f, voteCount = 500) }
             val comedies = (21..25).map { show(it, genreIds = listOf(35), voteAverage = 6f, voteCount = 500) }
-            stubExecute(candidates = dramas + comedies)
+            
+            // Increase comedy score to 15f
+            val profile = dramaProfile.copy(genreScores = dramaProfile.genreScores + ("35" to 15f))
+            stubExecute(profile = profile, candidates = dramas + comedies)
 
             val result = useCase.execute()
             val topHalf = result.take(result.size / 2)

@@ -1,5 +1,8 @@
 package com.andrea.showmateapp.ui.screens.swipe
 
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
@@ -29,6 +32,8 @@ class SwipeViewModelTest {
     private val interactionRepository: IInteractionRepository = mockk(relaxed = true)
     private val getRecommendationsUseCase: GetRecommendationsUseCase = mockk(relaxed = true)
     private val achievementChecker: AchievementChecker = mockk(relaxed = true)
+    private val dataStore: DataStore<Preferences> = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val sampleShows = listOf(
         MediaContent(id = 1, name = "Breaking Bad"),
@@ -36,12 +41,18 @@ class SwipeViewModelTest {
         MediaContent(id = 3, name = "Ozark")
     )
 
-    private fun viewModel() = SwipeViewModel(
-        userRepository,
-        interactionRepository,
-        getRecommendationsUseCase,
-        achievementChecker
-    )
+    private fun viewModel(): SwipeViewModel {
+        io.mockk.every { context.getString(any()) } returns "error"
+        io.mockk.every { context.getString(any(), *anyVararg()) } returns "error"
+        return SwipeViewModel(
+            userRepository,
+            interactionRepository,
+            getRecommendationsUseCase,
+            achievementChecker,
+            dataStore
+        )
+    }
+
 
     private val SwipeViewModel.shows get() = uiState.value.shows
     private val SwipeViewModel.isLoading get() = uiState.value.isLoading
@@ -96,7 +107,7 @@ class SwipeViewModelTest {
         advanceUntilIdle()
 
         assertNotNull(vm.errorMessage)
-        assertTrue(vm.errorMessage!!.contains("error", ignoreCase = true))
+        assertTrue(vm.errorMessage!!.asString(context).contains("error", ignoreCase = true))
     }
 
     @Test

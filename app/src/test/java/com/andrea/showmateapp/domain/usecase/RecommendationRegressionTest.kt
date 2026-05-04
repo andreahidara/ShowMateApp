@@ -112,7 +112,10 @@ class RecommendationRegressionTest {
             show(3, listOf(18), 7.5f, 100)
         )
         val comedyShow = show(4, listOf(35), 9.5f, 5000)
-        stubPipeline(profile, dramaShows + listOf(comedyShow))
+        
+        // Add comedy genre with 15f score so it's not filtered out
+        val profileWithComedy = profile.copy(genreScores = profile.genreScores + ("35" to 15f))
+        stubPipeline(profileWithComedy, dramaShows + listOf(comedyShow))
 
         val result = useCase.execute()
 
@@ -294,12 +297,19 @@ class RecommendationRegressionTest {
         val today = LocalDate.now()
         val profile = UserProfile(
             userId = "regression",
-            genreScores = mapOf("18" to 40f, "35" to 5f, "80" to 5f, "9648" to 3f),
+            genreScores = mapOf(
+                "18" to 40f, 
+                "35" to 15f, 
+                "80" to 15f, 
+                "9648" to 15f,
+                "10765" to 15f
+            ),
             genreScoreDates = mapOf(
                 "18" to System.currentTimeMillis(),
                 "35" to System.currentTimeMillis(),
                 "80" to System.currentTimeMillis(),
-                "9648" to System.currentTimeMillis()
+                "9648" to System.currentTimeMillis(),
+                "10765" to System.currentTimeMillis()
             )
         )
 

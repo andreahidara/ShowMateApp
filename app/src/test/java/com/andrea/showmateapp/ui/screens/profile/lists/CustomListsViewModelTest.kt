@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.profile.lists
 
+import android.content.Context
 import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.util.MainDispatcherRule
@@ -26,6 +27,7 @@ class CustomListsViewModelTest {
 
     private val interactionRepository: IInteractionRepository = mockk(relaxed = true)
     private val showRepository: ShowRepository = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val fakeLists = mapOf(
         "Favoritas" to listOf(1, 2),
@@ -34,7 +36,8 @@ class CustomListsViewModelTest {
 
     private fun viewModel(): CustomListsViewModel {
         every { interactionRepository.getCustomListsFlow() } returns flowOf(fakeLists)
-        return CustomListsViewModel(interactionRepository, showRepository)
+        every { context.getString(any()) } returns "error crear eliminar"
+        return CustomListsViewModel(interactionRepository, showRepository, context)
     }
 
     // --- Initial load ---
