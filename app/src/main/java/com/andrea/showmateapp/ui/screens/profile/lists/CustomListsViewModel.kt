@@ -1,12 +1,15 @@
 package com.andrea.showmateapp.ui.screens.profile.lists
 
+import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.andrea.showmateapp.data.repository.ShowRepository
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
+import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -30,7 +33,8 @@ data class CustomListsUiState(
 @HiltViewModel
 class CustomListsViewModel @Inject constructor(
     private val interactionRepository: IInteractionRepository,
-    private val showRepository: ShowRepository
+    private val showRepository: IShowRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CustomListsUiState())
@@ -49,7 +53,7 @@ class CustomListsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoading = false, error = "Error al cargar las listas") }
+                _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.custom_list_error_load)) }
             }
         }
     }
@@ -102,7 +106,7 @@ class CustomListsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = "Error al crear la lista") }
+                _uiState.update { it.copy(error = context.getString(R.string.custom_list_error_create)) }
             }
         }
     }
@@ -114,7 +118,7 @@ class CustomListsViewModel @Inject constructor(
                 _uiState.update { it.copy(lists = it.lists - name, posterPaths = it.posterPaths - name) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = "Error al eliminar la lista") }
+                _uiState.update { it.copy(error = context.getString(R.string.custom_list_error_delete)) }
             }
         }
     }

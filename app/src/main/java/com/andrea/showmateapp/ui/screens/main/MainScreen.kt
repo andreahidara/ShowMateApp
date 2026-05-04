@@ -56,14 +56,14 @@ fun MainScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: MainScreenViewModel = hiltViewModel()
 ) {
-    val isOnline by viewModel.networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)
-    val isLoggedIn by viewModel.authRepository.authState.collectAsStateWithLifecycle(initialValue = true)
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsStateWithLifecycle()
     val pendingAchievement by viewModel.pendingAchievement.collectAsStateWithLifecycle()
     val pendingRequestCount by viewModel.pendingRequestCount.collectAsStateWithLifecycle()
 
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) {
-            globalNavController.navigate(com.andrea.showmateapp.ui.navigation.Screen.Login) {
+            globalNavController.navigate(Screen.Login) {
                 popUpTo(0) { inclusive = true }
             }
         }

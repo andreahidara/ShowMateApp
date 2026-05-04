@@ -11,6 +11,7 @@ import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.andrea.showmateapp.util.GenreMapper
+import com.andrea.showmateapp.util.UiText
 import com.andrea.showmateapp.util.KeywordMapper
 import com.andrea.showmateapp.util.NarrativeStyleMapper
 import com.andrea.showmateapp.util.NetworkMonitor
@@ -25,9 +26,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +41,7 @@ data class DiscoverUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isFromCache: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val heroShow: MediaContent? = null,
     val topGenreShows: List<MediaContent> = emptyList(),
     val topGenreName: String = "",
@@ -76,9 +75,12 @@ data class DiscoverUiState(
     val creatorShows: List<MediaContent> = emptyList(),
     val creatorName: String = "",
     val collaborativeShows: List<MediaContent> = emptyList(),
-    val explorationShows: List<MediaContent> = emptyList(),
-    val explorationGenreName: String = "",
-    val timeTravelShows: List<MediaContent> = emptyList(),
+    val fourthGenreShows: List<MediaContent> = emptyList(),
+    val fourthGenreName: String = "",
+    val fourthGenreSubtitle: String = "",
+    val fifthGenreShows: List<MediaContent> = emptyList(),
+    val fifthGenreName: String = "",
+    val fifthGenreSubtitle: String = "",
     val secondKeywordShows: List<MediaContent> = emptyList(),
     val secondKeywordLabel: String = ""
 )
@@ -133,8 +135,8 @@ class DiscoverViewModel @Inject constructor(
                             moodSectionShows = state.moodSectionShows.filter { it.id !in interactedIds },
                             creatorShows = state.creatorShows.filter { it.id !in interactedIds },
                             collaborativeShows = state.collaborativeShows.filter { it.id !in interactedIds },
-                            explorationShows = state.explorationShows.filter { it.id !in interactedIds },
-                            timeTravelShows = state.timeTravelShows.filter { it.id !in interactedIds }
+                            fourthGenreShows = state.fourthGenreShows.filter { it.id !in interactedIds },
+                            fifthGenreShows = state.fifthGenreShows.filter { it.id !in interactedIds }
                         )
                     }
                 }
@@ -179,8 +181,8 @@ class DiscoverViewModel @Inject constructor(
             val moodSectionScored = getRecommendationsUseCase.scoreShows(currentState.moodSectionShows, cachedProfile)
             val creatorScored = getRecommendationsUseCase.scoreShows(currentState.creatorShows, cachedProfile)
             val collaborativeScored = getRecommendationsUseCase.scoreShows(currentState.collaborativeShows, cachedProfile)
-            val explorationScored = getRecommendationsUseCase.scoreShows(currentState.explorationShows, cachedProfile)
-            val timeTravelScored = getRecommendationsUseCase.scoreShows(currentState.timeTravelShows, cachedProfile)
+            val fourthGenreScored = getRecommendationsUseCase.scoreShows(currentState.fourthGenreShows, cachedProfile)
+            val fifthGenreScored = getRecommendationsUseCase.scoreShows(currentState.fifthGenreShows, cachedProfile)
 
             _uiState.update { state ->
                 state.copy(
@@ -200,8 +202,8 @@ class DiscoverViewModel @Inject constructor(
                     moodSectionShows = moodSectionScored,
                     creatorShows = creatorScored,
                     collaborativeShows = collaborativeScored,
-                    explorationShows = explorationScored,
-                    timeTravelShows = timeTravelScored
+                    fourthGenreShows = fourthGenreScored,
+                    fifthGenreShows = fifthGenreScored
                 )
             }
         }
@@ -305,21 +307,28 @@ class DiscoverViewModel @Inject constructor(
             }
             try {
                 val profile = userRepository.getUserProfile()
-                val sortedGenres = profile?.genreScores?.entries?.sortedByDescending { it.value } ?: emptyList()
+                val positiveGenreIds = profile?.genreScores?.filter { it.value >= 15f }?.keys?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()
+                val sortedGenres = profile?.genreScores?.entries?.filter { it.value >= 15f }?.sortedByDescending { it.value } ?: emptyList()
 
                 if (profile != null && (sortedGenres.isEmpty() || sortedGenres.all { it.value <= 0f })) {
                     Timber.w("Genre scores desynchronized or empty for user ${profile.userId}. Possible onboarding/profile sync issue.")
                 }
 
                 var topGenreId = "18"
-                var topName = "Drama"
+                var topName = GenreMapper.getGenreName("18")
                 var topSubtitle = ""
                 var secondGenreId = "35"
-                var secondName = "Comedia"
+                var secondName = GenreMapper.getGenreName("35")
                 var secondSubtitle = ""
                 var thirdGenreId: String? = null
                 var thirdName = ""
                 var thirdSubtitle = ""
+                var fourthGenreId: String? = null
+                var fourthName = ""
+                var fourthSubtitle = ""
+                var fifthGenreId: String? = null
+                var fifthName = ""
+                var fifthSubtitle = ""
                 if (sortedGenres.isNotEmpty()) {
                     topGenreId = sortedGenres[0].key
                     topName = GenreMapper.getGenreName(topGenreId)
@@ -338,9 +347,22 @@ class DiscoverViewModel @Inject constructor(
                     secondName = GenreMapper.getGenreName(secondGenreId)
                     secondSubtitle = getGenreSubtitle(secondGenreId)
                     if (sortedGenres.size > 2) {
-                        thirdGenreId = sortedGenres[2].key
-                        thirdName = thirdGenreId?.let { GenreMapper.getGenreName(it) } ?: ""
-                        thirdSubtitle = thirdGenreId?.let { getGenreSubtitle(it) } ?: ""
+                        val tId = sortedGenres[2].key
+                        thirdGenreId = tId
+                        thirdName = GenreMapper.getGenreName(tId)
+                        thirdSubtitle = getGenreSubtitle(tId)
+                    }
+                    if (sortedGenres.size > 3) {
+                        val fId = sortedGenres[3].key
+                        fourthGenreId = fId
+                        fourthName = GenreMapper.getGenreName(fId)
+                        fourthSubtitle = getGenreSubtitle(fId)
+                    }
+                    if (sortedGenres.size > 4) {
+                        val fiId = sortedGenres[4].key
+                        fifthGenreId = fiId
+                        fifthName = GenreMapper.getGenreName(fiId)
+                        fifthSubtitle = getGenreSubtitle(fiId)
                     }
                 }
 
@@ -350,7 +372,6 @@ class DiscoverViewModel @Inject constructor(
                 val kwResult = KeywordMapper.getTopMappedKeyword(
                     profile?.preferredKeywords ?: emptyMap()
                 )
-                val kwId = kwResult?.second
                 val kwLabel = kwResult?.third
 
                 val sortedActors = profile?.preferredActors?.entries?.sortedByDescending { it.value } ?: emptyList()
@@ -396,6 +417,8 @@ class DiscoverViewModel @Inject constructor(
                         )
                     }
                 val res3Def = thirdGenreId?.let { id -> async { repository.getShowsByGenres(id) } }
+                val res4Def = fourthGenreId?.let { id -> async { repository.getShowsByGenres(id) } }
+                val res5Def = fifthGenreId?.let { id -> async { repository.getShowsByGenres(id) } }
                 val person1Def = actorId1?.let { id -> async { repository.getPersonDetails(id) } }
                 val actor1ShowsDef = actorIdStr1?.let { id -> async { repository.discoverShows(withCast = id) } }
                 val person2Def = actorId2?.let { id -> async { repository.getPersonDetails(id) } }
@@ -405,12 +428,8 @@ class DiscoverViewModel @Inject constructor(
                 val firstKw = kwResults.getOrNull(0)
                 val secondKw = kwResults.getOrNull(1)
 
-                val kw1ShowsDef = firstKw?.let { it -> async { repository.discoverShows(keywords = it.second) } }
-                val kw2ShowsDef = secondKw?.let { it -> async { repository.discoverShows(keywords = it.second) } }
-                val timeTravelDef = async { repository.discoverShows(keywords = "4363") }
-
-                val unexploredGenreId = ExplorationEngine.unexploredGenres(profile ?: UserProfile(""), setOf(10759, 16, 35, 80, 99, 18, 10751, 9648, 10765, 37, 53)).randomOrNull()
-                val explorationShowsDef = unexploredGenreId?.let { id -> async { repository.discoverShows(genreId = id.toString(), minRating = 7.0f) } }
+                val kw1ShowsDef = firstKw?.let { async { repository.discoverShows(keywords = it.second) } }
+                val kw2ShowsDef = secondKw?.let { async { repository.discoverShows(keywords = it.second) } }
 
                 val recsDef = async { getRecommendationsUseCase.execute() }
                 val targetDetailsDef = targetId?.let { id -> async { repository.getShowDetails(id) } }
@@ -453,6 +472,8 @@ class DiscoverViewModel @Inject constructor(
 
                 val topRatedRes = topRatedDef.await()
                 val res3 = res3Def?.await()
+                val res4 = res4Def?.await()
+                val res5 = res5Def?.await()
                 val person1 = person1Def?.await()
                 val actor1Shows = actor1ShowsDef?.await()
                 val person2 = person2Def?.await()
@@ -466,83 +487,84 @@ class DiscoverViewModel @Inject constructor(
                 val creatorShowsRaw = creatorShowsDef?.await()
                 val kw1ShowsRes = kw1ShowsDef?.await()
                 val kw2ShowsRes = kw2ShowsDef?.await()
-                val timeTravelRes = timeTravelDef.await()
-                val explorationRes = explorationShowsDef?.await()
 
-                val topGenreShows = getRecommendationsUseCase.scoreShows(
+                val filterByGenre = { list: List<MediaContent> ->
+                    if (positiveGenreIds.isNotEmpty()) list.filter { show -> show.safeGenreIds.any { it in positiveGenreIds } } else list
+                }
+
+                val topGenreShows = filterByGenre(getRecommendationsUseCase.scoreShows(
                     topGenreFullList.shuffled().take(20), profile
-                )
+                ))
 
-                val secondGenreShows = getRecommendationsUseCase.scoreShows(
+                val secondGenreShows = filterByGenre(getRecommendationsUseCase.scoreShows(
                     secondGenreFullList.shuffled().take(20), profile
-                )
+                ))
                 val topRatedShows = if (topRatedRes is Resource.Success<List<MediaContent>> && topRatedRes.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(topRatedRes.data.take(20), profile)
+                    filterByGenre(getRecommendationsUseCase.scoreShows(topRatedRes.data.take(20), profile))
                 } else {
                     emptyList()
                 }
                 val thirdGenreShows = if (res3 is Resource.Success<List<MediaContent>>) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         res3.data.shuffled().take(20), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
                 val topKeywordShows = if (kw1ShowsRes is Resource.Success<List<MediaContent>> && kw1ShowsRes.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         kw1ShowsRes.data.shuffled().take(20), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
                 val secondKeywordShows = if (kw2ShowsRes is Resource.Success<List<MediaContent>> && kw2ShowsRes.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         kw2ShowsRes.data.shuffled().take(20), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
-                val timeTravelShows = if (timeTravelRes is Resource.Success<List<MediaContent>> && timeTravelRes.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
-                        timeTravelRes.data.shuffled().take(20), profile
-                    )
+                val fourthGenreShows = if (res4 is Resource.Success<List<MediaContent>>) {
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
+                        res4.data.shuffled().take(20), profile
+                    ))
                 } else {
                     emptyList()
                 }
-                val explorationShows = if (explorationRes is Resource.Success<List<MediaContent>> && explorationRes.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
-                        explorationRes.data.shuffled().take(20), profile
-                    )
+                val fifthGenreShows = if (res5 is Resource.Success<List<MediaContent>>) {
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
+                        res5.data.shuffled().take(20), profile
+                    ))
                 } else {
                     emptyList()
                 }
-                val explorationGenreName = unexploredGenreId?.let { GenreMapper.getGenreName(it.toString()) } ?: ""
 
                 val actorName =
                     if (person1 is Resource.Success && actor1Shows is Resource.Success) person1.data.name else ""
                 val actorShows = if (person1 is Resource.Success && actor1Shows is Resource.Success) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         actor1Shows.data.shuffled().take(20), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
                 val secondActorName =
                     if (person2 is Resource.Success && actor2Shows is Resource.Success) person2.data.name else ""
                 val secondActorShows = if (person2 is Resource.Success && actor2Shows is Resource.Success) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         actor2Shows.data.shuffled().take(20), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
 
-                val hero = recommendations.firstOrNull() ?: topGenreShows.randomOrNull()
+                val hero = filterByGenre(recommendations).firstOrNull() ?: topGenreShows.randomOrNull()
                 val similarToName = if (targetDetails is Resource.Success) targetDetails.data.name else ""
                 val similarShows = if (targetDetails is Resource.Success && !similarShowsRaw.isNullOrEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         similarShowsRaw.shuffled().take(20), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
@@ -583,33 +605,26 @@ class DiscoverViewModel @Inject constructor(
                     ""
                 }
                 val narrativeStyleShows = if (nsShows is Resource.Success && nsShows.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         nsShows.data.shuffled().take(10), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
 
                 val moodSectionShows = if (moodShows is Resource.Success && moodShows.data.isNotEmpty()) {
-                    getRecommendationsUseCase.scoreShows(
+                    filterByGenre(getRecommendationsUseCase.scoreShows(
                         moodShows.data.shuffled().take(10), profile
-                    )
+                    ))
                 } else {
                     emptyList()
                 }
 
-                val creatorLoaded = creatorPerson is Resource.Success &&
-                    creatorShowsRaw is Resource.Success && creatorShowsRaw.data.isNotEmpty()
-                val creatorName = if (creatorLoaded) {
-                    (creatorPerson as Resource.Success).data.name
-                } else {
-                    ""
-                }
-                val creatorShowsList = if (creatorLoaded) {
-                    val raw = (creatorShowsRaw as Resource.Success).data
-                    getRecommendationsUseCase.scoreShows(raw.shuffled().take(10), profile)
-                } else {
-                    emptyList()
+                var creatorName = ""
+                var creatorShowsList: List<MediaContent> = emptyList()
+                if (creatorPerson is Resource.Success && creatorShowsRaw is Resource.Success && creatorShowsRaw.data.isNotEmpty()) {
+                    creatorName = creatorPerson.data.name
+                    creatorShowsList = filterByGenre(getRecommendationsUseCase.scoreShows(creatorShowsRaw.data.shuffled().take(10), profile))
                 }
 
                 val heroId = hero?.id
@@ -632,9 +647,15 @@ class DiscoverViewModel @Inject constructor(
                         secondGenreSubtitle = secondSubtitle,
                         thirdGenreName = thirdName,
                         thirdGenreSubtitle = thirdSubtitle,
+                        fourthGenreName = fourthName,
+                        fourthGenreSubtitle = fourthSubtitle,
+                        fifthGenreName = fifthName,
+                        fifthGenreSubtitle = fifthSubtitle,
                         topGenreShows = topGenreShows,
                         secondGenreShows = secondGenreShows,
                         thirdGenreShows = thirdGenreShows,
+                        fourthGenreShows = fourthGenreShows,
+                        fifthGenreShows = fifthGenreShows,
                         topRatedShows = topRatedShows,
                         topKeywordLabel = kwLabel ?: "",
                         topKeywordShows = topKeywordShows,
@@ -656,13 +677,10 @@ class DiscoverViewModel @Inject constructor(
                         creatorName = creatorName,
                         creatorShows = creatorShowsList,
                         collaborativeShows = collaborativeShows,
-                        timeTravelShows = timeTravelShows,
-                        explorationShows = explorationShows,
-                        explorationGenreName = explorationGenreName,
                         secondKeywordLabel = secondKw?.third ?: "",
                         secondKeywordShows = secondKeywordShows,
                         errorMessage = if (!hasContent) {
-                            "No se pudo cargar el contenido. Por favor, reintenta."
+                            UiText.StringResource(R.string.discover_error_no_content)
                         } else {
                             null
                         }
@@ -676,7 +694,7 @@ class DiscoverViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorMessage = "Error al cargar el contenido. Comprueba tu conexión e inténtalo de nuevo."
+                        errorMessage = UiText.StringResource(R.string.error_unexpected_data)
                     )
                 }
             }

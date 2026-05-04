@@ -45,7 +45,7 @@ fun StatsScreen(navController: NavController, viewModel: StatsViewModel = hiltVi
             StatsSkeleton(modifier = Modifier.padding(paddingValues))
         } else if (uiState.error != null) {
             ErrorView(
-                message = uiState.error ?: "Error desconocido",
+                message = uiState.error ?: stringResource(R.string.error_unknown),
                 onRetry = viewModel::retry,
                 modifier = Modifier.padding(paddingValues)
             )

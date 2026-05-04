@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
@@ -57,13 +58,13 @@ fun FriendsScreen(globalNavController: NavController, viewModel: FriendsViewMode
 
     LaunchedEffect(uiState.successMessage) {
         if (uiState.successMessage != null) {
-            kotlinx.coroutines.delay(2500)
+            delay(2500)
             viewModel.dismissSuccess()
         }
     }
     LaunchedEffect(uiState.errorMessage) {
         if (uiState.errorMessage != null) {
-            kotlinx.coroutines.delay(3000)
+            delay(3000)
             viewModel.dismissError()
         }
     }

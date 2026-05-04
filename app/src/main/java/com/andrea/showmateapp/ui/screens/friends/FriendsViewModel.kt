@@ -11,7 +11,10 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.domain.usecase.GetFriendCompatibilityUseCase
+import android.content.Context
+import com.andrea.showmateapp.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
@@ -49,7 +52,8 @@ class FriendsViewModel @Inject constructor(
     private val socialRepository: ISocialRepository,
     private val userRepository: IUserRepository,
     private val achievementChecker: AchievementChecker,
-    private val getFriendCompatibilityUseCase: GetFriendCompatibilityUseCase
+    private val getFriendCompatibilityUseCase: GetFriendCompatibilityUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FriendsUiState())
@@ -163,7 +167,7 @@ class FriendsViewModel @Inject constructor(
                 socialRepository.acceptFriendRequest(request.id, request.fromUid)
                 _uiState.update {
                     it.copy(
-                        successMessage = "¡Ahora sois amigos!",
+                        successMessage = context.getString(R.string.friends_success_accepted),
                         incomingRequests = it.incomingRequests.filter { r -> r.id != request.id },
                         unreadRequestCount = (it.unreadRequestCount - 1).coerceAtLeast(0)
                     )
@@ -179,7 +183,7 @@ class FriendsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(errorMessage = "No se pudo aceptar la solicitud") }
+                _uiState.update { it.copy(errorMessage = context.getString(R.string.friends_error_accept)) }
             }
         }
     }
@@ -228,11 +232,11 @@ class FriendsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         sentRequestUids = it.sentRequestUids + toUid,
-                        successMessage = "Solicitud enviada a $toUsername"
+                        successMessage = context.getString(R.string.friends_success_request_sent, toUsername)
                     )
                 }
             } else {
-                _uiState.update { it.copy(errorMessage = "No se pudo enviar la solicitud") }
+                _uiState.update { it.copy(errorMessage = context.getString(R.string.friends_error_send)) }
             }
         }
     }
@@ -251,11 +255,11 @@ class FriendsViewModel @Inject constructor(
     fun addFriendToGroup(friend: FriendInfo) {
         val current = _uiState.value.groupMembers
         if (current.any { it == friend.email }) {
-            _uiState.update { it.copy(groupAddError = "${friend.username} ya está en el grupo") }
+            _uiState.update { it.copy(groupAddError = context.getString(R.string.friends_error_already_in_group, friend.username)) }
             return
         }
         if (current.size >= 4) {
-            _uiState.update { it.copy(groupAddError = "Máximo 4 amigos por grupo") }
+            _uiState.update { it.copy(groupAddError = context.getString(R.string.friends_error_group_full)) }
             return
         }
         _uiState.update { it.copy(groupMembers = current + friend.email, groupAddError = null) }

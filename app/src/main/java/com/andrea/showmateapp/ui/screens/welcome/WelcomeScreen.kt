@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.welcome
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -17,7 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,32 +40,15 @@ import kotlinx.coroutines.launch
 
 private data class WelcomePage(
     val icon: ImageVector,
-    val title: String,
-    val subtitle: String,
+    @StringRes val titleRes: Int,
+    @StringRes val subtitleRes: Int,
     val accentColor: Color
 )
 
 private val pages = listOf(
-    WelcomePage(
-        icon = Icons.Default.Stars,
-        title = "Descubre series que amarás",
-        subtitle = "Un algoritmo personal aprende de tus gustos con cada interacción " +
-            "y te recomienda exactamente lo que necesitas ver.",
-        accentColor = Color(0xFF7C4DFF)
-    ),
-    WelcomePage(
-        icon = Icons.Default.Psychology,
-        title = "Conoce tu perfil de espectador",
-        subtitle = "Identifica tus géneros, estilos narrativos y temas favoritos. " +
-            "Descubre qué tipo de espectador eres.",
-        accentColor = Color(0xFF9C27B0)
-    ),
-    WelcomePage(
-        icon = Icons.Default.Group,
-        title = "Conecta con amigos",
-        subtitle = "Compara favoritos, encuentra series en común y organiza maratones de grupo con un solo toque.",
-        accentColor = Color(0xFF6200EA)
-    )
+    WelcomePage(Icons.Default.Stars, R.string.welcome_title_1, R.string.welcome_subtitle_1, Color(0xFF7C4DFF)),
+    WelcomePage(Icons.Default.Psychology, R.string.welcome_title_2, R.string.welcome_subtitle_2, Color(0xFF9C27B0)),
+    WelcomePage(Icons.Default.Group, R.string.welcome_title_3, R.string.welcome_subtitle_3, Color(0xFF6200EA))
 )
 
 @Composable
@@ -80,7 +66,7 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
         ) {
             Spacer(modifier = Modifier.height(32.dp))
             Text(
-                text = "ShowMate",
+                text = stringResource(R.string.showmate),
                 color = PrimaryPurple,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
@@ -150,13 +136,13 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Siguiente", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.welcome_next), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                     TextButton(
                         onClick = onGetStarted,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Omitir", color = TextGray, fontSize = 14.sp)
+                        Text(stringResource(R.string.welcome_skip), color = TextGray, fontSize = 14.sp)
                     }
                 } else {
                     Box(
@@ -168,7 +154,7 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
                             .clickable { onGetStarted() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Empezar", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        Text(stringResource(R.string.welcome_start), color = Color.Black, fontWeight = FontWeight.Black, fontSize = 16.sp)
                     }
                 }
             }
@@ -212,7 +198,7 @@ private fun WelcomePageContent(page: WelcomePage) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = page.title,
+            text = stringResource(page.titleRes),
             color = Color.White,
             fontSize = 26.sp,
             fontWeight = FontWeight.Black,
@@ -224,7 +210,7 @@ private fun WelcomePageContent(page: WelcomePage) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = page.subtitle,
+            text = stringResource(page.subtitleRes),
             color = TextGray,
             fontSize = 15.sp,
             textAlign = TextAlign.Center,

@@ -21,6 +21,7 @@ import com.andrea.showmateapp.ui.screens.profile.settings.SettingsScreen
 import com.andrea.showmateapp.ui.screens.signup.SignUpScreen
 import com.andrea.showmateapp.ui.screens.splash.SplashScreen
 import com.andrea.showmateapp.ui.screens.stats.AchievementsScreen
+import com.andrea.showmateapp.ui.screens.swipe.SwipeScreen
 import com.andrea.showmateapp.ui.screens.stats.StatsScreen
 import com.andrea.showmateapp.ui.screens.welcome.WelcomeScreen
 
@@ -53,6 +54,11 @@ fun AppNavigation() {
                     },
                     onNavigateToOnboarding = {
                         navController.navigate(Screen.Onboarding) {
+                            popUpTo(Screen.Splash) { inclusive = true }
+                        }
+                    },
+                    onNavigateToSwipe = {
+                        navController.navigate(Screen.Swipe) {
                             popUpTo(Screen.Splash) { inclusive = true }
                         }
                     }
@@ -90,9 +96,7 @@ fun AppNavigation() {
             }
 
             composable<Screen.Swipe> {
-                com.andrea.showmateapp.ui.screens.swipe.SwipeScreen(
-                    navController = navController
-                )
+                SwipeScreen(navController = navController)
             }
 
             composable<Screen.Main> {

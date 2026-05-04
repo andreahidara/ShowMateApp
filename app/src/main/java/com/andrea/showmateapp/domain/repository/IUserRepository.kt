@@ -1,5 +1,7 @@
 package com.andrea.showmateapp.domain.repository
 
+import android.net.Uri
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.model.UserProfile
 import kotlinx.coroutines.flow.Flow
 
@@ -10,12 +12,15 @@ interface IUserRepository {
     suspend fun initUserProfile(username: String)
     suspend fun saveOnboardingInterests(
         genres: List<String>,
-        watchedShows: List<com.andrea.showmateapp.data.model.MediaContent> = emptyList(),
-        lovedShows: List<com.andrea.showmateapp.data.model.MediaContent> = emptyList(),
+        watchedShows: List<MediaContent> = emptyList(),
+        lovedShows: List<MediaContent> = emptyList(),
         preferShortEpisodes: Boolean? = null,
         preferFinishedShows: Boolean? = null,
-        preferDubbed: Boolean? = null
+        preferDubbed: Boolean? = null,
+        personalityType: String? = null
     )
+
+    suspend fun completeCalibration()
     suspend fun updateProfile(username: String)
     suspend fun getSimilarUsers(limit: Long = 30): List<UserProfile>
     suspend fun userExists(email: String): Boolean
@@ -25,7 +30,7 @@ interface IUserRepository {
     suspend fun resetAlgorithmData()
     suspend fun clearUserCache()
     suspend fun updateProfilePhoto(url: String)
-    suspend fun uploadProfilePhoto(uri: android.net.Uri): String
+    suspend fun uploadProfilePhoto(uri: Uri): String
     suspend fun deleteAccount()
     suspend fun restoreBackup(partial: UserProfile)
 }

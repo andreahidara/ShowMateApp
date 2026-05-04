@@ -4,13 +4,15 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.andrea.showmateapp.util.AppPrefsKeys
+import com.andrea.showmateapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.di.AppPrefsDataStore
+import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.ISocialRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.Resource
+import com.andrea.showmateapp.util.UiText
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -22,11 +24,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import timber.log.Timber
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val userRepository: IUserRepository,
-    private val showRepository: ShowRepository,
+    private val showRepository: IShowRepository,
     private val socialRepository: ISocialRepository,
     @AppPrefsDataStore private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
@@ -176,7 +179,7 @@ class OnboardingViewModel @Inject constructor(
 
     fun completeOnboarding() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val state = _uiState.value
 
             val saveResult = runCatching {
@@ -198,7 +201,8 @@ class OnboardingViewModel @Inject constructor(
                         DubbedPref.DUBBED -> true
                         DubbedPref.VO -> false
                         else -> null
-                    }
+                    },
+                    personalityType = state.personality?.name
                 )
             }
 
@@ -207,15 +211,33 @@ class OnboardingViewModel @Inject constructor(
                     dataStore.edit { prefs -> prefs[AppPrefsKeys.KEY_ONBOARDING] = true }
                 }
 
-                runCatching {
-                    val token = FirebaseMessaging.getInstance().token.await()
-                    socialRepository.saveDeviceToken(token)
-                }
+                _uiState.update { it.copy(isLoading = false, isComplete = true, errorMessage = null) }
 
-                _uiState.update { it.copy(isLoading = false, isComplete = true) }
+                launch {
+                    runCatching {
+                        val token = FirebaseMessaging.getInstance().token.await()
+                        socialRepository.saveDeviceToken(token)
+                    }
+                }
             } else {
-                _uiState.update { it.copy(isLoading = false) }
-                // Optional: add error message to UI state if we had one
+                val error = saveResult.exceptionOrNull()
+                Timber.e(error, "Error completing onboarding")
+
+                // Fallback: verify if it was actually saved despite the error
+                val profile = runCatching { userRepository.getUserProfile() }.getOrNull()
+                if (profile?.onboardingCompleted == true) {
+                    runCatching { dataStore.edit { prefs -> prefs[AppPrefsKeys.KEY_ONBOARDING] = true } }
+                    _uiState.update { it.copy(isLoading = false, isComplete = true, errorMessage = null) }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = UiText.DynamicString(
+                                "Error al guardar: ${error?.message ?: "Revisa tu conexión"}"
+                            )
+                        )
+                    }
+                }
             }
         }
     }

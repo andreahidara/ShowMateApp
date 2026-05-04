@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -100,8 +101,12 @@ private fun OnboardingHeader(step: Int, onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (step > 1) {
-                TextButton(onClick = onBack) {
-                    Text("←", color = TextGray, fontSize = 18.sp)
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = stringResource(R.string.settings_back_cd),
+                        tint = TextGray
+                    )
                 }
             } else {
                 Spacer(modifier = Modifier.width(48.dp))
@@ -160,7 +165,19 @@ private fun OnboardingButton(state: OnboardingUiState, viewModel: OnboardingView
         else -> stringResource(R.string.onboarding_btn_start)
     }
 
-    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+        if (state.errorMessage != null) {
+            Text(
+                text = state.errorMessage.asString(),
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            )
+        }
+
         Button(
             onClick = {
                 if (state.step == 5) {

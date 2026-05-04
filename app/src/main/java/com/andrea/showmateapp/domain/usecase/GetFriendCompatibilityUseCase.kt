@@ -30,7 +30,7 @@ class GetFriendCompatibilityUseCase @Inject constructor(
         val friendRatings = friend.ratings.mapKeys { it.key.toIntOrNull() ?: 0 }.filterKeys { it > 0 }
         // Coseno sobre ratings explícitos captura si valoran igual los mismos títulos, independientemente del sesgo de escala personal
         val ratingCorr = ContentEmbeddingEngine
-            .cosineSimilarityRatings(myRatings.mapValues { it.value }, friendRatings.mapValues { it.value })
+            .cosineSimilarityRatings(myRatings, friendRatings)
             .coerceIn(0f, 1f)
 
         val myFavorites = (me.likedMediaIds + me.essentialMediaIds).toSet()

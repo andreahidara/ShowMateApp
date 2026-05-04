@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
 import timber.log.Timber
-import com.andrea.showmateapp.data.repository.AuthRepository
+import com.andrea.showmateapp.domain.repository.IAuthRepository
+import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,9 +18,9 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
+    private val authRepository: IAuthRepository,
     private val userRepository: IUserRepository,
-    private val interactionRepository: com.andrea.showmateapp.domain.repository.IInteractionRepository
+    private val interactionRepository: IInteractionRepository
 ) : ViewModel() {
 
     private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
@@ -91,6 +92,7 @@ class LoginViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
+                    Timber.e(e, "Google sign-in failed")
                     _uiState.update {
                         it.copy(isGoogleLoading = false, error = UiText.StringResource(R.string.error_google_signin))
                     }

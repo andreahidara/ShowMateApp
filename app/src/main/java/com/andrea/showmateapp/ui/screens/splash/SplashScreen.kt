@@ -38,6 +38,7 @@ fun SplashScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToWelcomeNew: () -> Unit,
     onNavigateToOnboarding: () -> Unit,
+    onNavigateToSwipe: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
     val logoAlpha = remember { Animatable(0f) }
@@ -123,6 +124,7 @@ fun SplashScreen(
         when (destination) {
             SplashDestination.HOME -> onNavigateToMain()
             SplashDestination.ONBOARDING -> onNavigateToOnboarding()
+            SplashDestination.SWIPE -> onNavigateToSwipe()
             SplashDestination.LOGIN -> onNavigateToLogin()
             SplashDestination.WELCOME_NEW -> onNavigateToWelcomeNew()
         }
@@ -159,7 +161,7 @@ fun SplashScreen(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_star_logo),
-                    contentDescription = "Logo ShowMate",
+                    contentDescription = null,
                     modifier = Modifier
                         .size(120.dp)
                         .scale(logoScale.value * logoBreath)
@@ -169,7 +171,7 @@ fun SplashScreen(
                 Spacer(Modifier.height(32.dp))
 
                 Text(
-                    text = "ShowMate",
+                    text = stringResource(R.string.showmate),
                     style = TextStyle(
                         brush = Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryMagenta))
                     ),

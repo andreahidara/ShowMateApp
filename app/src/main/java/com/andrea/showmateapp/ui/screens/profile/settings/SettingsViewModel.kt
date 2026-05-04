@@ -1,19 +1,22 @@
 package com.andrea.showmateapp.ui.screens.profile.settings
 
+import android.content.Context
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.local.ThemePreference
-import com.andrea.showmateapp.data.repository.AuthRepository
 import com.andrea.showmateapp.di.AppPrefsDataStore
+import com.andrea.showmateapp.domain.repository.IAuthRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.util.AppPrefsKeys
 import com.andrea.showmateapp.util.DataExportManager
 import com.andrea.showmateapp.util.NotificationPrefsKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,10 +31,11 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val themePreference: ThemePreference,
-    private val authRepository: AuthRepository,
+    private val authRepository: IAuthRepository,
     private val userRepository: IUserRepository,
     @AppPrefsDataStore private val dataStore: DataStore<Preferences>,
-    private val exportManager: DataExportManager
+    private val exportManager: DataExportManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     val isDarkTheme = themePreference.isDarkTheme
@@ -129,7 +133,10 @@ class SettingsViewModel @Inject constructor(
             _isResetting.value = true
             try {
                 userRepository.resetAlgorithmData()
-                dataStore.edit { it[AppPrefsKeys.KEY_ONBOARDING] = false }
+                dataStore.edit {
+                    it[AppPrefsKeys.KEY_ONBOARDING] = false
+                    it[AppPrefsKeys.KEY_CALIBRATION] = false
+                }
                 onComplete(true)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -158,19 +165,19 @@ class SettingsViewModel @Inject constructor(
             try {
                 val content = exportManager.readUriContent(uri)
                     ?: run {
-                        onComplete(false, "No se pudo leer el archivo")
+                        onComplete(false, context.getString(R.string.settings_restore_error_read))
                         return@launch
                     }
                 val partial = exportManager.parseJsonBackup(content)
                     ?: run {
-                        onComplete(false, "Archivo de copia de seguridad no válido")
+                        onComplete(false, context.getString(R.string.settings_restore_error_invalid))
                         return@launch
                     }
                 userRepository.restoreBackup(partial)
-                onComplete(true, "Copia restaurada correctamente")
+                onComplete(true, context.getString(R.string.settings_restore_success))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                onComplete(false, "Error al restaurar: ${e.message}")
+                onComplete(false, context.getString(R.string.settings_restore_error_generic))
             }
         }
     }

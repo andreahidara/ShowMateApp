@@ -9,10 +9,9 @@ import com.andrea.showmateapp.di.AppPrefsDataStore
 import com.andrea.showmateapp.util.AppPrefsKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -20,14 +19,13 @@ class ConsentViewModel @Inject constructor(
     @AppPrefsDataStore private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
-    val isConsentGiven = dataStore.data
-        .map { prefs -> prefs[AppPrefsKeys.KEY_CONSENT] == true }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    private val _consentAccepted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val consentAccepted: SharedFlow<Unit> = _consentAccepted.asSharedFlow()
 
     fun giveConsent() {
         viewModelScope.launch {
             dataStore.edit { prefs -> prefs[AppPrefsKeys.KEY_CONSENT] = true }
+            _consentAccepted.emit(Unit)
         }
     }
 }

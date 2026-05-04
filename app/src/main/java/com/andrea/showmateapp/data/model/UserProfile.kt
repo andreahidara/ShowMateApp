@@ -34,5 +34,7 @@ data class UserProfile(
     val completedGroupMatches: Int = 0,
     val photoUrl: String? = null,
     val friendIds: List<String> = emptyList(),
-    val onboardingCompleted: Boolean = false
+    val personalityType: String? = null,
+    val onboardingCompleted: Boolean = false,
+    val calibrationCompleted: Boolean = false
 )

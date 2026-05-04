@@ -16,12 +16,18 @@ import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.TemporalPatternAnalyzer
 import com.andrea.showmateapp.util.UiText
 import com.andrea.showmateapp.R
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import kotlin.math.exp
 import kotlin.math.log10
+import kotlin.math.round
+import kotlin.math.tanh
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class GetRecommendationsUseCase @Inject constructor(
@@ -76,7 +82,7 @@ class GetRecommendationsUseCase @Inject constructor(
         val weights: ScoringWeights,
         val temporalPattern: TemporalPatternAnalyzer.TemporalPattern,
         val isWeekday: Boolean,
-        val today: java.time.LocalDate,
+        val today: LocalDate,
         val watchedEpisodesMap: Map<String, List<Int>>,
         val embeddingSpace: ContentEmbeddingEngine.EmbeddingSpace,
         val userVector: FloatArray,
@@ -124,7 +130,7 @@ class GetRecommendationsUseCase @Inject constructor(
             weights = weights,
             temporalPattern = TemporalPatternAnalyzer.analyze(profile.viewingHistory),
             isWeekday = TemporalPatternAnalyzer.isWeekday(),
-            today = java.time.LocalDate.now(),
+            today = LocalDate.now(),
             watchedEpisodesMap = profile.watchedEpisodes,
             embeddingSpace = embeddingSpace,
             userVector = userVector,
@@ -134,7 +140,7 @@ class GetRecommendationsUseCase @Inject constructor(
         )
     }
 
-    suspend fun execute(): List<MediaContent> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+    suspend fun execute(): List<MediaContent> = withContext(Dispatchers.Default) {
         val excludedIds = try {
             interactionRepository.getExcludedMediaIds().toList()
         } catch (e: Exception) {
@@ -175,10 +181,17 @@ class GetRecommendationsUseCase @Inject constructor(
                 .take(15)
                 .map { it.key }
                 .filter { it !in candidatesById && it !in excludedIds }
-            val allCandidates = if (collabOnlyIds.isEmpty()) {
+            val allCandidatesRaw = if (collabOnlyIds.isEmpty()) {
                 candidates
             } else {
                 candidates + showRepository.getShowDetailsInParallel(collabOnlyIds)
+            }
+
+            val positiveGenreIds = userProfile.genreScores.filter { it.value >= 15f }.keys.mapNotNull { it.toIntOrNull() }.toSet()
+            val allCandidates = if (positiveGenreIds.isNotEmpty()) {
+                allCandidatesRaw.filter { show -> show.safeGenreIds.any { it in positiveGenreIds } }
+            } else {
+                allCandidatesRaw
             }
 
             val now = System.currentTimeMillis()
@@ -207,7 +220,7 @@ class GetRecommendationsUseCase @Inject constructor(
         }
     }
 
-    suspend fun scoreShows(shows: List<MediaContent>, cachedProfile: UserProfile? = null): List<MediaContent> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+    suspend fun scoreShows(shows: List<MediaContent>, cachedProfile: UserProfile? = null): List<MediaContent> = withContext(Dispatchers.Default) {
         try {
             val userProfile = cachedProfile ?: userRepository.getUserProfile()
             val excludedIds = interactionRepository.getExcludedMediaIds()
@@ -238,7 +251,7 @@ class GetRecommendationsUseCase @Inject constructor(
         }
     }
 
-    suspend fun scoreForDetail(show: MediaContent): MediaContent = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+    suspend fun scoreForDetail(show: MediaContent): MediaContent = withContext(Dispatchers.Default) {
         try {
             val userProfile = userRepository.getUserProfile()
             if (userProfile == null || userProfile.genreScores.isEmpty()) return@withContext show
@@ -342,7 +355,7 @@ class GetRecommendationsUseCase @Inject constructor(
                 abandonmentPenalty - saturationPenalty
             ).coerceIn(0f, 10f)
 
-        val finalScore = (score * 10).let { kotlin.math.round(it) } / 10f
+        val finalScore = (score * 10).let { round(it) } / 10f
 
         val reasons = buildReasons(
             show = show,
@@ -366,7 +379,7 @@ class GetRecommendationsUseCase @Inject constructor(
         val raw = showStyles.entries.fold(0f) { acc, (style, relevance) ->
             val userPref = (user.narrativeStyleScores[style] ?: 0f)
             // tanh comprime preferencias extremas a [-1,1] para evitar que un único estilo muy marcado domine
-            val clampedPref = kotlin.math.tanh(userPref / 15.0).toFloat()
+            val clampedPref = tanh(userPref / 15.0).toFloat()
             acc + clampedPref * relevance
         }
         val normalized = (raw / showStyles.size).coerceIn(-1f, 1f)
@@ -401,11 +414,11 @@ class GetRecommendationsUseCase @Inject constructor(
         }
     }
 
-    private fun calculateNoveltyBoost(show: MediaContent, today: java.time.LocalDate): Float {
+    private fun calculateNoveltyBoost(show: MediaContent, today: LocalDate): Float {
         val dateStr = show.firstAirDate?.take(10) ?: return 0f
         return try {
-            val months = java.time.temporal.ChronoUnit.MONTHS.between(
-                java.time.LocalDate.parse(dateStr),
+            val months = ChronoUnit.MONTHS.between(
+                LocalDate.parse(dateStr),
                 today
             )
             when {
@@ -483,7 +496,7 @@ class GetRecommendationsUseCase @Inject constructor(
             .filter { it.second > 3f }
         val topGenreEntry = qualifiedGenres.maxByOrNull { it.second }
         topGenreEntry?.let { (genreId, genreScore) ->
-            val weight = kotlin.math.tanh(genreScore / 20.0).toFloat().coerceIn(0.15f, 1f)
+            val weight = tanh(genreScore / 20.0).toFloat().coerceIn(0.15f, 1f)
             personal += RecommendationReason(
                 ReasonType.GENRE, weight,
                 UiText.StringResource(R.string.reason_genre, GenreMapper.getGenreName(genreId)),
@@ -496,7 +509,7 @@ class GetRecommendationsUseCase @Inject constructor(
             ?.filter { it.second > 3f }
             ?.maxByOrNull { it.second }
         topActorEntry?.let { (actor, actorScore) ->
-            val weight = kotlin.math.tanh(actorScore / 20.0).toFloat().coerceIn(0.15f, 1f)
+            val weight = tanh(actorScore / 20.0).toFloat().coerceIn(0.15f, 1f)
             if (weight > 0.20f) {
                 personal += RecommendationReason(
                     ReasonType.ACTOR, weight,
@@ -511,7 +524,7 @@ class GetRecommendationsUseCase @Inject constructor(
             }
             .maxByOrNull { it.second }
         topStyleEntry?.let { (style, rawScore) ->
-            val weight = kotlin.math.tanh(rawScore / 15.0).toFloat().coerceIn(0.15f, 1f)
+            val weight = tanh(rawScore / 15.0).toFloat().coerceIn(0.15f, 1f)
             if (weight > 0.15f) {
                 personal += RecommendationReason(
                     ReasonType.NARRATIVE, weight,
@@ -526,7 +539,7 @@ class GetRecommendationsUseCase @Inject constructor(
             ?.filter { it.second > 3f }
             ?.maxByOrNull { it.second }
         topCreatorEntry?.let { (crew, creatorScore) ->
-            val weight = kotlin.math.tanh(creatorScore / 20.0).toFloat().coerceIn(0.15f, 1f)
+            val weight = tanh(creatorScore / 20.0).toFloat().coerceIn(0.15f, 1f)
             if (weight > 0.25f) {
                 personal += RecommendationReason(
                     ReasonType.CREATOR, weight,

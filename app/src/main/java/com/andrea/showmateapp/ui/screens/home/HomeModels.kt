@@ -5,6 +5,7 @@ import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.util.ErrorType
 import com.andrea.showmateapp.util.UiText
 
+@Immutable
 data class HomeGenreShows(
     val action: List<MediaContent> = emptyList(),
     val comedy: List<MediaContent> = emptyList(),

@@ -1,5 +1,6 @@
 package com.andrea.showmateapp.ui.screens.profile
 
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.data.model.toDomain
 import com.andrea.showmateapp.data.model.MediaContent
@@ -96,7 +97,7 @@ class ProfileViewModel @Inject constructor(
                 loadAchievementsData()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _error.value = e.message ?: "Error desconocido"
+                _error.value = context.getString(R.string.error_unknown)
             } finally {
                 _isLoading.value = false
             }
@@ -111,7 +112,7 @@ class ProfileViewModel @Inject constructor(
                 loadAchievementsData()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _error.value = e.message ?: "Error desconocido"
+                _error.value = context.getString(R.string.error_unknown)
             } finally {
                 _isLoading.value = false
             }
@@ -133,8 +134,8 @@ class ProfileViewModel @Inject constructor(
         profile?.username?.takeIf { it.isNotBlank() }
             ?: userRepository.getCurrentUserEmail()?.substringBefore("@")?.replaceFirstChar {
                 if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-            } ?: "Usuario"
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Cargando...")
+            } ?: context.getString(R.string.profile_default_username)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), context.getString(R.string.profile_loading))
 
     val photoUrl: StateFlow<String?> = userProfileFlow.map { it?.photoUrl }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

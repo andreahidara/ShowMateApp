@@ -1,16 +1,19 @@
 package com.andrea.showmateapp.ui.screens.profile.lists
 
+import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
+import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.ui.navigation.Screen
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -32,8 +35,9 @@ data class ListDetailUiState(
 @HiltViewModel
 class ListDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val showRepository: ShowRepository,
-    private val interactionRepository: IInteractionRepository
+    private val showRepository: IShowRepository,
+    private val interactionRepository: IInteractionRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ListDetailUiState())
@@ -62,7 +66,7 @@ class ListDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(shows = shows, isLoading = false) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoading = false, error = "Error al cargar las series") }
+                _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.list_detail_error_load)) }
             }
         }
     }

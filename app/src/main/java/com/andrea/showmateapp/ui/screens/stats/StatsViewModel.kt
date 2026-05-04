@@ -1,13 +1,16 @@
 package com.andrea.showmateapp.ui.screens.stats
 
+import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.UserProfile
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.GetViewerPersonalityUseCase
 import com.andrea.showmateapp.util.GenreMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -34,7 +37,8 @@ data class StatsUiState(
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val userRepository: IUserRepository,
-    private val getViewerPersonalityUseCase: GetViewerPersonalityUseCase
+    private val getViewerPersonalityUseCase: GetViewerPersonalityUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StatsUiState())
@@ -54,7 +58,7 @@ class StatsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
+                _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.error_unknown)) }
             }
         }
     }
@@ -135,7 +139,7 @@ class StatsViewModel @Inject constructor(
                 }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
+            _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.error_unknown)) }
         }
     }
 }

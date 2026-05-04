@@ -1,6 +1,9 @@
 package com.andrea.showmateapp.ui.screens.swipe
 
 import androidx.compose.runtime.Immutable
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.data.model.MediaContent
@@ -9,15 +12,17 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
+import com.andrea.showmateapp.R
+import com.andrea.showmateapp.di.AppPrefsDataStore
+import com.andrea.showmateapp.util.AppPrefsKeys
 import com.andrea.showmateapp.util.NarrativeStyleMapper
+import com.andrea.showmateapp.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -28,13 +33,9 @@ data class SwipeUiState(
     val isLoading: Boolean = true,
     val ratedCount: Int = 0,
     val lastAction: SwipeAction? = null,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 ) {
     data class SwipeAction(val show: MediaContent, val isLike: Boolean)
-}
-
-sealed interface SwipeEffect {
-    data class ShowError(val message: String) : SwipeEffect
 }
 
 @HiltViewModel
@@ -42,14 +43,12 @@ class SwipeViewModel @Inject constructor(
     private val userRepository: IUserRepository,
     private val interactionRepository: IInteractionRepository,
     private val getRecommendationsUseCase: GetRecommendationsUseCase,
-    private val achievementChecker: AchievementChecker
+    private val achievementChecker: AchievementChecker,
+    @AppPrefsDataStore private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SwipeUiState())
     val uiState: StateFlow<SwipeUiState> = _uiState.asStateFlow()
-
-    private val _effects = Channel<SwipeEffect>(Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
 
     fun loadShows(forceReload: Boolean = false) {
         if (!forceReload && _uiState.value.shows.isNotEmpty()) {
@@ -59,14 +58,30 @@ class SwipeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
+                interactionRepository.syncFavoritesAndWatchedToRoom()
                 val newShows = getRecommendationsUseCase.execute()
                 _uiState.update { it.copy(shows = newShows, isLoading = false) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Timber.e(e, "Error loading shows")
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = "Error al cargar las series. Inténtalo de nuevo.")
+                    it.copy(isLoading = false, errorMessage = UiText.StringResource(R.string.swipe_error_load))
                 }
+            }
+        }
+    }
+
+    fun completeCalibration(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                userRepository.completeCalibration()
+                // Update local DataStore as well
+                dataStore.edit { prefs -> prefs[AppPrefsKeys.KEY_CALIBRATION] = true }
+                onSuccess()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Timber.e(e, "Error completing calibration")
+                _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.swipe_error_complete)) }
             }
         }
     }
@@ -116,10 +131,10 @@ class SwipeViewModel @Inject constructor(
                     state.copy(
                         shows = listOf(show) + state.shows,
                         ratedCount = (state.ratedCount - 1).coerceAtLeast(0),
-                        lastAction = null
+                        lastAction = null,
+                        errorMessage = UiText.StringResource(R.string.swipe_error_save)
                     )
                 }
-                _effects.trySend(SwipeEffect.ShowError("No se pudo guardar. Revisa tu conexión."))
             }
         }
     }
@@ -176,6 +191,7 @@ class SwipeViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                interactionRepository.toggleFavorite(show, setLiked = true)
                 interactionRepository.toggleEssential(show, setEssential = true)
                 interactionRepository.trackMediaInteraction(
                     mediaId = show.id,
@@ -197,10 +213,10 @@ class SwipeViewModel @Inject constructor(
                     state.copy(
                         shows = listOf(show) + state.shows,
                         ratedCount = (state.ratedCount - 1).coerceAtLeast(0),
-                        lastAction = null
+                        lastAction = null,
+                        errorMessage = UiText.StringResource(R.string.swipe_error_save)
                     )
                 }
-                _effects.trySend(SwipeEffect.ShowError("No se pudo guardar. Revisa tu conexión."))
             }
         }
     }

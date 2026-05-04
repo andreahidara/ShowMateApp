@@ -20,6 +20,7 @@ import com.andrea.showmateapp.domain.usecase.GetRecommendationsUseCase
 import com.andrea.showmateapp.util.Resource
 import com.andrea.showmateapp.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Year
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -54,7 +56,7 @@ class SearchViewModel @Inject constructor(
         const val MIN_YEAR = 1990
         private val KEY_RECENT = stringPreferencesKey("recent_searches")
         private const val MAX_RECENT = 6
-        val CURRENT_YEAR: Int = java.time.Year.now().value
+        val CURRENT_YEAR: Int = Year.now().value
         val AVAILABLE_GENRES = listOf(
             "10759" to "Acción", "16" to "Animación", "35" to "Comedia",
             "80" to "Crimen", "99" to "Docu", "18" to "Drama",
@@ -82,7 +84,7 @@ class SearchViewModel @Inject constructor(
     val searchPagingData: Flow<PagingData<MediaContent>> = _pagingQuery
         .flatMapLatest { q ->
             if (q.isBlank()) {
-                kotlinx.coroutines.flow.flowOf(PagingData.empty())
+                flowOf(PagingData.empty())
             } else {
                 Pager(
                     config = PagingConfig(pageSize = 20, enablePlaceholders = false),
@@ -303,7 +305,7 @@ class SearchViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _errorMessage.value = UiText.DynamicString("Error: ${e.message}")
+                _errorMessage.value = UiText.StringResource(R.string.error_unexpected_data)
             } finally {
                 _isLoading.value = false
             }

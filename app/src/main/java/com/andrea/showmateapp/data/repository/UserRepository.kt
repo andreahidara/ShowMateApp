@@ -1,9 +1,13 @@
 package com.andrea.showmateapp.data.repository
 
+import android.net.Uri
+import java.time.LocalDate
 import com.andrea.showmateapp.data.local.MediaInteractionDao
 import com.andrea.showmateapp.data.local.MediaInteractionEntity
 import com.andrea.showmateapp.data.local.ShowDao
+import com.andrea.showmateapp.data.model.MediaContent
 import com.andrea.showmateapp.data.model.UserProfile
+import com.andrea.showmateapp.data.model.toEntity
 import com.andrea.showmateapp.di.IoDispatcher
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -99,7 +103,9 @@ class UserRepository @Inject constructor(
                     "email" to email,
                     "xp" to 0,
                     "completedGroupMatches" to 0,
-                    "friendIds" to emptyList<String>()
+                    "friendIds" to emptyList<String>(),
+                    "onboardingCompleted" to false,
+                    "calibrationCompleted" to false
                 ),
                 SetOptions.merge()
             ).await()
@@ -107,11 +113,12 @@ class UserRepository @Inject constructor(
 
     override suspend fun saveOnboardingInterests(
         genres: List<String>,
-        watchedShows: List<com.andrea.showmateapp.data.model.MediaContent>,
-        lovedShows: List<com.andrea.showmateapp.data.model.MediaContent>,
+        watchedShows: List<MediaContent>,
+        lovedShows: List<MediaContent>,
         preferShortEpisodes: Boolean?,
         preferFinishedShows: Boolean?,
-        preferDubbed: Boolean?
+        preferDubbed: Boolean?,
+        personalityType: String?
     ) = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
         val userRef = userDoc(uid)
@@ -119,46 +126,45 @@ class UserRepository @Inject constructor(
         val watchedShowIds = watchedShows.map { it.id }
         val lovedShowIds = lovedShows.map { it.id }
 
-        db.runTransaction { transaction ->
-            val snapshot = transaction.get(userRef)
-            val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
+        try {
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(userRef)
+                val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile(userId = uid)
 
-            val newGenreScores = profile.genreScores.toMutableMap()
-            val newGenreDates = profile.genreScoreDates.toMutableMap()
-            val now = System.currentTimeMillis()
-            genres.forEach { id ->
-                newGenreScores[id] = (newGenreScores[id] ?: 0f) + 15f
-                newGenreDates[id] = now
-            }
-
-            val newNarrativeScores = profile.narrativeStyleScores.toMutableMap()
-            val newNarrativeDates = profile.narrativeStyleDates.toMutableMap()
-            genres.forEach { genreId ->
-                NARRATIVE_SEEDS[genreId]?.forEach { (style, score) ->
-                    newNarrativeScores[style] = maxOf(newNarrativeScores[style] ?: 0f, score)
-                    newNarrativeDates[style] = now
+                val newGenreScores = profile.genreScores.toMutableMap()
+                val newGenreDates = profile.genreScoreDates.toMutableMap()
+                val now = System.currentTimeMillis()
+                genres.forEach { id ->
+                    newGenreScores[id] = (newGenreScores[id] ?: 0f) + 15f
+                    newGenreDates[id] = now
                 }
-            }
 
-            val newKeywordScores = profile.preferredKeywords.toMutableMap()
-            val newKeywordDates = profile.keywordScoreDates.toMutableMap()
-            genres.forEach { genreId ->
-                KEYWORD_SEEDS[genreId]?.forEach { (kw, score) ->
-                    newKeywordScores[kw] = maxOf(newKeywordScores[kw] ?: 0f, score)
-                    newKeywordDates[kw] = now
+                val newNarrativeScores = profile.narrativeStyleScores.toMutableMap()
+                val newNarrativeDates = profile.narrativeStyleDates.toMutableMap()
+                genres.forEach { genreId ->
+                    NARRATIVE_SEEDS[genreId]?.forEach { (style, score) ->
+                        newNarrativeScores[style] = maxOf(newNarrativeScores[style] ?: 0f, score)
+                        newNarrativeDates[style] = now
+                    }
                 }
-            }
 
-            val newLiked = (profile.likedMediaIds + watchedShowIds).distinct()
-            val newEssential = (profile.essentialMediaIds + lovedShowIds).distinct()
+                val newKeywordScores = profile.preferredKeywords.toMutableMap()
+                val newKeywordDates = profile.keywordScoreDates.toMutableMap()
+                genres.forEach { genreId ->
+                    KEYWORD_SEEDS[genreId]?.forEach { (kw, score) ->
+                        newKeywordScores[kw] = maxOf(newKeywordScores[kw] ?: 0f, score)
+                        newKeywordDates[kw] = now
+                    }
+                }
 
-            val newRatings = profile.ratings.toMutableMap()
-            watchedShowIds.forEach { id -> newRatings[id.toString()] = newRatings[id.toString()] ?: 3.5f }
-            lovedShowIds.forEach { id -> newRatings[id.toString()] = 4.5f }
+                val newLiked = (profile.likedMediaIds + watchedShowIds).distinct().toMutableList()
+                val newEssential = (profile.essentialMediaIds + lovedShowIds).distinct().toMutableList()
 
-            transaction.set(
-                userRef,
-                profile.copy(
+                val newRatings = profile.ratings.toMutableMap()
+                watchedShowIds.forEach { id -> newRatings[id.toString()] = newRatings[id.toString()] ?: 3.5f }
+                lovedShowIds.forEach { id -> newRatings[id.toString()] = 4.5f }
+
+                val updatedProfile = profile.copy(
                     genreScores = newGenreScores,
                     genreScoreDates = newGenreDates,
                     narrativeStyleScores = newNarrativeScores,
@@ -171,24 +177,54 @@ class UserRepository @Inject constructor(
                     preferShortEpisodes = preferShortEpisodes,
                     preferFinishedShows = preferFinishedShows,
                     preferDubbed = preferDubbed,
+                    personalityType = personalityType,
                     onboardingCompleted = true
                 )
-            )
 
+                transaction.set(userRef, updatedProfile)
+
+                // Save minimal Map to subcollections to avoid any serialization issues
+                watchedShows.forEach { show ->
+                    val minimal = mapOf(
+                        "id" to show.id,
+                        "name" to show.name,
+                        "poster_path" to show.posterPath
+                    )
+                    transaction.set(userRef.collection("watched").document(show.id.toString()), minimal)
+                }
+                lovedShows.forEach { show ->
+                    val minimal = mapOf(
+                        "id" to show.id,
+                        "name" to show.name,
+                        "poster_path" to show.posterPath
+                    )
+                    transaction.set(userRef.collection("favorites").document(show.id.toString()), minimal)
+                }
+            }.await()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Timber.e(e, "Error in onboarding transaction")
+            // Fallback: try to at least mark onboarding as completed even if subcollections fail
+            userRef.update("onboardingCompleted", true).await()
+        }
+
+        // Sync onboarding interactions to local Room
+        try {
             watchedShows.forEach { show ->
-                transaction.set(userRef.collection("watched").document(show.id.toString()), show.copy(reasons = emptyList(), affinityScore = 0f))
+                mediaInteractionDao.upsert(MediaInteractionEntity(mediaId = show.id, isWatched = true))
             }
             lovedShows.forEach { show ->
-                transaction.set(userRef.collection("favorites").document(show.id.toString()), show.copy(reasons = emptyList(), affinityScore = 0f))
+                mediaInteractionDao.upsert(MediaInteractionEntity(mediaId = show.id, isLiked = true, isEssential = true))
             }
-        }.await()
-
-        // Sync onboarding interactions to local Room so the exclusion filter works immediately
-        watchedShows.forEach { show ->
-            mediaInteractionDao.upsert(MediaInteractionEntity(mediaId = show.id, isLiked = true))
-        }
-        lovedShows.forEach { show ->
-            mediaInteractionDao.upsert(MediaInteractionEntity(mediaId = show.id, isLiked = true, isEssential = true))
+            if (watchedShows.isNotEmpty()) {
+                showDao.insertShows(watchedShows.map { it.toEntity("watched") })
+            }
+            if (lovedShows.isNotEmpty()) {
+                showDao.insertShows(lovedShows.map { it.toEntity("liked") })
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Timber.e(e, "Error syncing to Room during onboarding")
         }
     }
 
@@ -196,6 +232,13 @@ class UserRepository @Inject constructor(
         val uid = auth.currentUser?.uid ?: return@withContext
         userDoc(uid)
             .set(mapOf("username" to username), SetOptions.merge())
+            .await()
+    }
+
+    override suspend fun completeCalibration() = withContext(ioDispatcher) {
+        val uid = auth.currentUser?.uid ?: return@withContext
+        userDoc(uid)
+            .update("calibrationCompleted", true)
             .await()
     }
 
@@ -235,7 +278,7 @@ class UserRepository @Inject constructor(
     override suspend fun recordViewingSession(showId: Int, episodeCount: Int) = withContext(ioDispatcher) {
         val uid = auth.currentUser?.uid ?: return@withContext
         val userRef = userDoc(uid)
-        val today = java.time.LocalDate.now().toString()
+        val today = LocalDate.now().toString()
         db.runTransaction { transaction ->
             val snapshot = transaction.get(userRef)
             val profile = snapshot.toObject(UserProfile::class.java)
@@ -268,6 +311,8 @@ class UserRepository @Inject constructor(
 
             val resetData = mapOf(
                 "onboardingCompleted" to false,
+                "calibrationCompleted" to false,
+                "personalityType" to null,
                 "genreScores" to emptyMap<String, Float>(),
                 "genreScoreDates" to emptyMap<String, Long>(),
                 "preferredKeywords" to emptyMap<String, Float>(),
@@ -325,8 +370,8 @@ class UserRepository @Inject constructor(
         userDoc(uid).set(mapOf("photoUrl" to url), SetOptions.merge()).await()
     }
 
-    override suspend fun uploadProfilePhoto(uri: android.net.Uri): String = withContext(ioDispatcher) {
-        val uid = auth.currentUser?.uid ?: throw Exception("User not authenticated")
+    override suspend fun uploadProfilePhoto(uri: Uri): String = withContext(ioDispatcher) {
+        val uid = auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
         val ref = firebaseStorage.reference.child("avatars/$uid.jpg")
         ref.putFile(uri).await()
         ref.downloadUrl.await().toString()

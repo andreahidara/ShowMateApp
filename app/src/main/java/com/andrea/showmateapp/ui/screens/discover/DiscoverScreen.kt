@@ -136,7 +136,7 @@ fun DiscoverScreenContent(
         if (state.isLoading) {
             DiscoverSkeleton()
         } else if (state.errorMessage != null) {
-            ErrorView(message = state.errorMessage, onRetry = onRetry)
+            ErrorView(message = state.errorMessage.asString(), onRetry = onRetry)
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 item { DiscoverHeader() }
@@ -281,7 +281,6 @@ fun DiscoverScreenContent(
                 }
 
                 if (state.hiddenGemShows.isNotEmpty() ||
-                    state.explorationShows.isNotEmpty() ||
                     state.moodSectionShows.isNotEmpty()
                 ) {
                     item { DiscoverCategoryDivider(R.string.discover_explore_new) }
@@ -303,17 +302,16 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (state.explorationShows.isNotEmpty() && state.explorationGenreName.isNotEmpty()) {
+                if (state.fourthGenreShows.isNotEmpty() && state.fourthGenreName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = stringResource(R.string.discover_exploration_title, state.explorationGenreName),
-                            items = state.explorationShows,
+                            title = stringResource(R.string.discover_fourth_genre_title, state.fourthGenreName),
+                            items = state.fourthGenreShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            accentColor = PillCreator,
-                            tag = "discover_exploration",
-                            subtitle = stringResource(R.string.discover_exploration_subtitle),
+                            tag = "discover_genre4",
+                            subtitle = state.fourthGenreSubtitle.takeIf { it.isNotEmpty() },
                             listState = sectionStates[8]
                         )
                     }
@@ -336,8 +334,7 @@ fun DiscoverScreenContent(
 
                 if (state.similarShows.isNotEmpty() ||
                     state.actorShows.isNotEmpty() ||
-                    state.creatorShows.isNotEmpty() ||
-                    state.timeTravelShows.isNotEmpty()
+                    state.creatorShows.isNotEmpty()
                 ) {
                     item { DiscoverCategoryDivider(R.string.discover_because_you_watched) }
                 }
@@ -399,15 +396,16 @@ fun DiscoverScreenContent(
                     }
                 }
 
-                if (state.timeTravelShows.isNotEmpty()) {
+                if (state.fifthGenreShows.isNotEmpty() && state.fifthGenreName.isNotEmpty()) {
                     item {
                         ShowSection(
-                            title = stringResource(R.string.discover_timetravel),
-                            items = state.timeTravelShows,
+                            title = stringResource(R.string.discover_fifth_genre_title, state.fifthGenreName),
+                            items = state.fifthGenreShows,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onItemClick = onMediaClick,
-                            tag = "discover_timetravel",
+                            tag = "discover_genre5",
+                            subtitle = state.fifthGenreSubtitle.takeIf { it.isNotEmpty() },
                             listState = sectionStates[9]
                         )
                     }

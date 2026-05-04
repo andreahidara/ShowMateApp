@@ -11,8 +11,8 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.andrea.showmateapp.R
-import com.andrea.showmateapp.data.repository.ShowRepository
 import com.andrea.showmateapp.di.AppPrefsDataStore
+import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IInteractionRepository
 import com.andrea.showmateapp.ui.MainActivity
 import com.andrea.showmateapp.util.NotificationPrefsKeys
@@ -29,7 +29,7 @@ class SeasonCheckWorker @AssistedInject constructor(
     @Assisted private val ctx: Context,
     @Assisted params: WorkerParameters,
     private val interactionRepository: IInteractionRepository,
-    private val showRepository: ShowRepository,
+    private val showRepository: IShowRepository,
     @AppPrefsDataStore private val dataStore: DataStore<Preferences>
 ) : CoroutineWorker(ctx, params) {
 

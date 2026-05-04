@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.MediaContent
+import com.andrea.showmateapp.util.UiText
 import com.andrea.showmateapp.ui.components.MatchBadge
 import com.andrea.showmateapp.ui.components.TmdbImage
 import com.andrea.showmateapp.ui.components.shimmerBrush
@@ -71,8 +72,10 @@ fun SwipeScreen(navController: NavController) {
         onEssentialShow = { viewModel.essentialTopShow() },
         onUndoAction = { viewModel.undoLastAction() },
         onNavigateToHome = {
-            navController.navigate(Screen.Main) {
-                popUpTo(Screen.Swipe) { inclusive = true }
+            viewModel.completeCalibration {
+                navController.navigate(Screen.Main) {
+                    popUpTo(Screen.Swipe) { inclusive = true }
+                }
             }
         }
     )
@@ -81,7 +84,7 @@ fun SwipeScreen(navController: NavController) {
 @Composable
 fun SwipeScreenContent(
     showsToRate: List<MediaContent>,
-    errorMessage: String?,
+    errorMessage: UiText?,
     isLoading: Boolean,
     ratedCount: Int,
     lastAction: SwipeUiState.SwipeAction?,
@@ -107,7 +110,7 @@ fun SwipeScreenContent(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = errorMessage,
+                text = errorMessage.asString(),
                 color = HeartRed,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -286,22 +289,45 @@ fun SwipeScreenContent(
         }
 
         if (ratedCount < maxRatings && showsToRate.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 36.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                    .padding(bottom = 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Deshacer (Undo)
+                val undoActive = lastAction != null
                 Box(
                     modifier = Modifier
-                        .size(62.dp)
-                        .shadow(12.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.4f))
+                        .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                        .background(Color.White.copy(alpha = if (undoActive) 0.08f else 0.03f))
+                        .border(1.dp, Color.White.copy(alpha = if (undoActive) 0.15f else 0.05f), CircleShape)
+                        .semantics { role = Role.Button }
+                        .clickable(enabled = undoActive) { onUndoAction() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = stringResource(R.string.swipe_cd_undo),
+                        tint = if (undoActive) Color.White.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.15f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                // Pasar (Skip)
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .shadow(12.dp, CircleShape, spotColor = HeartRed.copy(alpha = 0.25f))
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.04f))
+                        .border(1.5.dp, HeartRed.copy(alpha = 0.4f), CircleShape)
                         .semantics { role = Role.Button }
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -312,48 +338,16 @@ fun SwipeScreenContent(
                     Icon(
                         Icons.Default.Close,
                         contentDescription = stringResource(R.string.swipe_cd_skip),
-                        tint = HeartRed.copy(alpha = 0.9f),
-                        modifier = Modifier.size(26.dp)
+                        tint = HeartRed,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
-                val undoActive = lastAction != null
+                // Me gusta (Like)
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (undoActive) {
-                                Color.White.copy(alpha = 0.08f)
-                            } else {
-                                Color.White.copy(alpha = 0.03f)
-                            }
-                        )
-                        .border(
-                            1.dp,
-                            if (undoActive) {
-                                Color.White.copy(alpha = 0.15f)
-                            } else {
-                                Color.White.copy(alpha = 0.05f)
-                            },
-                            CircleShape
-                        )
-                        .semantics { role = Role.Button }
-                        .clickable(enabled = undoActive) { onUndoAction() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Undo,
-                        contentDescription = stringResource(R.string.swipe_cd_undo),
-                        tint = if (undoActive) Color.White.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.15f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(78.dp)
-                        .shadow(20.dp, CircleShape, spotColor = PrimaryPurple.copy(alpha = 0.5f))
+                        .size(82.dp)
+                        .shadow(24.dp, CircleShape, spotColor = PrimaryPurple.copy(alpha = 0.5f))
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
@@ -373,17 +367,18 @@ fun SwipeScreenContent(
                         Icons.Default.Favorite,
                         contentDescription = stringResource(R.string.swipe_cd_like),
                         tint = Color.White,
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(38.dp)
                     )
                 }
 
+                // Esencial (Star)
                 Box(
                     modifier = Modifier
-                        .size(62.dp)
-                        .shadow(12.dp, CircleShape, spotColor = StarYellow.copy(alpha = 0.35f))
+                        .size(64.dp)
+                        .shadow(12.dp, CircleShape, spotColor = StarYellow.copy(alpha = 0.3f))
                         .clip(CircleShape)
-                        .background(StarYellow.copy(alpha = 0.12f))
-                        .border(1.dp, StarYellow.copy(alpha = 0.35f), CircleShape)
+                        .background(StarYellow.copy(alpha = 0.08f))
+                        .border(1.5.dp, StarYellow.copy(alpha = 0.5f), CircleShape)
                         .semantics { role = Role.Button }
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -395,7 +390,7 @@ fun SwipeScreenContent(
                         Icons.Default.Star,
                         contentDescription = stringResource(R.string.swipe_cd_essential),
                         tint = StarYellow,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }

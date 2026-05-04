@@ -70,7 +70,7 @@ fun SignUpScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "ShowMate",
+                        text = stringResource(R.string.showmate),
                         style = TextStyle(
                             brush = Brush.linearGradient(listOf(PrimaryPurpleLight, PrimaryMagenta)),
                             fontSize = 26.sp,
@@ -115,13 +115,13 @@ fun SignUpScreen(
                     PrimaryTextField(
                         value = state.username,
                         onValueChange = { viewModel.onUsernameChanged(it) },
-                        label = "Nombre de usuario",
+                        label = stringResource(R.string.signup_username_label),
                         leadingIcon = Icons.Default.Person,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Text(
-                        text = "3–20 caracteres, solo letras, números y _",
+                        text = stringResource(R.string.signup_username_hint),
                         color = TextGray.copy(alpha = 0.7f),
                         fontSize = 11.sp,
                         modifier = Modifier
@@ -144,7 +144,7 @@ fun SignUpScreen(
                     PrimaryTextField(
                         value = state.password,
                         onValueChange = { viewModel.onPasswordChanged(it) },
-                        label = "Contraseña",
+                        label = stringResource(R.string.signup_password_label),
                         leadingIcon = Icons.Default.Lock,
                         trailingIcon = {
                             IconButton(onClick = { viewModel.togglePasswordVisibility() }) {
@@ -171,7 +171,7 @@ fun SignUpScreen(
                     )
 
                     Text(
-                        text = "Mínimo 8 caracteres, una mayúscula y un número",
+                        text = stringResource(R.string.signup_password_hint),
                         color = TextGray.copy(alpha = 0.7f),
                         fontSize = 11.sp,
                         modifier = Modifier
@@ -192,10 +192,10 @@ fun SignUpScreen(
                             label = "strengthBar"
                         )
                         val (strengthColor, strengthLabel) = when (strength) {
-                            0 -> ErrorRed to "Débil"
-                            1 -> Color(0xFFFF9800) to "Media"
-                            2 -> SuccessGreen to "Fuerte"
-                            else -> Color(0xFF00BCD4) to "Muy fuerte"
+                            0 -> ErrorRed to stringResource(R.string.signup_strength_weak)
+                            1 -> Color(0xFFFF9800) to stringResource(R.string.signup_strength_medium)
+                            2 -> SuccessGreen to stringResource(R.string.signup_strength_strong)
+                            else -> Color(0xFF00BCD4) to stringResource(R.string.signup_strength_very_strong)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
@@ -232,7 +232,7 @@ fun SignUpScreen(
                     PrimaryTextField(
                         value = state.confirmPassword,
                         onValueChange = { viewModel.onConfirmPasswordChanged(it) },
-                        label = "Confirmar contraseña",
+                        label = stringResource(R.string.signup_confirm_password_label),
                         leadingIcon = Icons.Default.Lock,
                         trailingIcon = {
                             IconButton(onClick = { viewModel.toggleConfirmPasswordVisibility() }) {

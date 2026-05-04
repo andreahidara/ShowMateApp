@@ -265,7 +265,7 @@ fun HomeScreenContent(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF2A2A2A))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -493,7 +493,7 @@ private fun RecommendationFeedbackSheet(
                 icon = Icons.Default.ThumbDown,
                 title = stringResource(R.string.feedback_not_interested),
                 subtitle = stringResource(R.string.feedback_not_interested_desc),
-                iconTint = Color(0xFFE57373),
+                iconTint = MaterialTheme.colorScheme.error,
                 onClick = onNotInterested
             )
 

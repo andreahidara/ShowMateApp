@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -133,7 +134,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun findShowInState(mediaId: Int): com.andrea.showmateapp.data.model.MediaContent? {
+    private fun findShowInState(mediaId: Int): MediaContent? {
         val state = _uiState.value
         return state.trendingShows.find { it.id == mediaId }
             ?: state.top10Shows.find { it.id == mediaId }
@@ -522,8 +523,8 @@ class HomeViewModel @Inject constructor(
 
             val userGenres = profile?.genreScores?.filter { it.value > 0 }?.keys ?: emptySet()
 
-            val defs = mutableMapOf<String, kotlinx.coroutines.Deferred<Resource<List<MediaContent>>>>()
-            val defs2 = mutableMapOf<String, kotlinx.coroutines.Deferred<Resource<Pair<List<MediaContent>, Int>>>>()
+            val defs = mutableMapOf<String, Deferred<Resource<List<MediaContent>>>>()
+            val defs2 = mutableMapOf<String, Deferred<Resource<Pair<List<MediaContent>, Int>>>>()
 
             defs["new"] = async { repository.discoverShows(firstAirDateGte = threeMonthsAgo, sortBy = "popularity.desc") }
 

@@ -3,6 +3,7 @@ package com.andrea.showmateapp.ui.screens.detail
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.data.model.Review
 import com.andrea.showmateapp.data.model.ReviewPage
 import com.andrea.showmateapp.domain.repository.IReviewRepository
@@ -11,6 +12,7 @@ import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.util.OffensiveWordFilter
+import com.andrea.showmateapp.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -41,7 +43,7 @@ data class ReviewUiState(
     val lastCursorId: String? = null,
     val myUserId: String? = null,
     val reportedReviewIds: Set<String> = emptySet(),
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isInitialLoading: Boolean = true
 )
 
@@ -264,7 +266,7 @@ class ReviewViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(errorMessage = "No se pudo guardar la reseña") }
+                _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.reviews_error_save)) }
             } finally {
                 _uiState.update { it.copy(isSaving = false) }
             }

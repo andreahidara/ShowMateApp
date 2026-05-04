@@ -1,6 +1,5 @@
 package com.andrea.showmateapp.ui.screens.detail
 
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrea.showmateapp.R
@@ -632,7 +631,7 @@ class DetailViewModel @Inject constructor(
                 reasons += RecommendationReason(
                     type = ReasonType.GENRE,
                     weight = 0.7f,
-                    description = UiText.DynamicString("Coincide con tu preferencia de ${GenreMapper.getGenreName(topGenreId)}"),
+                    description = UiText.StringResource(R.string.reason_genre, GenreMapper.getGenreName(topGenreId)),
                     iconEmoji = "🎭"
                 )
             }
@@ -644,7 +643,7 @@ class DetailViewModel @Inject constructor(
                 reasons += RecommendationReason(
                     type = ReasonType.ACTOR,
                     weight = 0.6f,
-                    description = UiText.DynamicString("Protagonizada por $actorName, que te gusta"),
+                    description = UiText.StringResource(R.string.reason_actor, actorName),
                     iconEmoji = "🎬"
                 )
             }
@@ -654,7 +653,7 @@ class DetailViewModel @Inject constructor(
             reasons += RecommendationReason(
                 type = ReasonType.TRENDING,
                 weight = 0.5f,
-                description = UiText.DynamicString("Altamente valorada por la comunidad"),
+                description = UiText.StringResource(R.string.reason_trending),
                 iconEmoji = "⭐"
             )
         }
@@ -663,7 +662,7 @@ class DetailViewModel @Inject constructor(
             reasons += RecommendationReason(
                 type = ReasonType.HIDDEN_GEM,
                 weight = 0.5f,
-                description = UiText.DynamicString("Joya oculta con gran valoración"),
+                description = UiText.StringResource(R.string.reason_hidden_gem_simple),
                 iconEmoji = "💎"
             )
         }

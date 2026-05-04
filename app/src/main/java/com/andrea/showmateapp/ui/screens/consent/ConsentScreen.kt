@@ -26,16 +26,16 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.andrea.showmateapp.R
 import com.andrea.showmateapp.ui.components.AuthBackground
 import com.andrea.showmateapp.ui.theme.*
@@ -43,6 +43,11 @@ import com.andrea.showmateapp.ui.theme.ShowMateAppTheme
 
 @Composable
 fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltViewModel()) {
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.consentAccepted.collect { onAccepted() }
+    }
 
     AuthBackground {
         Column(
@@ -109,10 +114,7 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
             Spacer(modifier = Modifier.height(28.dp))
 
             Button(
-                onClick = {
-                    viewModel.giveConsent()
-                    onAccepted()
-                },
+                onClick = { viewModel.giveConsent() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -140,7 +142,7 @@ fun ConsentScreen(onAccepted: () -> Unit, viewModel: ConsentViewModel = hiltView
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(
-                onClick = { android.os.Process.killProcess(android.os.Process.myPid()) },
+                onClick = { (context as? Activity)?.finishAffinity() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(

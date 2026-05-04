@@ -8,15 +8,18 @@ import com.andrea.showmateapp.data.model.GroupSession
 import com.andrea.showmateapp.data.model.MemberVoteDoc
 import com.andrea.showmateapp.data.model.VoteType
 import com.andrea.showmateapp.data.model.MediaContent
-import com.andrea.showmateapp.data.repository.ShowRepository
+import android.content.Context
+import com.andrea.showmateapp.R
 import com.andrea.showmateapp.domain.repository.IAchievementRepository
 import com.andrea.showmateapp.domain.repository.IGroupSessionRepository
+import com.andrea.showmateapp.domain.repository.IShowRepository
 import com.andrea.showmateapp.domain.repository.IUserRepository
 import com.andrea.showmateapp.domain.usecase.AchievementChecker
 import com.andrea.showmateapp.domain.usecase.AchievementDefs
 import com.andrea.showmateapp.domain.usecase.GetCollaborativeBoostUseCase
 import com.andrea.showmateapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -65,11 +68,12 @@ data class GroupMatchUiState(
 @HiltViewModel
 class GroupMatchViewModel @Inject constructor(
     private val userRepository: IUserRepository,
-    private val showRepository: ShowRepository,
+    private val showRepository: IShowRepository,
     private val groupSessionRepository: IGroupSessionRepository,
     private val achievementChecker: AchievementChecker,
     private val achievementRepository: IAchievementRepository,
-    private val collaborativeBoostUseCase: GetCollaborativeBoostUseCase
+    private val collaborativeBoostUseCase: GetCollaborativeBoostUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GroupMatchUiState())
@@ -96,7 +100,7 @@ class GroupMatchViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(phase = GroupPhase.LOBBY, errorMessage = "Error al crear la sala") }
+                _uiState.update { it.copy(phase = GroupPhase.LOBBY, errorMessage = context.getString(R.string.group_match_error_create)) }
             }
         }
     }
@@ -202,7 +206,7 @@ class GroupMatchViewModel @Inject constructor(
             sessionId?.let { groupSessionRepository.updateCandidates(it, filteredCandidates.map { s -> s.id }) }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            _uiState.update { it.copy(errorMessage = "Error cargando candidatos") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.group_match_error_candidates)) }
         } finally {
             _uiState.update { it.copy(isComputingCandidates = false) }
         }
@@ -223,7 +227,7 @@ class GroupMatchViewModel @Inject constructor(
                     groupSessionRepository.updateSessionStatus(id, GroupSession.STATUS_VOTING)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    _uiState.update { it.copy(errorMessage = "Error al iniciar la votación") }
+                    _uiState.update { it.copy(errorMessage = context.getString(R.string.group_match_error_start_voting)) }
                 }
             }
         }
